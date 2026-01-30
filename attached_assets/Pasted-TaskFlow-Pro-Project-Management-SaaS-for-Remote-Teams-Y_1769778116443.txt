@@ -1,0 +1,690 @@
+TaskFlow Pro – Project Management SaaS for Remote Teams**
+
+You are building **TaskFlow Pro**, a modern, real-time project management SaaS for remote teams, comparable to ClickUp and Asana.
+The goal is to deliver a **high-quality MVP within 7 days** with clean architecture, strict RBAC, real-time collaboration, and scalable SaaS foundations.
+
+---
+
+## 1️⃣ PROJECT OVERVIEW
+
+**Application Name:** TaskFlow Pro
+**Type:** B2B SaaS – Subscription-based
+**Target Users:** Remote teams, startups, agencies
+**Core Value:** Real-time task execution, accountability, time tracking, and role-based collaboration
+
+---
+
+## 2️⃣ TECHNOLOGY STACK
+
+### Frontend
+
+* React 18 + TypeScript
+* Tailwind CSS
+* Shadcn UI / Headless UI
+* Zustand (global state)
+* React Query (server state)
+* Drag & Drop (dnd-kit)
+* WebSocket client (Socket.io)
+
+### Backend
+
+* Node.js + Express
+* RESTful API
+* Socket.io for real-time updates
+* JWT Authentication (Access + Refresh)
+* RBAC middleware (role + project-level checks)
+
+### Database
+
+* MongoDB + Mongoose
+
+### Payments
+
+* Stripe Subscriptions
+* Webhooks for lifecycle events
+* Immediate upgrade/downgrade with proration
+
+---
+
+## 3️⃣ USER ROLES & RBAC
+
+### Roles
+
+* **Admin**
+* **Team Lead**
+* **Member**
+
+### RBAC Rules (Strict – Enforced Frontend + Backend)
+
+| Action                  | Admin | Team Lead        | Member |
+| ----------------------- | ----- | ---------------- | ------ |
+| Manage org & billing    | ✅     | ❌                | ❌      |
+| Create projects         | ✅     | ✅                | ❌      |
+| Add members to project  | ✅     | ✅                | ❌      |
+| Create / assign tasks   | ✅     | ✅                | ✅      |
+| Update any task         | ✅     | ✅                | ✅      |
+| View org analytics      | ✅     | ❌                | ❌      |
+| View project analytics  | ✅     | ✅ (own projects) | ❌      |
+| View personal analytics | ✅     | ✅                | ✅      |
+
+---
+
+## 4️⃣ AUTHENTICATION & SECURITY
+
+### Authentication
+
+* Email + password signup/login
+* Email verification on signup
+* JWT access token (15 min)
+* Refresh token (7 days)
+* bcrypt password hashing
+
+### Security
+
+* Role-based route guards
+* Project-level permission checks
+* Rate limiting on auth routes
+* Input validation & sanitization
+* Secure env secrets
+* CORS + HTTP security headers
+
+---
+
+## 5️⃣ ORGANIZATION & PROJECT MODEL
+
+### Organization
+
+* Users can belong to **multiple organizations**
+* One workspace per organization
+* Admin can manage members & billing
+
+### Projects
+
+* **Private by default**
+* Only invited members can view
+* Admin / Team Lead can add/remove members
+
+---
+
+## 6️⃣ TASK MANAGEMENT SYSTEM
+
+### Task Roles (Per Task)
+
+* **Assignee** (required, single)
+* **Reviewer** (optional, single)
+* **Tester** (optional, single)
+
+### Task Status Flow (Fixed)
+
+```
+To Do → In Progress → In Review → Testing → Done
+```
+
+### Task Fields
+
+* Title
+* Description (rich text)
+* Priority (Low, Medium, High, Urgent)
+* Status
+* Due date
+* Assignee
+* Reviewer
+* Tester
+* Dependencies
+* Subtasks
+* Attachments
+* Activity log
+
+---
+
+## 7️⃣ REAL-TIME FEATURES (WebSockets)
+
+Real-time updates must trigger on:
+
+* Task status changes
+* New comments
+* Time tracking updates
+
+Do NOT implement presence indicators.
+
+---
+
+## 8️⃣ TIME TRACKING
+
+### Features
+
+* Start / Stop timer per task
+* Manual time entry
+* Per-task & per-user aggregation
+
+### Rules
+
+* Time tracked **second-by-second**
+* Time logs:
+
+  * ❌ Not editable after submission
+  * 🔒 Locked after Admin / Lead approval
+
+---
+
+## 9️⃣ COLLABORATION
+
+### Comments
+
+* Task-level threaded comments
+* @mentions
+* Real-time updates
+
+### File Uploads
+
+* Attach files to tasks
+* Store metadata in DB (URL, size, uploader)
+
+---
+
+## 🔔 10️⃣ NOTIFICATIONS (IN-APP ONLY)
+
+No email notifications for MVP.
+
+Triggers:
+
+* Task assigned
+* Status changed
+* Mentioned in comment
+* Due date reminder
+* Added to project
+
+Delivery:
+
+* Real-time notification events
+* Notification center UI
+
+---
+
+## 📊 11️⃣ ANALYTICS & DASHBOARDS
+
+### Admin Dashboard
+
+* Org productivity
+* Time per project
+* User performance breakdown
+
+### Team Lead Dashboard
+
+* Analytics for owned projects only
+* Team completion rates
+* Time per member
+
+### Member Dashboard
+
+* Personal stats only
+* Tasks completed
+* Time tracked
+
+---
+
+## 💳 12️⃣ SUBSCRIPTIONS & BILLING (STRIPE)
+
+### Plans
+
+**Free**
+
+* Max 3 projects (hard limit)
+
+**Pro – $29/month**
+
+* Unlimited projects
+
+**Team – $99/month**
+
+* Unlimited projects
+* Advanced analytics
+
+### Enforcement
+
+* Hard block project creation beyond limits
+* Subscription changes apply **immediately**
+* Stripe proration enabled
+* Webhooks update subscription status
+
+---
+
+## 13️⃣ DATABASE SCHEMA (MONGOOSE)
+
+### Users
+
+* email
+* passwordHash
+* role
+* organizations[]
+
+### Organizations
+
+* name
+* owner
+* members[]
+
+### Projects
+
+* name
+* organizationId
+* members[]
+* isPrivate
+
+### Tasks
+
+* projectId
+* title
+* status
+* assignee
+* reviewer
+* tester
+* priority
+* dueDate
+
+### TimeLogs
+
+* taskId
+* userId
+* startTime
+* endTime
+* approved
+
+### Comments
+
+* taskId
+* authorId
+* content
+* mentions[]
+
+### Subscriptions
+
+* organizationId
+* plan
+* stripeCustomerId
+* status
+
+---
+
+## 14️⃣ API ENDPOINTS (REST)
+
+### Auth
+
+* POST /auth/register
+* POST /auth/login
+* POST /auth/refresh
+
+### Organizations
+
+* POST /org
+* GET /org/:id
+
+### Projects
+
+* POST /projects
+* GET /projects
+* PUT /projects/:id
+
+### Tasks
+
+* POST /tasks
+* PUT /tasks/:id
+* PATCH /tasks/:id/status
+
+### Time Tracking
+
+* POST /timelogs/start
+* POST /timelogs/stop
+* POST /timelogs/approve
+
+### Billing
+
+* POST /billing/checkout
+* POST /billing/webhook
+
+---
+
+## 15️⃣ UI PAGES
+
+* Auth (Login / Register / Verify)
+* Organization Setup
+* Dashboard
+* Project View (Kanban + List toggle)
+* Task Details Drawer
+* Time Tracking Panel
+* Analytics Dashboard
+* Billing & Subscription Page
+* Notification Center
+
+---
+
+## 16️⃣ PERFORMANCE REQUIREMENTS
+
+* API response < 300ms
+* WebSocket latency < 200ms
+* Indexed DB queries
+* Pagination on lists
+* Lazy-loaded dashboards
+
+---
+## 18️⃣ VISUAL DESIGN SYSTEM (MANDATORY)
+
+### 🎨 Design Philosophy
+
+* Clean, modern, enterprise SaaS look (ClickUp / Linear inspired)
+* High information density without visual clutter
+* Clear hierarchy, fast scanning
+* Consistent across desktop & mobile
+
+---
+
+### 🎨 Color Palette
+
+**Primary**
+
+* Primary Blue: `#2563EB` (actions, highlights)
+* Primary Hover: `#1D4ED8`
+
+**Secondary**
+
+* Indigo: `#6366F1` (secondary actions)
+* Emerald: `#10B981` (success)
+
+**Status Colors**
+
+* Success: `#22C55E`
+* Warning: `#F59E0B`
+* Error: `#EF4444`
+* Info: `#0EA5E9`
+
+**Neutral / UI**
+
+* Background: `#F8FAFC`
+* Surface: `#FFFFFF`
+* Border: `#E5E7EB`
+* Text Primary: `#111827`
+* Text Secondary: `#6B7280`
+
+**Dark Mode**
+
+* Background: `#0F172A`
+* Surface: `#020617`
+* Text Primary: `#E5E7EB`
+* Border: `#1E293B`
+
+---
+
+### 🔤 Typography
+
+**Font Family**
+
+* Primary: `Inter`
+* Fallback: `system-ui, sans-serif`
+
+**Font Scale**
+
+* H1: 32px / Semi-bold
+* H2: 24px / Semi-bold
+* H3: 20px / Medium
+* Body: 14–16px / Regular
+* Caption: 12px / Regular
+
+**Rules**
+
+* No more than 2 font weights per screen
+* Headings always darker than body text
+* Line height ≥ 1.5 for readability
+
+---
+
+### 📐 Spacing & Layout System
+
+**Spacing Scale (Tailwind-based)**
+
+* 4px, 8px, 12px, 16px, 24px, 32px, 48px
+
+**Layout**
+
+* App Shell Layout:
+
+  * Left Sidebar (collapsible)
+  * Top Navigation Bar
+  * Main Content Area
+* Max content width: 1440px
+* Sticky headers for boards & tables
+
+---
+
+## 19️⃣ CORE UI COMPONENTS
+
+### 🧩 Buttons
+
+* Primary (solid)
+* Secondary (outline)
+* Ghost (text only)
+* Destructive (red)
+
+States:
+
+* Default, Hover, Active, Disabled, Loading
+
+---
+
+### 📝 Input Fields
+
+* Text, Email, Password
+* Select / Multi-select
+* Date Picker
+* User Picker (Assignee / Reviewer / Tester)
+* Search Input (debounced)
+
+Rules:
+
+* Inline validation
+* Error text below input
+* Required fields clearly marked
+
+---
+
+### 🗂 Cards
+
+Used for:
+
+* Tasks
+* Projects
+* Analytics widgets
+
+Card Structure:
+
+* Header (title + actions)
+* Body (content)
+* Footer (meta / status)
+
+---
+
+### 📊 Tables (List View)
+
+* Sticky header
+* Column sorting
+* Row hover states
+* Inline status & assignee pills
+* Empty + loading states
+
+---
+
+### 🧱 Kanban Board
+
+* Horizontal scroll
+* Drag & drop between columns
+* Visual status indicators
+* Assignee avatar
+* Priority badge
+
+---
+
+## 20️⃣ INTERACTION DESIGN
+
+### Feedback Rules
+
+* All user actions show immediate feedback
+* Optimistic UI updates for:
+
+  * Task status change
+  * Comments
+  * Time tracking
+* Toast notifications for success/errors
+
+---
+
+### Animations
+
+* Subtle transitions (150–250ms)
+* Drag & drop animations
+* Skeleton loaders (no spinners for pages)
+
+---
+
+### Confirmations
+
+Required for:
+
+* Deleting projects
+* Deleting tasks
+* Removing members
+* Cancelling subscriptions
+
+---
+
+## 21️⃣ EMPTY STATES & EDGE UX
+
+### Empty States Must Include:
+
+* Friendly illustration or icon
+* Clear explanation
+* Primary CTA button
+
+Examples:
+
+* “No projects yet → Create your first project”
+* “No tasks assigned → Assign tasks to get started”
+* “No time tracked → Start timer on a task”
+
+---
+
+### Error States
+
+* Human-readable messages
+* Never expose raw backend errors
+* Retry action where possible
+
+---
+
+## 22️⃣ CORE WORKFLOWS (DETAILED)
+
+### 🧑‍💼 User Onboarding
+
+1. Signup → Email verification
+2. Create or join organization
+3. Select subscription plan
+4. Redirect to dashboard
+
+---
+
+### 📁 Project Creation
+
+1. Admin / Lead clicks “New Project”
+2. Enter name + description
+3. Add members
+4. Project created (private by default)
+5. Redirect to Kanban view
+
+---
+
+### ✅ Task Lifecycle
+
+1. Task created in “To Do”
+2. Assign Assignee / Reviewer / Tester
+3. Move to In Progress
+4. Reviewer moves to In Review
+5. Tester moves to Testing
+6. Mark as Done
+
+---
+
+### ⏱ Time Tracking
+
+1. Start timer on task
+2. Timer runs in background
+3. Stop timer
+4. Log submitted
+5. Lead/Admin approves
+6. Log locked permanently
+
+---
+
+### 💳 Subscription Upgrade
+
+1. Admin opens Billing page
+2. Select new plan
+3. Stripe Checkout
+4. Webhook confirms update
+5. Limits update immediately
+
+---
+
+## 23️⃣ ACCESSIBILITY (NON-NEGOTIABLE)
+
+* WCAG AA compliant
+* Keyboard navigation
+* Focus states visible
+* ARIA labels for:
+
+  * Buttons
+  * Inputs
+  * Drag & drop
+* Color contrast ≥ 4.5:1
+
+---
+
+## 24️⃣ UI PERFORMANCE RULES
+
+* No blocking loaders
+* Lazy load analytics & charts
+* Virtualized lists for tasks
+* Memoized components
+
+---
+
+
+## 17️⃣ MVP DEVELOPMENT PHASES
+
+### Phase 1 – MVP (7 Days)
+
+✅ Auth & RBAC
+✅ Projects & Tasks
+✅ Kanban + List views
+✅ Time tracking
+✅ Real-time updates
+✅ Stripe subscriptions
+
+### Phase 2
+
+* Email notifications
+* Custom workflows
+* Audit logs
+
+### Phase 3
+
+* Presence indicators
+* AI insights
+* Enterprise permissions
+
+---
+
+## FINAL INSTRUCTION TO CODING AI
+
+Build this application with **clean, modular, production-ready code**.
+Strictly follow RBAC rules, schema design, and real-time constraints.
+Do not invent features beyond this spec.
+
+
