@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -9,8 +9,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { UserPlus, Mail, Send } from "lucide-react";
+import { UserPlus, Mail, Loader2 } from "lucide-react";
 import type { User } from "@shared/models/auth";
+import type { ProjectInvitation } from "@shared/schema";
 
 interface ProjectMembersDialogProps {
   open: boolean;
@@ -22,7 +23,37 @@ interface ProjectMembersDialogProps {
 export function ProjectMembersDialog({ open, onClose, projectId, members }: ProjectMembersDialogProps) {
   const { toast } = useToast();
   const [inviteEmail, setInviteEmail] = useState("");
-  const [invitedEmails, setInvitedEmails] = useState<string[]>([]);
+
+  const { data: invitations = [] } = useQuery<ProjectInvitation[]>({
+    queryKey: ["/api/projects", projectId, "invitations"],
+    enabled: open,
+  });
+
+  const inviteMutation = useMutation({
+    mutationFn: async (email: string) => {
+      const res = await apiRequest("POST", `/api/projects/${projectId}/invite`, { email });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      if (data.status === "added") {
+        toast({ title: `${data.user.email} has been added to the project` });
+        queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "members"] });
+      } else {
+        toast({ title: `Invitation sent to ${data.email}` });
+      }
+      queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "invitations"] });
+      setInviteEmail("");
+    },
+    onError: (error: Error) => {
+      const message = error.message.includes(":") ? error.message.split(": ").slice(1).join(": ") : error.message;
+      try {
+        const parsed = JSON.parse(message);
+        toast({ title: parsed.message || "Failed to invite", variant: "destructive" });
+      } catch {
+        toast({ title: message || "Failed to invite", variant: "destructive" });
+      }
+    },
+  });
 
   const getInitials = (member: User) => {
     if (member.firstName && member.lastName) {
@@ -48,13 +79,7 @@ export function ProjectMembersDialog({ open, onClose, projectId, members }: Proj
       toast({ title: "This person is already a member", variant: "destructive" });
       return;
     }
-    if (invitedEmails.includes(email)) {
-      toast({ title: "Invitation already sent to this email", variant: "destructive" });
-      return;
-    }
-    setInvitedEmails(prev => [...prev, email]);
-    setInviteEmail("");
-    toast({ title: `Invitation sent to ${email}` });
+    inviteMutation.mutate(email);
   };
 
   return (
@@ -77,15 +102,20 @@ export function ProjectMembersDialog({ open, onClose, projectId, members }: Proj
                 placeholder="Invite by email..."
                 className="pl-9"
                 onKeyDown={(e) => e.key === "Enter" && handleInvite()}
+                disabled={inviteMutation.isPending}
                 data-testid="input-invite-email"
               />
             </div>
             <Button
               onClick={handleInvite}
-              disabled={!inviteEmail.trim()}
+              disabled={!inviteEmail.trim() || inviteMutation.isPending}
               data-testid="button-send-invite"
             >
-              <UserPlus className="h-4 w-4 mr-2" />
+              {inviteMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <UserPlus className="h-4 w-4 mr-2" />
+              )}
               Invite
             </Button>
           </div>
@@ -126,24 +156,24 @@ export function ProjectMembersDialog({ open, onClose, projectId, members }: Proj
                 ))
               )}
 
-              {invitedEmails.length > 0 && (
+              {invitations.length > 0 && (
                 <>
                   <p className="text-sm font-medium text-muted-foreground mt-4">
-                    Pending invitations ({invitedEmails.length})
+                    Pending invitations ({invitations.length})
                   </p>
-                  {invitedEmails.map((email) => (
+                  {invitations.map((invite) => (
                     <div
-                      key={email}
+                      key={invite.id}
                       className="flex items-center gap-3 p-3 rounded-md bg-muted/30"
-                      data-testid={`invite-item-${email}`}
+                      data-testid={`invite-item-${invite.email}`}
                     >
                       <Avatar className="h-9 w-9">
                         <AvatarFallback className="bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400 text-sm">
-                          {email[0].toUpperCase()}
+                          {invite.email[0].toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">{email}</p>
+                        <p className="font-medium text-sm truncate">{invite.email}</p>
                       </div>
                       <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400">
                         Invited

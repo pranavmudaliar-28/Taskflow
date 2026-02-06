@@ -153,6 +153,17 @@ export const notifications = pgTable("notifications", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Project Invitations (pending invites for unregistered users)
+export const projectInvitations = pgTable("project_invitations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").notNull(),
+  organizationId: varchar("organization_id").notNull(),
+  email: text("email").notNull(),
+  invitedBy: varchar("invited_by").notNull(),
+  status: text("status").notNull().default("pending"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Insert schemas
 export const insertOrganizationSchema = createInsertSchema(organizations).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertProjectSchema = createInsertSchema(projects).omit({ id: true, createdAt: true, updatedAt: true });
@@ -162,6 +173,7 @@ export const insertCommentSchema = createInsertSchema(comments).omit({ id: true,
 export const insertNotificationSchema = createInsertSchema(notifications).omit({ id: true, createdAt: true });
 export const insertOrganizationMemberSchema = createInsertSchema(organizationMembers).omit({ id: true, joinedAt: true });
 export const insertProjectMemberSchema = createInsertSchema(projectMembers).omit({ id: true, addedAt: true });
+export const insertProjectInvitationSchema = createInsertSchema(projectInvitations).omit({ id: true, createdAt: true });
 
 // Types
 export type Organization = typeof organizations.$inferSelect;
@@ -180,6 +192,8 @@ export type OrganizationMember = typeof organizationMembers.$inferSelect;
 export type InsertOrganizationMember = z.infer<typeof insertOrganizationMemberSchema>;
 export type ProjectMember = typeof projectMembers.$inferSelect;
 export type InsertProjectMember = z.infer<typeof insertProjectMemberSchema>;
+export type ProjectInvitation = typeof projectInvitations.$inferSelect;
+export type InsertProjectInvitation = z.infer<typeof insertProjectInvitationSchema>;
 
 // Role type
 export type Role = "admin" | "team_lead" | "member";

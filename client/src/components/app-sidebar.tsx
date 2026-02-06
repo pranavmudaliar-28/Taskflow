@@ -93,14 +93,14 @@ export function AppSidebar({ projects, onCreateProject }: AppSidebarProps) {
       <SidebarHeader className="p-3">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild>
+            <SidebarMenuButton size="lg" asChild tooltip="TaskFlow Pro">
               <Link href="/dashboard">
-                <div className="h-8 w-8 rounded-md bg-sidebar-primary flex items-center justify-center shrink-0">
-                  <Kanban className="h-4 w-4 text-sidebar-primary-foreground" />
+                <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary shrink-0">
+                  <Kanban className="h-5 w-5 text-primary-foreground" />
                 </div>
-                <div className="flex flex-col leading-tight">
+                <div className="flex flex-col gap-0.5 leading-none">
                   <span className="font-semibold text-sm">TaskFlow Pro</span>
-                  <span className="text-xs text-sidebar-foreground/60">Project Management</span>
+                  <span className="text-xs text-muted-foreground">Project Management</span>
                 </div>
               </Link>
             </SidebarMenuButton>

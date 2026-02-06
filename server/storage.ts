@@ -1,6 +1,6 @@
 import { 
   organizations, projects, tasks, timeLogs, comments, notifications,
-  organizationMembers, projectMembers,
+  organizationMembers, projectMembers, projectInvitations,
   type Organization, type InsertOrganization,
   type Project, type InsertProject,
   type Task, type InsertTask,
@@ -9,6 +9,7 @@ import {
   type Notification, type InsertNotification,
   type OrganizationMember, type InsertOrganizationMember,
   type ProjectMember, type InsertProjectMember,
+  type ProjectInvitation, type InsertProjectInvitation,
 } from "@shared/schema";
 import { users, type User, type UpsertUser } from "@shared/models/auth";
 import { db } from "./db";
@@ -72,6 +73,12 @@ export interface IStorage {
   getNotificationsByUser(userId: string): Promise<Notification[]>;
   markNotificationRead(id: string, userId: string): Promise<void>;
   markAllNotificationsRead(userId: string): Promise<void>;
+  
+  // Project Invitations
+  createProjectInvitation(invitation: InsertProjectInvitation): Promise<ProjectInvitation>;
+  getProjectInvitations(projectId: string): Promise<ProjectInvitation[]>;
+  getPendingInvitationsByEmail(email: string): Promise<ProjectInvitation[]>;
+  deleteProjectInvitation(id: string): Promise<void>;
   
   // Dashboard Stats
   getDashboardStats(userId: string): Promise<{
@@ -388,6 +395,27 @@ export class DatabaseStorage implements IStorage {
     await db.update(notifications)
       .set({ read: true })
       .where(eq(notifications.userId, userId));
+  }
+
+  // Project Invitations
+  async createProjectInvitation(invitation: InsertProjectInvitation): Promise<ProjectInvitation> {
+    const [created] = await db.insert(projectInvitations).values(invitation).returning();
+    return created;
+  }
+
+  async getProjectInvitations(projectId: string): Promise<ProjectInvitation[]> {
+    return db.select().from(projectInvitations)
+      .where(and(eq(projectInvitations.projectId, projectId), eq(projectInvitations.status, "pending")))
+      .orderBy(desc(projectInvitations.createdAt));
+  }
+
+  async getPendingInvitationsByEmail(email: string): Promise<ProjectInvitation[]> {
+    return db.select().from(projectInvitations)
+      .where(and(eq(projectInvitations.email, email.toLowerCase()), eq(projectInvitations.status, "pending")));
+  }
+
+  async deleteProjectInvitation(id: string): Promise<void> {
+    await db.delete(projectInvitations).where(eq(projectInvitations.id, id));
   }
 
   // Dashboard Stats

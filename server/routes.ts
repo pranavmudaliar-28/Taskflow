@@ -52,6 +52,37 @@ export async function registerRoutes(
         lastName: data.lastName,
       });
 
+      // Process any pending invitations for this email
+      try {
+        const normalizedEmail = data.email.trim().toLowerCase();
+        const pendingInvites = await storage.getPendingInvitationsByEmail(normalizedEmail);
+        for (const invite of pendingInvites) {
+          const alreadyMember = await storage.isUserInOrganization(user.id, invite.organizationId);
+          if (!alreadyMember) {
+            await storage.addOrganizationMember({
+              organizationId: invite.organizationId,
+              userId: user.id,
+              role: "member",
+            });
+          }
+          await storage.addProjectMember({
+            projectId: invite.projectId,
+            userId: user.id,
+            role: "member",
+          });
+          await storage.createNotification({
+            userId: user.id,
+            type: "added_to_project",
+            title: "Added to project",
+            message: `You have been added to a project via invitation`,
+            relatedProjectId: invite.projectId,
+          });
+          await storage.deleteProjectInvitation(invite.id);
+        }
+      } catch (inviteError) {
+        console.error("Error processing pending invitations:", inviteError);
+      }
+
       // Create session manually
       (req as any).login({ id: user.id, claims: { sub: user.id } }, (err: any) => {
         if (err) {
@@ -270,6 +301,96 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/projects/:id/invite", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const projectId = req.params.id;
+      const { email } = req.body;
+
+      if (!email || !email.includes("@")) {
+        return res.status(400).json({ message: "Valid email is required" });
+      }
+
+      const hasAccess = await storage.isUserInProject(userId, projectId);
+      if (!hasAccess) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const project = await storage.getProject(projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      const normalizedEmail = email.trim().toLowerCase();
+
+      const existingUser = await storage.getUserByEmail(normalizedEmail);
+      if (existingUser) {
+        const alreadyMember = await storage.isUserInOrganization(existingUser.id, project.organizationId);
+        if (alreadyMember) {
+          return res.status(400).json({ message: "This user is already a member" });
+        }
+
+        await storage.addOrganizationMember({
+          organizationId: project.organizationId,
+          userId: existingUser.id,
+          role: "member",
+        });
+
+        await storage.addProjectMember({
+          projectId,
+          userId: existingUser.id,
+          role: "member",
+        });
+
+        await storage.createNotification({
+          userId: existingUser.id,
+          type: "added_to_project",
+          title: "Added to project",
+          message: `You have been added to the project "${project.name}"`,
+          relatedProjectId: projectId,
+        });
+
+        res.json({ status: "added", user: { id: existingUser.id, email: existingUser.email, firstName: existingUser.firstName, lastName: existingUser.lastName } });
+      } else {
+        const existingInvites = await storage.getProjectInvitations(projectId);
+        if (existingInvites.some(i => i.email === normalizedEmail)) {
+          return res.status(400).json({ message: "Invitation already sent to this email" });
+        }
+
+        await storage.createProjectInvitation({
+          projectId,
+          organizationId: project.organizationId,
+          email: normalizedEmail,
+          invitedBy: userId,
+          status: "pending",
+        });
+
+        res.json({ status: "invited", email: normalizedEmail });
+      }
+    } catch (error) {
+      console.error("Error inviting member:", error);
+      res.status(500).json({ message: "Failed to invite member" });
+    }
+  });
+
+  app.get("/api/projects/:id/invitations", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const projectId = req.params.id;
+
+      const hasAccess = await storage.isUserInProject(userId, projectId);
+      if (!hasAccess) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const invitations = await storage.getProjectInvitations(projectId);
+      res.json(invitations);
+    } catch (error) {
+      console.error("Error fetching invitations:", error);
+      res.status(500).json({ message: "Failed to fetch invitations" });
+    }
+  });
+
   // === Tasks ===
   app.get("/api/tasks", isAuthenticated, async (req, res) => {
     try {
@@ -483,10 +604,10 @@ export async function registerRoutes(
         return res.status(403).json({ message: "Access denied to task" });
       }
 
-      // Check if there's already an active timer
+      // Auto-stop existing timer if one is running
       const existing = await storage.getActiveTimeLog(userId);
       if (existing) {
-        return res.status(400).json({ message: "You already have an active timer" });
+        await storage.stopTimeLog(existing.id, new Date());
       }
 
       const log = await storage.createTimeLog({
