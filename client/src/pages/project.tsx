@@ -82,11 +82,22 @@ export default function ProjectPage() {
     mutationFn: async ({ taskId, updates }: { taskId: string; updates: Partial<Task> }) => {
       return apiRequest("PATCH", `/api/tasks/${taskId}`, updates);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/projects", id, "tasks"] });
+    onMutate: async ({ taskId, updates }) => {
+      await queryClient.cancelQueries({ queryKey: ["/api/projects", id, "tasks"] });
+      const previousTasks = queryClient.getQueryData<Task[]>(["/api/projects", id, "tasks"]);
+      queryClient.setQueryData<Task[]>(["/api/projects", id, "tasks"], (old) =>
+        old?.map((t) => (t.id === taskId ? { ...t, ...updates } : t)) ?? []
+      );
+      return { previousTasks };
     },
-    onError: () => {
+    onError: (_err, _vars, context) => {
+      if (context?.previousTasks) {
+        queryClient.setQueryData(["/api/projects", id, "tasks"], context.previousTasks);
+      }
       toast({ title: "Failed to move task", variant: "destructive" });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/projects", id, "tasks"] });
     },
   });
 
