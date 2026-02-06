@@ -1,3 +1,4 @@
+import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -37,12 +38,17 @@ export default function Landing() {
 
             <div className="flex items-center gap-3">
               <ThemeToggle />
-              <Button asChild data-testid="button-login">
-                <a href="/api/login">
+              <Link href="/login">
+                <Button variant="ghost" data-testid="button-signin">
+                  Sign In
+                </Button>
+              </Link>
+              <Link href="/signup">
+                <Button data-testid="button-login">
                   Get Started
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
-              </Button>
+                </Button>
+              </Link>
             </div>
           </div>
         </div>
@@ -69,12 +75,12 @@ export default function Landing() {
               </div>
               
               <div className="flex flex-col sm:flex-row gap-4">
-                <Button size="lg" asChild data-testid="button-get-started">
-                  <a href="/api/login">
+                <Link href="/signup">
+                  <Button size="lg" data-testid="button-get-started">
                     Start for Free
                     <ArrowRight className="ml-2 h-4 w-4" />
-                  </a>
-                </Button>
+                  </Button>
+                </Link>
                 <Button size="lg" variant="outline" asChild data-testid="button-learn-more">
                   <a href="#features">Learn More</a>
                 </Button>
@@ -258,14 +264,15 @@ export default function Landing() {
                       </li>
                     ))}
                   </ul>
-                  <Button 
-                    className="w-full" 
-                    variant={plan.popular ? "default" : "outline"}
-                    asChild
-                    data-testid={`button-plan-${plan.name.toLowerCase()}`}
-                  >
-                    <a href="/api/login">{plan.cta}</a>
-                  </Button>
+                  <Link href="/signup">
+                    <Button 
+                      className="w-full" 
+                      variant={plan.popular ? "default" : "outline"}
+                      data-testid={`button-plan-${plan.name.toLowerCase()}`}
+                    >
+                      {plan.cta}
+                    </Button>
+                  </Link>
                 </CardContent>
               </Card>
             ))}

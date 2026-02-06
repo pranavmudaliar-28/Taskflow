@@ -14,6 +14,7 @@ import {
   SidebarHeader,
   SidebarFooter,
   SidebarSeparator,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import {
   DropdownMenu,
@@ -22,6 +23,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   LayoutDashboard,
   FolderKanban,
@@ -44,6 +50,8 @@ interface AppSidebarProps {
 export function AppSidebar({ projects, onCreateProject }: AppSidebarProps) {
   const [location] = useLocation();
   const { user, logout } = useAuth();
+  const { state } = useSidebar();
+  const isCollapsed = state === "collapsed";
 
   const mainNavItems = [
     {
@@ -82,16 +90,22 @@ export function AppSidebar({ projects, onCreateProject }: AppSidebarProps) {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="p-4">
-        <div className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-md bg-sidebar-primary flex items-center justify-center shrink-0">
-            <Kanban className="h-5 w-5 text-sidebar-primary-foreground" />
-          </div>
-          <div className="flex flex-col">
-            <span className="font-semibold text-sidebar-foreground">TaskFlow Pro</span>
-            <span className="text-xs text-sidebar-foreground/60">Project Management</span>
-          </div>
-        </div>
+      <SidebarHeader className="p-3">
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton size="lg" asChild>
+              <Link href="/dashboard">
+                <div className="h-8 w-8 rounded-md bg-sidebar-primary flex items-center justify-center shrink-0">
+                  <Kanban className="h-4 w-4 text-sidebar-primary-foreground" />
+                </div>
+                <div className="flex flex-col leading-tight">
+                  <span className="font-semibold text-sm">TaskFlow Pro</span>
+                  <span className="text-xs text-sidebar-foreground/60">Project Management</span>
+                </div>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
       </SidebarHeader>
 
       <SidebarSeparator />
@@ -105,10 +119,11 @@ export function AppSidebar({ projects, onCreateProject }: AppSidebarProps) {
                   <SidebarMenuButton
                     asChild
                     isActive={location === item.url}
-                    data-testid={`nav-${item.title.toLowerCase().replace(" ", "-")}`}
+                    tooltip={item.title}
+                    data-testid={`nav-${item.title.toLowerCase().replace(/\s+/g, "-")}`}
                   >
                     <Link href={item.url}>
-                      <item.icon className="h-4 w-4" />
+                      <item.icon />
                       <span>{item.title}</span>
                     </Link>
                   </SidebarMenuButton>
@@ -121,21 +136,39 @@ export function AppSidebar({ projects, onCreateProject }: AppSidebarProps) {
         <SidebarSeparator />
 
         <SidebarGroup>
-          <SidebarGroupLabel className="flex items-center justify-between">
+          <SidebarGroupLabel>
             <span>Projects</span>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-5 w-5"
-              onClick={onCreateProject}
-              data-testid="button-create-project"
-            >
-              <Plus className="h-3 w-3" />
-            </Button>
+            {!isCollapsed && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={onCreateProject}
+                    data-testid="button-create-project"
+                    className="ml-auto"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right">New Project</TooltipContent>
+              </Tooltip>
+            )}
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {projects.length === 0 ? (
+              {isCollapsed ? (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    tooltip="New Project"
+                    onClick={onCreateProject}
+                    data-testid="button-create-project-collapsed"
+                  >
+                    <Plus />
+                    <span>New Project</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ) : projects.length === 0 ? (
                 <div className="px-3 py-4 text-center">
                   <p className="text-xs text-sidebar-foreground/60 mb-2">No projects yet</p>
                   <Button
@@ -155,10 +188,11 @@ export function AppSidebar({ projects, onCreateProject }: AppSidebarProps) {
                     <SidebarMenuButton
                       asChild
                       isActive={location === `/projects/${project.id}`}
+                      tooltip={project.name}
                       data-testid={`nav-project-${project.id}`}
                     >
                       <Link href={`/projects/${project.id}`}>
-                        <FolderKanban className="h-4 w-4" />
+                        <FolderKanban />
                         <span className="truncate">{project.name}</span>
                       </Link>
                     </SidebarMenuButton>
@@ -177,10 +211,9 @@ export function AppSidebar({ projects, onCreateProject }: AppSidebarProps) {
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton
                   size="lg"
-                  className="w-full"
                   data-testid="button-user-menu"
                 >
-                  <Avatar className="h-8 w-8">
+                  <Avatar className="h-6 w-6 shrink-0">
                     <AvatarImage src={user?.profileImageUrl || undefined} alt={getUserDisplayName()} />
                     <AvatarFallback className="bg-sidebar-primary text-sidebar-primary-foreground text-xs">
                       {getUserInitials()}

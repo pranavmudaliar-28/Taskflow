@@ -1,5 +1,6 @@
 import { db } from "./db";
-import { projects, tasks, projectMembers } from "@shared/schema";
+import { projects, tasks, projectMembers, users } from "@shared/schema";
+import { eq } from "drizzle-orm";
 import { storage } from "./storage";
 
 export async function seedDatabase(userId: string) {
@@ -7,10 +8,10 @@ export async function seedDatabase(userId: string) {
     // Initialize user's workspace (creates org if needed)
     const org = await storage.initializeUserWorkspace(userId);
     
-    // Check if user already has projects
-    const existingProjects = await storage.getProjectsByUser(userId);
-    if (existingProjects.length > 0) {
-      return; // User already has data, skip seeding
+    // Check if user has already been seeded (prevents re-seeding after deletion)
+    const user = await storage.getUser(userId);
+    if (user?.seeded) {
+      return;
     }
 
     console.log(`Seeding database for user ${userId}...`);
@@ -160,6 +161,9 @@ export async function seedDatabase(userId: string) {
     ];
 
     await db.insert(tasks).values([...websiteTasks, ...mobileTasks, ...marketingTasks]);
+
+    // Mark user as seeded so we don't re-seed after they delete everything
+    await db.update(users).set({ seeded: true }).where(eq(users.id, userId));
 
     console.log(`Seed data created successfully for user ${userId}!`);
   } catch (error) {

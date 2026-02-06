@@ -25,6 +25,8 @@ import {
 import type { Project, Notification } from "@shared/schema";
 
 import Landing from "@/pages/landing";
+import Login from "@/pages/login";
+import Signup from "@/pages/signup";
 import Dashboard from "@/pages/dashboard";
 import ProjectPage from "@/pages/project";
 import TimeTracking from "@/pages/time-tracking";
@@ -188,6 +190,8 @@ function AppRouter() {
     return (
       <Switch>
         <Route path="/" component={Landing} />
+        <Route path="/login" component={Login} />
+        <Route path="/signup" component={Signup} />
         <Route component={Landing} />
       </Switch>
     );

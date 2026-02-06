@@ -17,6 +17,7 @@ import { eq, and, desc, isNull, sql, inArray } from "drizzle-orm";
 export interface IStorage {
   // Users
   getUser(id: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
   getUsersByIds(ids: string[]): Promise<User[]>;
   
   // Organizations
@@ -87,6 +88,11 @@ export class DatabaseStorage implements IStorage {
   // Users
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
     return user || undefined;
   }
 

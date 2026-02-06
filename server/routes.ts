@@ -2,9 +2,11 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated, registerAuthRoutes } from "./replit_integrations/auth";
+import { authStorage } from "./replit_integrations/auth/storage";
 import { insertProjectSchema, insertTaskSchema, insertCommentSchema } from "@shared/schema";
 import { seedDatabase } from "./seed";
 import { z } from "zod";
+import bcrypt from "bcryptjs";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -16,8 +18,95 @@ export async function registerRoutes(
 
   // Helper to get user ID from request
   const getUserId = (req: any): string => {
-    return req.user?.claims?.sub;
+    return req.user?.claims?.sub || req.user?.id;
   };
+
+  // === Custom Auth Routes ===
+  const registerSchema = z.object({
+    email: z.string().email(),
+    password: z.string().min(6),
+    firstName: z.string().min(1),
+    lastName: z.string().min(1),
+  });
+
+  const loginSchema = z.object({
+    email: z.string().email(),
+    password: z.string().min(1),
+  });
+
+  app.post("/api/auth/register", async (req, res) => {
+    try {
+      const data = registerSchema.parse(req.body);
+      
+      const existingUser = await storage.getUserByEmail(data.email);
+      if (existingUser) {
+        return res.status(400).json({ message: "An account with this email already exists" });
+      }
+
+      const hashedPassword = await bcrypt.hash(data.password, 10);
+      
+      const user = await authStorage.upsertUser({
+        email: data.email,
+        password: hashedPassword,
+        firstName: data.firstName,
+        lastName: data.lastName,
+      });
+
+      // Create session manually
+      (req as any).login({ id: user.id, claims: { sub: user.id } }, (err: any) => {
+        if (err) {
+          return res.status(500).json({ message: "Failed to create session" });
+        }
+        const { password: _, ...safeUser } = user;
+        res.json(safeUser);
+      });
+    } catch (error: any) {
+      if (error?.issues) {
+        return res.status(400).json({ message: "Please check your input", errors: error.issues });
+      }
+      console.error("Registration error:", error);
+      res.status(500).json({ message: "Registration failed" });
+    }
+  });
+
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const data = loginSchema.parse(req.body);
+      
+      const user = await storage.getUserByEmail(data.email);
+      if (!user || !user.password) {
+        return res.status(401).json({ message: "Invalid email or password" });
+      }
+
+      const isValid = await bcrypt.compare(data.password, user.password);
+      if (!isValid) {
+        return res.status(401).json({ message: "Invalid email or password" });
+      }
+
+      // Create session manually
+      (req as any).login({ id: user.id, claims: { sub: user.id } }, (err: any) => {
+        if (err) {
+          return res.status(500).json({ message: "Failed to create session" });
+        }
+        const { password: _, ...safeUser } = user;
+        res.json(safeUser);
+      });
+    } catch (error: any) {
+      if (error?.issues) {
+        return res.status(400).json({ message: "Please check your input", errors: error.issues });
+      }
+      console.error("Login error:", error);
+      res.status(500).json({ message: "Login failed" });
+    }
+  });
+
+  app.post("/api/auth/logout", (req, res) => {
+    req.logout(() => {
+      req.session.destroy(() => {
+        res.json({ message: "Logged out" });
+      });
+    });
+  });
 
   // === Dashboard ===
   app.get("/api/dashboard/stats", isAuthenticated, async (req, res) => {
