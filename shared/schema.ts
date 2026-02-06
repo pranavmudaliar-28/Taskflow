@@ -67,6 +67,7 @@ export const projectMembers = pgTable("project_members", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   projectId: varchar("project_id").notNull(),
   userId: varchar("user_id").notNull(),
+  role: roleEnum("role").notNull().default("member"),
   addedAt: timestamp("added_at").defaultNow(),
 });
 
@@ -159,6 +160,7 @@ export const projectInvitations = pgTable("project_invitations", {
   projectId: varchar("project_id").notNull(),
   organizationId: varchar("organization_id").notNull(),
   email: text("email").notNull(),
+  role: roleEnum("role").notNull().default("member"),
   invitedBy: varchar("invited_by").notNull(),
   status: text("status").notNull().default("pending"),
   createdAt: timestamp("created_at").defaultNow(),

@@ -68,6 +68,7 @@ export async function registerRoutes(
           await storage.addProjectMember({
             projectId: invite.projectId,
             userId: user.id,
+            role: invite.role || "member",
           });
           await storage.createNotification({
             userId: user.id,
@@ -297,8 +298,7 @@ export async function registerRoutes(
       }
       
       const members = await storage.getProjectMembers(projectId);
-      const safeMembers = members.map(({ password, ...rest }) => rest);
-      res.json(safeMembers);
+      res.json(members);
     } catch (error) {
       console.error("Error fetching project members:", error);
       res.status(500).json({ message: "Failed to fetch members" });
@@ -309,7 +309,8 @@ export async function registerRoutes(
     try {
       const userId = getUserId(req);
       const projectId = req.params.id;
-      const { email } = req.body;
+      const { email, role } = req.body;
+      const memberRole = (role === "admin" || role === "team_lead") ? role : "member";
 
       if (!email || !email.includes("@")) {
         return res.status(400).json({ message: "Valid email is required" });
@@ -346,6 +347,7 @@ export async function registerRoutes(
         await storage.addProjectMember({
           projectId,
           userId: existingUser.id,
+          role: memberRole,
         });
 
         await storage.createNotification({
@@ -367,6 +369,7 @@ export async function registerRoutes(
           projectId,
           organizationId: project.organizationId,
           email: normalizedEmail,
+          role: memberRole,
           invitedBy: userId,
           status: "pending",
         });
@@ -376,6 +379,30 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error inviting member:", error);
       res.status(500).json({ message: "Failed to invite member" });
+    }
+  });
+
+  app.patch("/api/projects/:id/members/:memberId/role", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const projectId = req.params.id;
+      const memberId = req.params.memberId;
+      const { role } = req.body;
+
+      if (!role || !["admin", "team_lead", "member"].includes(role)) {
+        return res.status(400).json({ message: "Valid role is required (admin, team_lead, member)" });
+      }
+
+      const callerRole = await storage.getProjectMemberRole(userId, projectId);
+      if (callerRole !== "admin") {
+        return res.status(403).json({ message: "Only admins can change member roles" });
+      }
+
+      await storage.updateProjectMemberRole(memberId, projectId, role);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error updating member role:", error);
+      res.status(500).json({ message: "Failed to update role" });
     }
   });
 

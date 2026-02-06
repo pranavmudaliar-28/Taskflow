@@ -15,6 +15,15 @@ import { users, type User, type UpsertUser } from "@shared/models/auth";
 import { db } from "./db";
 import { eq, and, desc, isNull, sql, inArray } from "drizzle-orm";
 
+export type ProjectMemberWithUser = {
+  id: string;
+  projectId: string;
+  userId: string;
+  role: string;
+  addedAt: Date | null;
+  user: Omit<User, 'password'>;
+};
+
 export interface IStorage {
   // Users
   getUser(id: string): Promise<User | undefined>;
@@ -40,7 +49,9 @@ export interface IStorage {
   updateProject(id: string, updates: Partial<Project>): Promise<Project | undefined>;
   deleteProject(id: string): Promise<void>;
   addProjectMember(member: InsertProjectMember): Promise<ProjectMember>;
-  getProjectMembers(projectId: string): Promise<User[]>;
+  getProjectMembers(projectId: string): Promise<ProjectMemberWithUser[]>;
+  getProjectMemberRole(userId: string, projectId: string): Promise<string | null>;
+  updateProjectMemberRole(userId: string, projectId: string, role: string): Promise<void>;
   isUserInProject(userId: string, projectId: string): Promise<boolean>;
   isUserProjectMember(userId: string, projectId: string): Promise<boolean>;
   
@@ -240,12 +251,44 @@ export class DatabaseStorage implements IStorage {
     return !!row;
   }
 
-  async getProjectMembers(projectId: string): Promise<User[]> {
+  async getProjectMembers(projectId: string): Promise<ProjectMemberWithUser[]> {
     const members = await db.select().from(projectMembers)
       .where(eq(projectMembers.projectId, projectId));
     if (members.length === 0) return [];
     const userIds = members.map(m => m.userId);
-    return this.getUsersByIds(userIds);
+    const usersList = await this.getUsersByIds(userIds);
+    const usersMap = new Map(usersList.map(u => [u.id, u]));
+    return members.map(m => {
+      const u = usersMap.get(m.userId);
+      if (!u) return null;
+      const { password, ...userWithoutPassword } = u as any;
+      return {
+        id: m.id,
+        projectId: m.projectId,
+        userId: m.userId,
+        role: m.role,
+        addedAt: m.addedAt,
+        user: userWithoutPassword,
+      };
+    }).filter(Boolean) as ProjectMemberWithUser[];
+  }
+
+  async getProjectMemberRole(userId: string, projectId: string): Promise<string | null> {
+    const [row] = await db.select().from(projectMembers)
+      .where(and(
+        eq(projectMembers.projectId, projectId),
+        eq(projectMembers.userId, userId),
+      ));
+    return row?.role || null;
+  }
+
+  async updateProjectMemberRole(userId: string, projectId: string, role: string): Promise<void> {
+    await db.update(projectMembers)
+      .set({ role: role as any })
+      .where(and(
+        eq(projectMembers.projectId, projectId),
+        eq(projectMembers.userId, userId),
+      ));
   }
 
   // Tasks

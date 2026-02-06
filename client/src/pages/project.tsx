@@ -21,8 +21,17 @@ import {
   Users
 } from "lucide-react";
 import { TASK_STATUSES } from "@/lib/constants";
-import type { Task, Project } from "@shared/schema";
+import type { Task, Project, Role } from "@shared/schema";
 import type { User } from "@shared/models/auth";
+
+type ProjectMemberWithUser = {
+  id: string;
+  projectId: string;
+  userId: string;
+  role: Role;
+  addedAt: string | null;
+  user: Omit<User, 'password'>;
+};
 
 export default function ProjectPage() {
   const { id } = useParams<{ id: string }>();
@@ -44,15 +53,17 @@ export default function ProjectPage() {
     queryKey: ["/api/projects", id, "tasks"],
   });
 
-  const { data: members, isLoading: membersLoading } = useQuery<User[]>({
+  const { data: memberData, isLoading: membersLoading } = useQuery<ProjectMemberWithUser[]>({
     queryKey: ["/api/projects", id, "members"],
   });
 
+  const members = useMemo(() => memberData?.map(m => m.user as User) || [], [memberData]);
+
   const usersMap = useMemo(() => {
     const map = new Map<string, User>();
-    members?.forEach((m) => map.set(m.id, m));
+    memberData?.forEach((m) => map.set(m.userId, m.user as User));
     return map;
-  }, [members]);
+  }, [memberData]);
 
   const selectedTask = useMemo(() => {
     if (!selectedTaskId || !tasks) return null;
@@ -288,7 +299,7 @@ export default function ProjectPage() {
         open={showMembers}
         onClose={() => setShowMembers(false)}
         projectId={id}
-        members={members || []}
+        memberData={memberData || []}
       />
 
       <ProjectSettingsDialog
