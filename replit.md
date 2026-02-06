@@ -80,8 +80,28 @@ Preferred communication style: Simple, everyday language.
 - Lucide React for icons
 - date-fns for date formatting
 - Embla Carousel for carousel components
+- @hello-pangea/dnd for Kanban drag-and-drop
 
 ### Development Tools
 - Vite for frontend bundling with HMR
 - ESBuild for production server bundling
 - TypeScript for type safety across the stack
+
+## Recent Changes (Feb 2026)
+
+### Bug Fixes Applied
+1. **Drag & Drop**: Added @hello-pangea/dnd for Kanban column drag-and-drop task reordering
+2. **Task Detail Drawer**: Stores taskId (not full task object) and resolves from query cache for live updates
+3. **Time Tracking**: Fixed apiRequest() Response parsing - must call .json() on mutation results
+4. **Sidebar Collapse**: Uses collapsible="icon" prop for icon-only collapsed mode
+5. **User Profile Menu**: Added dropdown in header with My Account, Settings, Log Out
+6. **Project Members Dialog**: Shows members list with invite-by-email functionality
+7. **Project Settings Dialog**: Edit project name/description/privacy, delete project
+8. **Create Task Assignee**: Added assignee selection dropdown to task creation
+9. **Due Date Fix**: Backend converts ISO date strings to Date objects in PATCH handler
+
+### Technical Notes
+- `apiRequest()` returns a Response object, not parsed JSON. Always call `.json()` in mutation handlers
+- Query keys use array segments: `["/api/projects", id, "tasks"]` which join to form the URL path
+- Active timer uses `refetchInterval: 5000` for real-time updates
+- Sidebar uses `collapsible="icon"` prop (not "offcanvas") for icon-only collapsed state

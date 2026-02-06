@@ -81,7 +81,7 @@ export function AppSidebar({ projects, onCreateProject }: AppSidebarProps) {
   };
 
   return (
-    <Sidebar>
+    <Sidebar collapsible="icon">
       <SidebarHeader className="p-4">
         <div className="flex items-center gap-3">
           <div className="h-9 w-9 rounded-md bg-sidebar-primary flex items-center justify-center shrink-0">

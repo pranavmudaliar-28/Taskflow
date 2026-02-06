@@ -1,13 +1,17 @@
 import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { KanbanColumn } from "@/components/kanban-column";
 import { TaskDetailDrawer } from "@/components/task-detail-drawer";
 import { CreateTaskDialog } from "@/components/create-task-dialog";
+import { ProjectMembersDialog } from "@/components/project-members-dialog";
+import { ProjectSettingsDialog } from "@/components/project-settings-dialog";
 import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { DragDropContext, type DropResult } from "@hello-pangea/dnd";
 import { 
   LayoutGrid, 
   List, 
@@ -22,9 +26,12 @@ import type { User } from "@shared/models/auth";
 
 export default function ProjectPage() {
   const { id } = useParams<{ id: string }>();
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const { toast } = useToast();
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [showTaskDrawer, setShowTaskDrawer] = useState(false);
   const [showCreateTask, setShowCreateTask] = useState(false);
+  const [showMembers, setShowMembers] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [createTaskStatus, setCreateTaskStatus] = useState<string>("todo");
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
@@ -47,6 +54,11 @@ export default function ProjectPage() {
     return map;
   }, [members]);
 
+  const selectedTask = useMemo(() => {
+    if (!selectedTaskId || !tasks) return null;
+    return tasks.find(t => t.id === selectedTaskId) || null;
+  }, [selectedTaskId, tasks]);
+
   const filteredTasks = useMemo(() => {
     if (!tasks) return [];
     if (!searchQuery.trim()) return tasks;
@@ -66,8 +78,32 @@ export default function ProjectPage() {
     return grouped;
   }, [filteredTasks]);
 
+  const updateTaskMutation = useMutation({
+    mutationFn: async ({ taskId, updates }: { taskId: string; updates: Partial<Task> }) => {
+      return apiRequest("PATCH", `/api/tasks/${taskId}`, updates);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/projects", id, "tasks"] });
+    },
+    onError: () => {
+      toast({ title: "Failed to move task", variant: "destructive" });
+    },
+  });
+
+  const handleDragEnd = (result: DropResult) => {
+    const { destination, source, draggableId } = result;
+    if (!destination) return;
+    if (destination.droppableId === source.droppableId && destination.index === source.index) return;
+
+    const newStatus = destination.droppableId;
+    updateTaskMutation.mutate({
+      taskId: draggableId,
+      updates: { status: newStatus as any },
+    });
+  };
+
   const handleTaskClick = (task: Task) => {
-    setSelectedTask(task);
+    setSelectedTaskId(task.id);
     setShowTaskDrawer(true);
   };
 
@@ -98,7 +134,6 @@ export default function ProjectPage() {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
       <div className="p-4 border-b shrink-0">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
@@ -110,11 +145,11 @@ export default function ProjectPage() {
             )}
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" data-testid="button-project-members">
+            <Button variant="outline" size="sm" onClick={() => setShowMembers(true)} data-testid="button-project-members">
               <Users className="h-4 w-4 mr-2" />
               Members
             </Button>
-            <Button variant="outline" size="sm" data-testid="button-project-settings">
+            <Button variant="outline" size="sm" onClick={() => setShowSettings(true)} data-testid="button-project-settings">
               <Settings className="h-4 w-4 mr-2" />
               Settings
             </Button>
@@ -126,7 +161,6 @@ export default function ProjectPage() {
         </div>
       </div>
 
-      {/* Toolbar */}
       <div className="p-4 border-b shrink-0">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="relative flex-1 max-w-sm">
@@ -140,21 +174,26 @@ export default function ProjectPage() {
             />
           </div>
           <div className="flex items-center gap-2">
-            <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "kanban" | "list")}>
-              <TabsList>
-                <TabsTrigger value="kanban" data-testid="tab-kanban-view">
-                  <LayoutGrid className="h-4 w-4" />
-                </TabsTrigger>
-                <TabsTrigger value="list" data-testid="tab-list-view">
-                  <List className="h-4 w-4" />
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+            <Button
+              variant={viewMode === "kanban" ? "default" : "ghost"}
+              size="icon"
+              onClick={() => setViewMode("kanban")}
+              data-testid="tab-kanban-view"
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === "list" ? "default" : "ghost"}
+              size="icon"
+              onClick={() => setViewMode("list")}
+              data-testid="tab-list-view"
+            >
+              <List className="h-4 w-4" />
+            </Button>
           </div>
         </div>
       </div>
 
-      {/* Content */}
       <div className="flex-1 overflow-hidden">
         {tasksLoading ? (
           <div className="p-4">
@@ -169,22 +208,24 @@ export default function ProjectPage() {
             </div>
           </div>
         ) : viewMode === "kanban" ? (
-          <div className="h-full p-4 kanban-scroll">
-            <div className="flex gap-4 h-full">
-              {TASK_STATUSES.map((status) => (
-                <KanbanColumn
-                  key={status.id}
-                  id={status.id}
-                  title={status.label}
-                  color={status.color}
-                  tasks={tasksByStatus[status.id] || []}
-                  users={usersMap}
-                  onTaskClick={handleTaskClick}
-                  onAddTask={() => handleAddTask(status.id)}
-                />
-              ))}
+          <DragDropContext onDragEnd={handleDragEnd}>
+            <div className="h-full p-4 overflow-x-auto">
+              <div className="flex gap-4 h-full">
+                {TASK_STATUSES.map((status) => (
+                  <KanbanColumn
+                    key={status.id}
+                    id={status.id}
+                    title={status.label}
+                    color={status.color}
+                    tasks={tasksByStatus[status.id] || []}
+                    users={usersMap}
+                    onTaskClick={handleTaskClick}
+                    onAddTask={() => handleAddTask(status.id)}
+                  />
+                ))}
+              </div>
             </div>
-          </div>
+          </DragDropContext>
         ) : (
           <div className="p-4 space-y-2">
             {filteredTasks.length === 0 ? (
@@ -213,24 +254,36 @@ export default function ProjectPage() {
         )}
       </div>
 
-      {/* Task Detail Drawer */}
       <TaskDetailDrawer
         task={selectedTask}
         open={showTaskDrawer}
         onClose={() => {
           setShowTaskDrawer(false);
-          setSelectedTask(null);
+          setSelectedTaskId(null);
         }}
         projectId={id}
         members={members || []}
       />
 
-      {/* Create Task Dialog */}
       <CreateTaskDialog
         open={showCreateTask}
         onClose={() => setShowCreateTask(false)}
         projectId={id}
         initialStatus={createTaskStatus}
+        members={members || []}
+      />
+
+      <ProjectMembersDialog
+        open={showMembers}
+        onClose={() => setShowMembers(false)}
+        projectId={id}
+        members={members || []}
+      />
+
+      <ProjectSettingsDialog
+        open={showSettings}
+        onClose={() => setShowSettings(false)}
+        project={project}
       />
     </div>
   );

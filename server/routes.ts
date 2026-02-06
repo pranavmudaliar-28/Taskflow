@@ -261,7 +261,13 @@ export async function registerRoutes(
         return res.status(403).json({ message: "Access denied" });
       }
       
-      const task = await storage.updateTask(taskId, req.body);
+      // Convert date strings to Date objects for timestamp fields
+      const updates = { ...req.body };
+      if (updates.dueDate !== undefined) {
+        updates.dueDate = updates.dueDate ? new Date(updates.dueDate) : null;
+      }
+      
+      const task = await storage.updateTask(taskId, updates);
       if (!task) {
         return res.status(404).json({ message: "Task not found" });
       }

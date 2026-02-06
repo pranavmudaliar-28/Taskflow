@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,14 +20,13 @@ import {
   MessageSquare, 
   User, 
   Trash2,
-  X,
   Send,
   Play,
   Square
 } from "lucide-react";
 import { TASK_STATUSES, TASK_PRIORITIES } from "@/lib/constants";
 import { format } from "date-fns";
-import type { Task, Comment } from "@shared/schema";
+import type { Task, Comment, TimeLog } from "@shared/schema";
 import type { User as UserType } from "@shared/models/auth";
 
 interface TaskDetailDrawerProps {
@@ -42,15 +41,21 @@ export function TaskDetailDrawer({ task, open, onClose, projectId, members }: Ta
   const { user } = useAuth();
   const { toast } = useToast();
   const [newComment, setNewComment] = useState("");
-  const [isTracking, setIsTracking] = useState(false);
 
   const { data: comments, isLoading: commentsLoading } = useQuery<Comment[]>({
     queryKey: ["/api/tasks", task?.id, "comments"],
-    enabled: !!task?.id,
+    enabled: !!task?.id && open,
   });
 
+  const { data: activeLog } = useQuery<TimeLog | null>({
+    queryKey: ["/api/timelogs/active"],
+    enabled: open,
+  });
+
+  const isTrackingThisTask = activeLog && !activeLog.endTime && activeLog.taskId === task?.id;
+
   const updateTaskMutation = useMutation({
-    mutationFn: async (updates: Partial<Task>) => {
+    mutationFn: async (updates: Record<string, any>) => {
       return apiRequest("PATCH", `/api/tasks/${task?.id}`, updates);
     },
     onSuccess: () => {
@@ -97,21 +102,21 @@ export function TaskDetailDrawer({ task, open, onClose, projectId, members }: Ta
       return apiRequest("POST", "/api/timelogs/start", { taskId: task?.id });
     },
     onSuccess: () => {
-      setIsTracking(true);
+      queryClient.invalidateQueries({ queryKey: ["/api/timelogs/active"] });
       queryClient.invalidateQueries({ queryKey: ["/api/timelogs"] });
       toast({ title: "Timer started" });
     },
-    onError: () => {
-      toast({ title: "Failed to start timer", variant: "destructive" });
+    onError: (error: any) => {
+      toast({ title: error?.message || "Failed to start timer", variant: "destructive" });
     },
   });
 
   const stopTimerMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest("POST", "/api/timelogs/stop", { taskId: task?.id });
+      return apiRequest("POST", "/api/timelogs/stop");
     },
     onSuccess: () => {
-      setIsTracking(false);
+      queryClient.invalidateQueries({ queryKey: ["/api/timelogs/active"] });
       queryClient.invalidateQueries({ queryKey: ["/api/timelogs"] });
       toast({ title: "Timer stopped" });
     },
@@ -121,14 +126,6 @@ export function TaskDetailDrawer({ task, open, onClose, projectId, members }: Ta
   });
 
   if (!task) return null;
-
-  const getStatusClass = (status: string) => {
-    return `status-${status.replace("_", "-")}`;
-  };
-
-  const getPriorityClass = (priority: string) => {
-    return `priority-${priority}`;
-  };
 
   const getInitials = (member: UserType) => {
     if (member.firstName && member.lastName) {
@@ -161,13 +158,12 @@ export function TaskDetailDrawer({ task, open, onClose, projectId, members }: Ta
 
         <ScrollArea className="flex-1">
           <div className="p-4 space-y-6">
-            {/* Status & Priority */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-muted-foreground">Status</label>
                 <Select
                   value={task.status}
-                  onValueChange={(value) => updateTaskMutation.mutate({ status: value as any })}
+                  onValueChange={(value) => updateTaskMutation.mutate({ status: value })}
                 >
                   <SelectTrigger data-testid="select-status">
                     <SelectValue />
@@ -189,7 +185,7 @@ export function TaskDetailDrawer({ task, open, onClose, projectId, members }: Ta
                 <label className="text-sm font-medium text-muted-foreground">Priority</label>
                 <Select
                   value={task.priority}
-                  onValueChange={(value) => updateTaskMutation.mutate({ priority: value as any })}
+                  onValueChange={(value) => updateTaskMutation.mutate({ priority: value })}
                 >
                   <SelectTrigger data-testid="select-priority">
                     <SelectValue />
@@ -208,19 +204,21 @@ export function TaskDetailDrawer({ task, open, onClose, projectId, members }: Ta
               </div>
             </div>
 
-            {/* Description */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-muted-foreground">Description</label>
               <Textarea
-                value={task.description || ""}
-                onChange={(e) => updateTaskMutation.mutate({ description: e.target.value })}
+                defaultValue={task.description || ""}
+                onBlur={(e) => {
+                  if (e.target.value !== (task.description || "")) {
+                    updateTaskMutation.mutate({ description: e.target.value });
+                  }
+                }}
                 placeholder="Add a description..."
                 className="min-h-[100px] resize-none"
                 data-testid="input-description"
               />
             </div>
 
-            {/* Assignee */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-muted-foreground">Assignee</label>
               <Select
@@ -252,7 +250,6 @@ export function TaskDetailDrawer({ task, open, onClose, projectId, members }: Ta
               </Select>
             </div>
 
-            {/* Due Date */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-muted-foreground">Due Date</label>
               <Popover>
@@ -266,18 +263,19 @@ export function TaskDetailDrawer({ task, open, onClose, projectId, members }: Ta
                   <Calendar
                     mode="single"
                     selected={task.dueDate ? new Date(task.dueDate) : undefined}
-                    onSelect={(date) => updateTaskMutation.mutate({ dueDate: date?.toISOString() })}
+                    onSelect={(date) => {
+                      updateTaskMutation.mutate({ dueDate: date ? date.toISOString() : null });
+                    }}
                     initialFocus
                   />
                 </PopoverContent>
               </Popover>
             </div>
 
-            {/* Time Tracking */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-muted-foreground">Time Tracking</label>
               <div className="flex gap-2">
-                {isTracking ? (
+                {isTrackingThisTask ? (
                   <Button
                     variant="outline"
                     className="flex-1"
@@ -305,7 +303,6 @@ export function TaskDetailDrawer({ task, open, onClose, projectId, members }: Ta
 
             <Separator />
 
-            {/* Comments */}
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <MessageSquare className="h-4 w-4" />
@@ -313,7 +310,6 @@ export function TaskDetailDrawer({ task, open, onClose, projectId, members }: Ta
                 <Badge variant="secondary" className="text-xs">{comments?.length || 0}</Badge>
               </div>
 
-              {/* Comment Input */}
               <div className="flex gap-2">
                 <Input
                   value={newComment}
@@ -332,7 +328,6 @@ export function TaskDetailDrawer({ task, open, onClose, projectId, members }: Ta
                 </Button>
               </div>
 
-              {/* Comments List */}
               <div className="space-y-3">
                 {commentsLoading ? (
                   <p className="text-sm text-muted-foreground text-center py-4">Loading comments...</p>
@@ -369,7 +364,6 @@ export function TaskDetailDrawer({ task, open, onClose, projectId, members }: Ta
           </div>
         </ScrollArea>
 
-        {/* Footer Actions */}
         <div className="p-4 border-t shrink-0">
           <Button
             variant="outline"

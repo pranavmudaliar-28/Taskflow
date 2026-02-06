@@ -5,24 +5,29 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { TASK_PRIORITIES, TASK_STATUSES } from "@/lib/constants";
+import { User } from "lucide-react";
+import type { User as UserType } from "@shared/models/auth";
 
 interface CreateTaskDialogProps {
   open: boolean;
   onClose: () => void;
   projectId: string;
   initialStatus?: string;
+  members?: UserType[];
 }
 
-export function CreateTaskDialog({ open, onClose, projectId, initialStatus = "todo" }: CreateTaskDialogProps) {
+export function CreateTaskDialog({ open, onClose, projectId, initialStatus = "todo", members = [] }: CreateTaskDialogProps) {
   const { toast } = useToast();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<string>("medium");
   const [status, setStatus] = useState<string>(initialStatus);
+  const [assigneeId, setAssigneeId] = useState<string>("unassigned");
 
   const createTaskMutation = useMutation({
     mutationFn: async () => {
@@ -32,6 +37,7 @@ export function CreateTaskDialog({ open, onClose, projectId, initialStatus = "to
         projectId,
         priority,
         status,
+        assigneeId: assigneeId === "unassigned" ? undefined : assigneeId,
       });
     },
     onSuccess: () => {
@@ -51,6 +57,7 @@ export function CreateTaskDialog({ open, onClose, projectId, initialStatus = "to
     setDescription("");
     setPriority("medium");
     setStatus("todo");
+    setAssigneeId("unassigned");
     onClose();
   };
 
@@ -58,6 +65,20 @@ export function CreateTaskDialog({ open, onClose, projectId, initialStatus = "to
     e.preventDefault();
     if (!title.trim()) return;
     createTaskMutation.mutate();
+  };
+
+  const getInitials = (member: UserType) => {
+    if (member.firstName && member.lastName) {
+      return `${member.firstName[0]}${member.lastName[0]}`.toUpperCase();
+    }
+    return member.email?.[0].toUpperCase() || "?";
+  };
+
+  const getMemberName = (member: UserType) => {
+    if (member.firstName && member.lastName) {
+      return `${member.firstName} ${member.lastName}`;
+    }
+    return member.email || "Unknown";
   };
 
   return (
@@ -132,6 +153,34 @@ export function CreateTaskDialog({ open, onClose, projectId, initialStatus = "to
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Assignee</Label>
+              <Select value={assigneeId} onValueChange={setAssigneeId}>
+                <SelectTrigger data-testid="select-task-assignee">
+                  <SelectValue placeholder="Select assignee" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unassigned">
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4" />
+                      Unassigned
+                    </div>
+                  </SelectItem>
+                  {members.map((member) => (
+                    <SelectItem key={member.id} value={member.id}>
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-5 w-5">
+                          <AvatarImage src={member.profileImageUrl || undefined} />
+                          <AvatarFallback className="text-[10px]">{getInitials(member)}</AvatarFallback>
+                        </Avatar>
+                        {getMemberName(member)}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
