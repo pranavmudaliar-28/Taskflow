@@ -68,7 +68,6 @@ export async function registerRoutes(
           await storage.addProjectMember({
             projectId: invite.projectId,
             userId: user.id,
-            role: "member",
           });
           await storage.createNotification({
             userId: user.id,
@@ -212,6 +211,10 @@ export async function registerRoutes(
       });
       
       const project = await storage.createProject(validated);
+      await storage.addProjectMember({
+        projectId: project.id,
+        userId,
+      });
       res.status(201).json(project);
     } catch (error) {
       console.error("Error creating project:", error);
@@ -294,7 +297,8 @@ export async function registerRoutes(
       }
       
       const members = await storage.getProjectMembers(projectId);
-      res.json(members);
+      const safeMembers = members.map(({ password, ...rest }) => rest);
+      res.json(safeMembers);
     } catch (error) {
       console.error("Error fetching project members:", error);
       res.status(500).json({ message: "Failed to fetch members" });
@@ -325,21 +329,23 @@ export async function registerRoutes(
 
       const existingUser = await storage.getUserByEmail(normalizedEmail);
       if (existingUser) {
-        const alreadyMember = await storage.isUserInOrganization(existingUser.id, project.organizationId);
-        if (alreadyMember) {
-          return res.status(400).json({ message: "This user is already a member" });
+        const alreadyProjectMember = await storage.isUserProjectMember(existingUser.id, projectId);
+        if (alreadyProjectMember) {
+          return res.status(400).json({ message: "This user is already a member of this project" });
         }
 
-        await storage.addOrganizationMember({
-          organizationId: project.organizationId,
-          userId: existingUser.id,
-          role: "member",
-        });
+        const alreadyInOrg = await storage.isUserInOrganization(existingUser.id, project.organizationId);
+        if (!alreadyInOrg) {
+          await storage.addOrganizationMember({
+            organizationId: project.organizationId,
+            userId: existingUser.id,
+            role: "member",
+          });
+        }
 
         await storage.addProjectMember({
           projectId,
           userId: existingUser.id,
-          role: "member",
         });
 
         await storage.createNotification({

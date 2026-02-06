@@ -42,6 +42,7 @@ export interface IStorage {
   addProjectMember(member: InsertProjectMember): Promise<ProjectMember>;
   getProjectMembers(projectId: string): Promise<User[]>;
   isUserInProject(userId: string, projectId: string): Promise<boolean>;
+  isUserProjectMember(userId: string, projectId: string): Promise<boolean>;
   
   // Tasks
   createTask(task: InsertTask): Promise<Task>;
@@ -201,11 +202,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async isUserInProject(userId: string, projectId: string): Promise<boolean> {
-    const project = await this.getProject(projectId);
-    if (!project) return false;
-    
-    // Check if user is in the project's organization
-    return this.isUserInOrganization(userId, project.organizationId);
+    return this.isUserProjectMember(userId, projectId);
   }
 
   async updateProject(id: string, updates: Partial<Project>): Promise<Project | undefined> {
@@ -224,19 +221,30 @@ export class DatabaseStorage implements IStorage {
   }
 
   async addProjectMember(member: InsertProjectMember): Promise<ProjectMember> {
+    const existing = await db.select().from(projectMembers)
+      .where(and(
+        eq(projectMembers.projectId, member.projectId),
+        eq(projectMembers.userId, member.userId),
+      ));
+    if (existing.length > 0) return existing[0];
     const [created] = await db.insert(projectMembers).values(member).returning();
     return created;
   }
 
+  async isUserProjectMember(userId: string, projectId: string): Promise<boolean> {
+    const [row] = await db.select().from(projectMembers)
+      .where(and(
+        eq(projectMembers.projectId, projectId),
+        eq(projectMembers.userId, userId),
+      ));
+    return !!row;
+  }
+
   async getProjectMembers(projectId: string): Promise<User[]> {
-    // Get all users in the project's organization
-    const project = await this.getProject(projectId);
-    if (!project) return [];
-    
-    const orgMembers = await this.getOrganizationMembers(project.organizationId);
-    if (orgMembers.length === 0) return [];
-    
-    const userIds = orgMembers.map(m => m.userId);
+    const members = await db.select().from(projectMembers)
+      .where(eq(projectMembers.projectId, projectId));
+    if (members.length === 0) return [];
+    const userIds = members.map(m => m.userId);
     return this.getUsersByIds(userIds);
   }
 
