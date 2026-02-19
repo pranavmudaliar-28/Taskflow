@@ -88,7 +88,12 @@ app.use('/api', (req, res, next) => {
   next();
 });
 
+import { connectMongo } from "./db";
+
 (async () => {
+  // Initialize MongoDB connection
+  await connectMongo();
+
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {

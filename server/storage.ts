@@ -22,6 +22,7 @@ import { users, type User, type UpsertUser } from "@shared/models/auth";
 import { db } from "./db";
 import { eq, and, desc, asc, isNull, sql, inArray, ilike, or } from "drizzle-orm";
 import { generateSlug } from "./slug-utils";
+import { MongoStorage } from "./mongodb-storage";
 
 export type ProjectMemberWithUser = {
   id: string;
@@ -159,7 +160,7 @@ export interface IStorage {
 export class DatabaseStorage implements IStorage {
   // Users
   async getUser(id: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
+    const [user] = await db!.select().from(users).where(eq(users.id, id));
     return user || undefined;
   }
 
@@ -956,4 +957,4 @@ export class DatabaseStorage implements IStorage {
   }
 }
 
-export const storage = new DatabaseStorage();
+export const storage = process.env.MONGODB_URI ? new MongoStorage() : new DatabaseStorage();
