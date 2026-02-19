@@ -1,18 +1,31 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Calendar, Clock, MessageSquare } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Calendar, Clock, MessageSquare, Play, Square } from "lucide-react";
 import type { Task } from "@shared/schema";
 import { TASK_PRIORITIES } from "@/lib/constants";
+import { formatDurationShort } from "@/lib/utils"; // We might need to move this util or duplicate it
 
 interface TaskCardProps {
   task: Task;
   assignee?: { id: string; firstName?: string | null; lastName?: string | null; profileImageUrl?: string | null; email?: string | null };
   onClick?: () => void;
   commentCount?: number;
+  isTracking?: boolean;
+  onToggleTimer?: (e: React.MouseEvent) => void;
+  totalDuration?: number;
 }
 
-export function TaskCard({ task, assignee, onClick, commentCount = 0 }: TaskCardProps) {
+export function TaskCard({
+  task,
+  assignee,
+  onClick,
+  commentCount = 0,
+  isTracking = false,
+  onToggleTimer,
+  totalDuration = 0
+}: TaskCardProps) {
   const priority = TASK_PRIORITIES.find(p => p.id === task.priority);
 
   const getPriorityClass = () => {
@@ -36,18 +49,41 @@ export function TaskCard({ task, assignee, onClick, commentCount = 0 }: TaskCard
 
   const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && task.status !== "done";
 
+  // Helper for formatting duration (simple version if utils not available)
+  const formatTime = (seconds: number) => {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    if (h > 0) return `${h}h ${m}m`;
+    return `${m}m`;
+  };
+
   return (
     <Card
-      className="cursor-pointer hover-elevate active-elevate-2 transition-all duration-150"
+      className={`cursor-pointer transition-all duration-150 ${isTracking ? 'ring-2 ring-primary border-primary' : 'hover-elevate active-elevate-2'}`}
       onClick={onClick}
       data-testid={`task-card-${task.id}`}
     >
       <CardContent className="p-3 space-y-3">
         {/* Title */}
         <div className="space-y-1">
-          <p className="font-medium text-sm leading-snug line-clamp-2" data-testid={`task-title-${task.id}`}>
-            {task.title}
-          </p>
+          <div className="flex justify-between items-start gap-2">
+            <p className="font-medium text-sm leading-snug line-clamp-2" data-testid={`task-title-${task.id}`}>
+              {task.title}
+            </p>
+            {onToggleTimer && (
+              <Button
+                size="icon"
+                variant={isTracking ? "destructive" : "ghost"}
+                className={`h-6 w-6 shrink-0 ${isTracking ? '' : 'text-muted-foreground hover:text-primary'}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleTimer(e);
+                }}
+              >
+                {isTracking ? <Square className="h-3 w-3" /> : <Play className="h-3 w-3" />}
+              </Button>
+            )}
+          </div>
           {task.description && (
             <p className="text-xs text-muted-foreground line-clamp-2">
               {task.description}
@@ -55,11 +91,17 @@ export function TaskCard({ task, assignee, onClick, commentCount = 0 }: TaskCard
           )}
         </div>
 
-        {/* Priority Badge */}
-        <div className="flex items-center gap-2 flex-wrap">
+        {/* Priority Badge & Time */}
+        <div className="flex items-center justify-between gap-2 flex-wrap">
           <Badge variant="secondary" className={`text-xs ${getPriorityClass()}`}>
             {priority?.label || task.priority}
           </Badge>
+          {(totalDuration > 0 || isTracking) && (
+            <span className={`text-[10px] font-medium flex items-center gap-1 ${isTracking ? 'text-primary' : 'text-muted-foreground'}`}>
+              <Clock className="h-3 w-3" />
+              {formatTime(totalDuration)}
+            </span>
+          )}
         </div>
 
         {/* Footer */}

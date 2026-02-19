@@ -14,6 +14,8 @@ export default function Signup() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const urlParams = new URLSearchParams(window.location.search);
+  const redirect = urlParams.get("redirect");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
@@ -32,7 +34,7 @@ export default function Signup() {
     },
     onSuccess: (user) => {
       queryClient.setQueryData(["/api/auth/user"], user);
-      setLocation("/dashboard");
+      setLocation(redirect || "/onboarding");
     },
     onError: (error: any) => {
       toast({
@@ -182,7 +184,7 @@ export default function Signup() {
               <p className="text-sm text-muted-foreground">
                 Already have an account?{" "}
                 <Link
-                  href="/login"
+                  href={redirect ? `/login?redirect=${redirect}` : "/login"}
                   className="text-primary hover:underline font-medium"
                   data-testid="link-login"
                 >

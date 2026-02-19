@@ -15,6 +15,9 @@ interface KanbanColumnProps {
   users: Map<string, User>;
   onTaskClick: (task: Task) => void;
   onAddTask: () => void;
+  activeTaskId?: string | null;
+  onToggleTimer?: (taskId: string) => void;
+  taskDurations?: Record<string, number>;
 }
 
 export function KanbanColumn({
@@ -25,6 +28,9 @@ export function KanbanColumn({
   users,
   onTaskClick,
   onAddTask,
+  activeTaskId,
+  onToggleTimer,
+  taskDurations = {},
 }: KanbanColumnProps) {
   return (
     <div className="flex flex-col bg-muted/30 rounded-lg min-w-[280px] max-w-[320px] h-full">
@@ -68,6 +74,9 @@ export function KanbanColumn({
                         task={task}
                         assignee={task.assigneeId ? users.get(task.assigneeId) || undefined : undefined}
                         onClick={() => onTaskClick(task)}
+                        isTracking={activeTaskId === task.id}
+                        onToggleTimer={onToggleTimer ? () => onToggleTimer(task.id) : undefined}
+                        totalDuration={taskDurations[task.id] || 0}
                       />
                     </div>
                   )}

@@ -14,6 +14,8 @@ export default function Login() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const urlParams = new URLSearchParams(window.location.search);
+  const redirect = urlParams.get("redirect");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -24,7 +26,7 @@ export default function Login() {
     },
     onSuccess: (user) => {
       queryClient.setQueryData(["/api/auth/user"], user);
-      setLocation("/dashboard");
+      setLocation(redirect || "/dashboard");
     },
     onError: (error: any) => {
       toast({

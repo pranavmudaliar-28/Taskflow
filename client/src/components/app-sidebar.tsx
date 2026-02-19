@@ -30,7 +30,6 @@ import {
 } from "@/components/ui/tooltip";
 import {
   LayoutDashboard,
-  FolderKanban,
   Clock,
   BarChart3,
   Settings,
@@ -39,8 +38,12 @@ import {
   Plus,
   Bell,
   Kanban,
+  Building2,
+  FolderKanban,
+  ListTodo,
 } from "lucide-react";
 import type { Project } from "@shared/schema";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface AppSidebarProps {
   projects: Project[];
@@ -51,13 +54,19 @@ export function AppSidebar({ projects, onCreateProject }: AppSidebarProps) {
   const [location] = useLocation();
   const { user, logout } = useAuth();
   const { state } = useSidebar();
-  const isCollapsed = state === "collapsed";
+  const isMobile = useIsMobile();
+  const isCollapsed = state === "collapsed" && !isMobile;
 
   const mainNavItems = [
     {
       title: "Dashboard",
       url: "/dashboard",
       icon: LayoutDashboard,
+    },
+    {
+      title: "All Tasks",
+      url: "/tasks",
+      icon: ListTodo,
     },
     {
       title: "Time Tracking",
@@ -68,6 +77,11 @@ export function AppSidebar({ projects, onCreateProject }: AppSidebarProps) {
       title: "Analytics",
       url: "/analytics",
       icon: BarChart3,
+    },
+    {
+      title: "Organization",
+      url: "/organization-settings",
+      icon: Building2,
     },
   ];
 
@@ -98,10 +112,12 @@ export function AppSidebar({ projects, onCreateProject }: AppSidebarProps) {
                 <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary shrink-0">
                   <Kanban className="h-5 w-5 text-primary-foreground" />
                 </div>
-                <div className="flex flex-col gap-0.5 leading-none">
-                  <span className="font-semibold text-sm">TaskFlow Pro</span>
-                  <span className="text-xs text-muted-foreground">Project Management</span>
-                </div>
+                {!isCollapsed && (
+                  <div className="grid flex-1 text-left text-sm leading-tight transition-all duration-200">
+                    <span className="truncate font-semibold">TaskFlow Pro</span>
+                    <span className="truncate text-xs text-muted-foreground">Project Management</span>
+                  </div>
+                )}
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -124,7 +140,7 @@ export function AppSidebar({ projects, onCreateProject }: AppSidebarProps) {
                   >
                     <Link href={item.url}>
                       <item.icon />
-                      <span>{item.title}</span>
+                      {!isCollapsed && <span>{item.title}</span>}
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -137,22 +153,26 @@ export function AppSidebar({ projects, onCreateProject }: AppSidebarProps) {
 
         <SidebarGroup>
           <SidebarGroupLabel>
-            <span>Projects</span>
-            {!isCollapsed && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={onCreateProject}
-                    data-testid="button-create-project"
-                    className="ml-auto"
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="right">New Project</TooltipContent>
-              </Tooltip>
+            {!isCollapsed ? (
+              <>
+                <span>Spaces</span>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={onCreateProject}
+                      data-testid="button-create-project"
+                      className="ml-auto"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">New Space</TooltipContent>
+                </Tooltip>
+              </>
+            ) : (
+              <span className="sr-only">Spaces</span>
             )}
           </SidebarGroupLabel>
           <SidebarGroupContent>
@@ -160,17 +180,17 @@ export function AppSidebar({ projects, onCreateProject }: AppSidebarProps) {
               {isCollapsed ? (
                 <SidebarMenuItem>
                   <SidebarMenuButton
-                    tooltip="New Project"
+                    tooltip="New Space"
                     onClick={onCreateProject}
                     data-testid="button-create-project-collapsed"
                   >
                     <Plus />
-                    <span>New Project</span>
+                    <span className="sr-only">New Space</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ) : projects.length === 0 ? (
                 <div className="px-3 py-4 text-center">
-                  <p className="text-xs text-sidebar-foreground/60 mb-2">No projects yet</p>
+                  <p className="text-xs text-sidebar-foreground/60 mb-2">No spaces yet</p>
                   <Button
                     variant="outline"
                     size="sm"
@@ -179,7 +199,7 @@ export function AppSidebar({ projects, onCreateProject }: AppSidebarProps) {
                     data-testid="button-create-first-project"
                   >
                     <Plus className="h-3 w-3 mr-1" />
-                    Create Project
+                    Create Space
                   </Button>
                 </div>
               ) : (
@@ -187,11 +207,14 @@ export function AppSidebar({ projects, onCreateProject }: AppSidebarProps) {
                   <SidebarMenuItem key={project.id}>
                     <SidebarMenuButton
                       asChild
-                      isActive={location === `/projects/${project.id}`}
+                      isActive={
+                        location === `/projects/${project.slug || project.id}` ||
+                        location === `/projects/${project.id}`
+                      }
                       tooltip={project.name}
                       data-testid={`nav-project-${project.id}`}
                     >
-                      <Link href={`/projects/${project.id}`}>
+                      <Link href={`/projects/${project.slug || project.id}`}>
                         <FolderKanban />
                         <span className="truncate">{project.name}</span>
                       </Link>
@@ -219,11 +242,15 @@ export function AppSidebar({ projects, onCreateProject }: AppSidebarProps) {
                       {getUserInitials()}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="flex flex-col items-start text-left flex-1 min-w-0">
-                    <span className="text-sm font-medium truncate w-full">{getUserDisplayName()}</span>
-                    <span className="text-xs text-sidebar-foreground/60 truncate w-full">{user?.email}</span>
-                  </div>
-                  <ChevronUp className="h-4 w-4 shrink-0" />
+                  {!isCollapsed && (
+                    <>
+                      <div className="grid flex-1 text-left text-sm leading-tight transition-all duration-200">
+                        <span className="truncate font-semibold">{getUserDisplayName()}</span>
+                        <span className="truncate text-xs text-muted-foreground">{user?.email}</span>
+                      </div>
+                      <ChevronUp className="ml-auto size-4 shrink-0" />
+                    </>
+                  )}
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent side="top" align="start" className="w-56">

@@ -8,10 +8,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { 
-  Clock, 
-  Play, 
-  Square, 
+import {
+  Clock,
+  Play,
+  Square,
   Calendar,
   BarChart3
 } from "lucide-react";
@@ -35,23 +35,28 @@ export default function TimeTracking() {
     queryKey: ["/api/tasks"],
   });
 
-  const { data: activeLog } = useQuery<TimeLog | null>({
+  const { data: activeLogs = [] } = useQuery<TimeLog[]>({
     queryKey: ["/api/timelogs/active"],
     refetchInterval: 5000,
   });
 
-  const isTimerActive = activeLog && !activeLog.endTime;
+  const [elapsedTimes, setElapsedTimes] = useState<Record<string, number>>({});
 
   useEffect(() => {
-    if (isTimerActive && activeLog) {
+    if (activeLogs.length > 0) {
       const interval = setInterval(() => {
-        const start = new Date(activeLog.startTime);
-        setElapsedTime(differenceInSeconds(new Date(), start));
+        const newElapsedTimes: Record<string, number> = {};
+        activeLogs.forEach(log => {
+          const start = new Date(log.startTime);
+          newElapsedTimes[log.taskId] = differenceInSeconds(new Date(), start);
+        });
+        setElapsedTimes(newElapsedTimes);
       }, 1000);
       return () => clearInterval(interval);
+    } else {
+      setElapsedTimes({});
     }
-    setElapsedTime(0);
-  }, [isTimerActive, activeLog]);
+  }, [activeLogs]);
 
   const startTimerMutation = useMutation({
     mutationFn: async (taskId: string) => {
@@ -69,12 +74,11 @@ export default function TimeTracking() {
   });
 
   const stopTimerMutation = useMutation({
-    mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/timelogs/stop");
+    mutationFn: async (taskId: string) => {
+      const res = await apiRequest("POST", "/api/timelogs/stop", { taskId });
       return await res.json();
     },
     onSuccess: () => {
-      setElapsedTime(0);
       queryClient.invalidateQueries({ queryKey: ["/api/timelogs"] });
       queryClient.invalidateQueries({ queryKey: ["/api/timelogs/active"] });
       toast({ title: "Timer stopped" });
@@ -131,7 +135,11 @@ export default function TimeTracking() {
     return acc;
   }, 0) || 0;
 
-  const activeTasks = tasks?.filter((t) => t.status !== "done") || [];
+  // Current active elapsed times
+  const activeElapsedTime = Object.values(elapsedTimes).reduce((acc, val) => acc + val, 0);
+
+  // Filter out tasks that already have active timers
+  const activeTasks = tasks?.filter((t) => t.status !== "done" && !(Array.isArray(activeLogs) && activeLogs.some(log => log.taskId === t.id))) || [];
 
   return (
     <div className="p-6 space-y-6">
@@ -140,34 +148,37 @@ export default function TimeTracking() {
         <p className="text-muted-foreground">Track time spent on your tasks</p>
       </div>
 
-      <Card className={isTimerActive ? "ring-2 ring-primary" : ""}>
+      <Card className={activeLogs.length > 0 ? "ring-2 ring-primary" : ""}>
         <CardHeader className="flex flex-row items-center justify-between gap-4 pb-2">
-          <CardTitle className="text-lg">Active Timer</CardTitle>
-          {isTimerActive && (
-            <Badge className="bg-emerald-500 text-white no-default-hover-elevate no-default-active-elevate">Recording</Badge>
+          <CardTitle className="text-lg">Active Timers</CardTitle>
+          {activeLogs.length > 0 && (
+            <Badge className="bg-emerald-500 text-white no-default-hover-elevate no-default-active-elevate">
+              {activeLogs.length} Recording
+            </Badge>
           )}
         </CardHeader>
         <CardContent>
-          {isTimerActive && activeLog ? (
-            <div className="space-y-4">
-              <div className="text-center">
-                <p className="text-5xl font-mono font-bold text-primary" data-testid="text-active-timer">
-                  {formatDuration(elapsedTime)}
-                </p>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Working on: {getTaskName(activeLog.taskId)}
-                </p>
-              </div>
-              <Button
-                variant="destructive"
-                className="w-full"
-                onClick={() => stopTimerMutation.mutate()}
-                disabled={stopTimerMutation.isPending}
-                data-testid="button-stop-active-timer"
-              >
-                <Square className="h-4 w-4 mr-2" />
-                Stop Timer
-              </Button>
+          {activeLogs.length > 0 ? (
+            <div className="space-y-3">
+              {activeLogs.map(log => (
+                <div key={log.id} className="flex items-center justify-between gap-4 p-3 rounded-md bg-muted/30">
+                  <div className="flex-1">
+                    <p className="font-medium text-sm">{getTaskName(log.taskId)}</p>
+                    <p className="text-2xl font-mono font-bold text-primary mt-1">
+                      {formatDuration(elapsedTimes[log.taskId] || 0)}
+                    </p>
+                  </div>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => stopTimerMutation.mutate(log.taskId)}
+                    disabled={stopTimerMutation.isPending}
+                  >
+                    <Square className="h-4 w-4 mr-2" />
+                    Stop
+                  </Button>
+                </div>
+              ))}
             </div>
           ) : (
             <div className="space-y-4">
@@ -217,7 +228,7 @@ export default function TimeTracking() {
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold" data-testid="text-time-today">
-              {formatDurationShort(totalTimeToday + (isTimerActive ? elapsedTime : 0))}
+              {formatDurationShort(totalTimeToday + activeElapsedTime)}
             </p>
           </CardContent>
         </Card>
@@ -228,7 +239,7 @@ export default function TimeTracking() {
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold" data-testid="text-time-week">
-              {formatDurationShort(totalTimeWeek + (isTimerActive ? elapsedTime : 0))}
+              {formatDurationShort(totalTimeWeek + activeElapsedTime)}
             </p>
           </CardContent>
         </Card>

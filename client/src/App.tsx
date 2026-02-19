@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Switch, Route, useLocation, Link } from "wouter";
+import { Switch, Route, useLocation, Link, Redirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -28,12 +28,18 @@ import Landing from "@/pages/landing";
 import Login from "@/pages/login";
 import Signup from "@/pages/signup";
 import Dashboard from "@/pages/dashboard";
+import TasksPage from "@/pages/tasks";
+import TaskView from "@/pages/task-view";
 import ProjectPage from "@/pages/project";
 import TimeTracking from "@/pages/time-tracking";
 import Analytics from "@/pages/analytics";
 import Notifications from "@/pages/notifications";
 import SettingsPage from "@/pages/settings";
+import OrganizationSettings from "@/pages/organization-settings";
+import AcceptInvitation from "@/pages/accept-invitation";
+import Onboarding from "@/pages/onboarding";
 import NotFound from "@/pages/not-found";
+import MockBillingPortal from "@/pages/billing-portal-mock";
 
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
@@ -62,6 +68,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
     if (location === "/analytics") return "Analytics";
     if (location === "/notifications") return "Notifications";
     if (location === "/settings") return "Settings";
+    if (location === "/organization-settings") return "Organization Settings";
     return null;
   };
 
@@ -104,8 +111,8 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
                 <Button variant="ghost" size="icon" className="relative" data-testid="button-notifications">
                   <Bell className="h-5 w-5" />
                   {unreadCount > 0 && (
-                    <Badge 
-                      variant="destructive" 
+                    <Badge
+                      variant="destructive"
                       className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
                     >
                       {unreadCount > 9 ? "9+" : unreadCount}
@@ -141,6 +148,12 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
                     <Link href="/settings" data-testid="menu-settings-header">
                       <Settings className="h-4 w-4 mr-2" />
                       Settings
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/organization-settings" data-testid="menu-organization-settings">
+                      <Settings className="h-4 w-4 mr-2" />
+                      Organization
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
@@ -192,7 +205,21 @@ function AppRouter() {
         <Route path="/" component={Landing} />
         <Route path="/login" component={Login} />
         <Route path="/signup" component={Signup} />
+        <Route path="/accept-invitation" component={AcceptInvitation} />
         <Route component={Landing} />
+      </Switch>
+    );
+  }
+
+  // If user is logged in but hasn't completed onboarding
+  if (user.onboardingStep !== "completed") {
+    return (
+      <Switch>
+        <Route path="/onboarding" component={Onboarding} />
+        <Route path="/accept-invitation" component={AcceptInvitation} />
+        <Route>
+          <Redirect to="/onboarding" />
+        </Route>
       </Switch>
     );
   }
@@ -202,11 +229,19 @@ function AppRouter() {
       <Switch>
         <Route path="/" component={Dashboard} />
         <Route path="/dashboard" component={Dashboard} />
+        <Route path="/tasks" component={TasksPage} />
+        <Route path="/tasks/:id" component={TaskView} />
         <Route path="/projects/:id" component={ProjectPage} />
         <Route path="/time-tracking" component={TimeTracking} />
         <Route path="/analytics" component={Analytics} />
         <Route path="/notifications" component={Notifications} />
         <Route path="/settings" component={SettingsPage} />
+        <Route path="/organization-settings" component={OrganizationSettings} />
+        <Route path="/accept-invitation" component={AcceptInvitation} />
+        <Route path="/onboarding">
+          <Redirect to="/dashboard" />
+        </Route>
+        <Route path="/billing-portal-mock" component={MockBillingPortal} />
         <Route component={NotFound} />
       </Switch>
     </AuthenticatedLayout>
