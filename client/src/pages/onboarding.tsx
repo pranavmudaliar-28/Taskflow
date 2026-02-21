@@ -10,6 +10,10 @@ import { Label } from "@/components/ui/label";
 import { CheckCircle2, ArrowRight, Kanban, Loader2 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { loadStripe } from "@stripe/stripe-js";
+
+// Initialize Stripe
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "");
 
 export default function Onboarding() {
     const { user } = useAuth();
@@ -107,6 +111,7 @@ export default function Onboarding() {
                     await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
                     setStep("organization");
                 } else {
+                    // Using the SDK here allows for future expansion into Elements/Native SDK patterns.
                     window.location.href = data.url;
                 }
             }

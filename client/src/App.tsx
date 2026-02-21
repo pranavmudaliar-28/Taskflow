@@ -39,7 +39,6 @@ import OrganizationSettings from "@/pages/organization-settings";
 import AcceptInvitation from "@/pages/accept-invitation";
 import Onboarding from "@/pages/onboarding";
 import NotFound from "@/pages/not-found";
-import MockBillingPortal from "@/pages/billing-portal-mock";
 import BillingPage from "@/pages/billing";
 
 
@@ -222,7 +221,6 @@ function AppRouter() {
         <Route path="/onboarding" component={Onboarding} />
         <Route path="/accept-invitation" component={AcceptInvitation} />
         <Route path="/billing" component={BillingPage} />
-        <Route path="/billing-portal-mock" component={MockBillingPortal} />
         <Route>
           <Redirect to="/onboarding" />
         </Route>
@@ -248,7 +246,6 @@ function AppRouter() {
           <Redirect to="/dashboard" />
         </Route>
         <Route path="/billing" component={BillingPage} />
-        <Route path="/billing-portal-mock" component={MockBillingPortal} />
         {/* Redirect auth pages → dashboard for logged-in users */}
         <Route path="/login"><Redirect to="/dashboard" /></Route>
         <Route path="/signup"><Redirect to="/dashboard" /></Route>

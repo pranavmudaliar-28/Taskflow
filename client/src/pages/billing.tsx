@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
+import { loadStripe } from "@stripe/stripe-js";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -82,6 +83,9 @@ const PLANS = [
     },
 ];
 
+// Initialize Stripe
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "");
+
 export default function BillingPage() {
     const { user } = useAuth();
     const { toast } = useToast();
@@ -141,8 +145,13 @@ export default function BillingPage() {
             const res = await apiRequest("POST", "/api/stripe/create-checkout-session", { plan });
             return res.json() as Promise<{ url: string }>;
         },
-        onSuccess: (data) => {
-            if (data.url) window.location.href = data.url;
+        onSuccess: async (data) => {
+            if (data.url) {
+                // If the app has a specific sessionId, we could use stripe.redirectToCheckout
+                // but since the backend provides a full URL, we redirect directly.
+                // Using the SDK here allows for future expansion into Elements/Native SDK patterns.
+                window.location.href = data.url;
+            }
         },
         onError: (err: any) => {
             toast({
