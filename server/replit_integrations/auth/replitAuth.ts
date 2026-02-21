@@ -6,6 +6,7 @@ import session from "express-session";
 import type { Express, RequestHandler } from "express";
 import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
+import MongoStore from "connect-mongo";
 import { authStorage } from "./storage";
 
 const getOidcConfig = memoize(
@@ -20,13 +21,27 @@ const getOidcConfig = memoize(
 
 export function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
-  const pgStore = connectPg(session);
-  const sessionStore = new pgStore({
-    conString: process.env.DATABASE_URL,
-    createTableIfMissing: true,
-    ttl: sessionTtl,
-    tableName: "sessions",
-  });
+  let sessionStore;
+
+  if (process.env.MONGODB_URI) {
+    sessionStore = MongoStore.create({
+      mongoUrl: process.env.MONGODB_URI,
+      ttl: sessionTtl / 1000, // connect-mongo uses seconds
+      collectionName: "sessions",
+    });
+  } else if (process.env.DATABASE_URL) {
+    const pgStore = connectPg(session);
+    sessionStore = new pgStore({
+      conString: process.env.DATABASE_URL,
+      createTableIfMissing: true,
+      ttl: sessionTtl / 1000, // connect-pg-simple uses seconds internally for some calculations but here we pass ms/1000 usually
+      tableName: "sessions",
+    });
+  } else {
+    // Fallback to memory store for local dev without DB (not recommended for production)
+    console.warn("No MONGODB_URI or DATABASE_URL found. Falling back to memory store for sessions.");
+  }
+
   return session({
     secret: process.env.SESSION_SECRET || "dev_secret",
     store: sessionStore,
