@@ -71,14 +71,15 @@ export default function Onboarding() {
             const res = await apiRequest("GET", `/api/stripe/session-status?session_id=${sessionId}`);
             const data = await res.json();
             if (data.status === "success") {
-                await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+                // Refetch (not just invalidate) so App.tsx immediately gets the
+                // updated onboardingStep value from the server.
+                await queryClient.refetchQueries({ queryKey: ["/api/auth/user"] });
                 setStep("organization");
             } else {
                 toast({
                     title: "Payment Pending",
                     description: "We're still waiting for payment confirmation. Please wait a moment.",
                 });
-                // Check again after 3 seconds
                 setTimeout(verifyStripeSession, 3000);
             }
         } catch (error) {
@@ -96,7 +97,10 @@ export default function Onboarding() {
     const handlePlanSelect = async (plan: string) => {
         setIsSubmitting(true);
         try {
-            const res = await apiRequest("POST", "/api/stripe/create-checkout-session", { plan });
+            const res = await apiRequest("POST", "/api/stripe/create-checkout-session", {
+                plan,
+                returnTo: "onboarding",  // ← tell backend to redirect back to /onboarding after payment
+            });
             const data = await res.json();
             if (data.url) {
                 if (plan === "free") {

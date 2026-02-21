@@ -41,6 +41,7 @@ import {
   Building2,
   FolderKanban,
   ListTodo,
+  CreditCard,
 } from "lucide-react";
 import type { Project } from "@shared/schema";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -83,6 +84,11 @@ export function AppSidebar({ projects, onCreateProject }: AppSidebarProps) {
       url: "/organization-settings",
       icon: Building2,
     },
+    {
+      title: "Billing",
+      url: "/billing",
+      icon: CreditCard,
+    },
   ];
 
   const getUserInitials = () => {
@@ -109,13 +115,13 @@ export function AppSidebar({ projects, onCreateProject }: AppSidebarProps) {
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild tooltip="TaskFlow Pro">
               <Link href="/dashboard">
-                <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary shrink-0">
-                  <Kanban className="h-5 w-5 text-primary-foreground" />
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 shrink-0">
+                  <Kanban className="h-3.5 w-3.5 text-white" />
                 </div>
                 {!isCollapsed && (
                   <div className="grid flex-1 text-left text-sm leading-tight transition-all duration-200">
-                    <span className="truncate font-semibold">TaskFlow Pro</span>
-                    <span className="truncate text-xs text-muted-foreground">Project Management</span>
+                    <span className="truncate font-semibold text-sm">TaskFlow Pro</span>
+                    <span className="truncate text-[11px] text-muted-foreground">Project Management</span>
                   </div>
                 )}
               </Link>
@@ -238,7 +244,7 @@ export function AppSidebar({ projects, onCreateProject }: AppSidebarProps) {
                 >
                   <Avatar className="h-6 w-6 shrink-0">
                     <AvatarImage src={user?.profileImageUrl || undefined} alt={getUserDisplayName()} />
-                    <AvatarFallback className="bg-sidebar-primary text-sidebar-primary-foreground text-xs">
+                    <AvatarFallback className="bg-gradient-to-br from-violet-500 to-purple-600 text-white text-[10px] font-bold">
                       {getUserInitials()}
                     </AvatarFallback>
                   </Avatar>

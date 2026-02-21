@@ -116,7 +116,15 @@ export class MongoStorage implements IStorage {
 
     // Projects
     async createProject(project: InsertProject): Promise<Project> {
-        const created = await ProjectMongo.create(project);
+        let slug = generateSlug(project.name);
+
+        // Ensure slug uniqueness
+        const existing = await ProjectMongo.findOne({ slug });
+        if (existing) {
+            slug = `${slug}-${Math.random().toString(36).substring(2, 7)}`;
+        }
+
+        const created = await ProjectMongo.create({ ...project, slug });
         return this.transform<Project>(created)!;
     }
 
@@ -200,7 +208,14 @@ export class MongoStorage implements IStorage {
 
     // Tasks
     async createTask(task: InsertTask): Promise<Task> {
-        const slug = generateSlug(task.title);
+        let slug = generateSlug(task.title);
+
+        // Ensure slug uniqueness
+        const existing = await TaskMongo.findOne({ slug });
+        if (existing) {
+            slug = `${slug}-${Math.random().toString(36).substring(2, 7)}`;
+        }
+
         const created = await TaskMongo.create({ ...task, slug });
         return this.transform<Task>(created)!;
     }

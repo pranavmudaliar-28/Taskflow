@@ -52,7 +52,7 @@ export function registerStripeRoutes(app: Express) {
             const user = (req as any).user;
             if (!user) return res.status(401).json({ message: "Unauthorized" });
 
-            const { plan } = req.body as { plan: string };
+            const { plan, returnTo } = req.body as { plan: string; returnTo?: string };
             if (!plan || plan === "free") {
                 return res.status(400).json({ message: "Select a paid plan (pro or team)" });
             }
@@ -80,12 +80,22 @@ export function registerStripeRoutes(app: Express) {
                     ? "https://your-domain.com"
                     : `http://localhost:${process.env.PORT || 5002}`);
 
+            // Build success_url based on where the user started checkout from:
+            // - "onboarding": return to /onboarding?step=verify so the onboarding
+            //   flow can call session-status and then proceed to org creation.
+            // - "billing" (default): return to /billing with success params.
+            const successUrl = returnTo === "onboarding"
+                ? `${appUrl}/onboarding?step=verify&session_id={CHECKOUT_SESSION_ID}&plan=${plan}`
+                : `${appUrl}/billing?success=true&session_id={CHECKOUT_SESSION_ID}&plan=${plan}`;
+
             const session = await stripe.checkout.sessions.create({
                 customer: customerId,
                 payment_method_types: ["card"],
                 line_items: [{ price: planConfig.priceId, quantity: 1 }],
-                success_url: `${appUrl}/billing?success=true&session_id={CHECKOUT_SESSION_ID}&plan=${plan}`,
-                cancel_url: `${appUrl}/billing?canceled=true`,
+                success_url: successUrl,
+                cancel_url: returnTo === "onboarding"
+                    ? `${appUrl}/onboarding?canceled=true`
+                    : `${appUrl}/billing?canceled=true`,
                 subscription_data: { metadata: { userId, plan } },
                 metadata: { userId, plan },
                 allow_promotion_codes: true,

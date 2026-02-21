@@ -322,7 +322,12 @@ export class DatabaseStorage implements IStorage {
 
   // Projects
   async createProject(project: InsertProject): Promise<Project> {
-    const [created] = await db.insert(projects).values(project).returning();
+    let slug = generateSlug(project.name);
+    const existing = await this.getProjectBySlug(slug);
+    if (existing) {
+      slug = `${slug}-${Math.random().toString(36).substring(2, 7)}`;
+    }
+    const [created] = await db!.insert(projects).values({ ...project, slug }).returning();
     return created;
   }
 
@@ -432,8 +437,12 @@ export class DatabaseStorage implements IStorage {
 
   // Tasks
   async createTask(task: InsertTask): Promise<Task> {
-    const slug = generateSlug(task.title);
-    const [created] = await db.insert(tasks).values({ ...task, slug }).returning();
+    let slug = generateSlug(task.title);
+    const existing = await this.getTaskBySlug(slug);
+    if (existing) {
+      slug = `${slug}-${Math.random().toString(36).substring(2, 7)}`;
+    }
+    const [created] = await db!.insert(tasks).values({ ...task, slug }).returning();
     return created;
   }
 
