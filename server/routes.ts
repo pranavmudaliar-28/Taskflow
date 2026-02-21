@@ -796,7 +796,7 @@ export async function registerRoutes(
       const allMembers: any[] = [];
 
       for (const orgId of orgIds) {
-        const members = await storage.getOrganizationMembersForUser(userId, [orgId]);
+        const members = await storage.getOrganizationMembers(orgId);
         const userIds = members.map(m => m.userId);
         const users = await storage.getUsersByIds(userIds);
 

@@ -481,15 +481,15 @@ export default function Settings() {
                 variant="outline"
                 onClick={async () => {
                   try {
-                    const res = await apiRequest("GET", "/api/stripe/create-portal-session");
+                    const res = await apiRequest("POST", "/api/stripe/create-portal-session");
                     const data = await res.json();
                     if (data.url) {
                       window.location.href = data.url;
                     }
-                  } catch (error) {
+                  } catch (error: any) {
                     toast({
                       title: "Error",
-                      description: "Failed to open billing portal",
+                      description: error.message || "Failed to open billing portal",
                       variant: "destructive"
                     });
                   }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRoute, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 import type { Task, Comment, TimeLog, User } from "@shared/schema";
 import {
     Select,
@@ -61,12 +62,18 @@ export default function TaskView() {
     const taskId = params?.id;
     const [, setLocation] = useLocation();
     const { toast } = useToast();
+    const { user: currentUser } = useAuth();
     const queryClient = useQueryClient();
 
     const [comment, setComment] = useState("");
     const [isEditingTitle, setIsEditingTitle] = useState(false);
     const [title, setTitle] = useState("");
     const [showCreateSubtask, setShowCreateSubtask] = useState(false);
+
+    // Mentions state
+    const [showMentions, setShowMentions] = useState(false);
+    const [mentionQuery, setMentionQuery] = useState("");
+    const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
 
     // Fetch Task
     const { data: task, isLoading: taskLoading } = useQuery<Task>({
@@ -87,19 +94,25 @@ export default function TaskView() {
 
     // Fetch Subtasks
     const { data: subtasks } = useQuery<{ tasks: Task[] }>({
-        queryKey: ["/api/tasks/search", task?.projectId, { parentId: taskId }],
+        queryKey: ["/api/tasks/search", task?.projectId, { parentId: task?.id }],
         queryFn: async () => {
-            const res = await fetch(`/api/tasks/search?projectId=${task?.projectId}&parentId=${taskId}`);
+            const res = await fetch(`/api/tasks/search?projectId=${task?.projectId}&parentId=${task?.id}`);
             if (!res.ok) throw new Error("Failed to fetch subtasks");
             return res.json();
         },
-        enabled: !!taskId && !!task?.projectId,
+        enabled: !!task?.id && !!task?.projectId,
     });
 
     // Fetch Comments
     const { data: comments } = useQuery<Comment[]>({
-        queryKey: [`/api/tasks/${taskId}/comments`],
-        enabled: !!taskId,
+        queryKey: [`/api/tasks/${task?.id}/comments`],
+        enabled: !!task?.id,
+    });
+
+    // Fetch organization members for mentions
+    const { data: orgMembers } = useQuery<any[]>({
+        queryKey: [`/api/organizations/members`],
+        enabled: !!project?.organizationId,
     });
 
     // Fetch Milestones for the organization
@@ -108,6 +121,19 @@ export default function TaskView() {
         enabled: !!project?.organizationId,
     });
 
+    // Users map for resolving names (using org members as it's more comprehensive)
+    const usersMap = useMemo(() => {
+        const map = new Map<string, any>();
+        orgMembers?.forEach(m => map.set(m.userId, m.user));
+        // Fallback to project members if org members haven't loaded yet or are different
+        members?.forEach(m => {
+            if (!map.has(m.userId)) {
+                map.set(m.userId, m.user);
+            }
+        });
+        return map;
+    }, [orgMembers, members]);
+
     useEffect(() => {
         if (task) setTitle(task.title);
     }, [task]);
@@ -115,29 +141,78 @@ export default function TaskView() {
     // Mutations
     const updateTaskMutation = useMutation({
         mutationFn: async (updates: Partial<Task>) => {
-            const res = await apiRequest("PATCH", `/api/tasks/${taskId}`, updates);
+            const res = await apiRequest("PATCH", `/api/tasks/${task?.id}`, updates);
             return res.json();
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: [`/api/tasks/${taskId}`] });
+            queryClient.invalidateQueries({ queryKey: [`/api/tasks/${task?.id}`] });
             toast({ title: "Task updated" });
         },
     });
 
     const createCommentMutation = useMutation({
-        mutationFn: async (content: string) => {
-            const res = await apiRequest("POST", `/api/tasks/${taskId}/comments`, { content });
+        mutationFn: async ({ content, mentions }: { content: string; mentions: string[] }) => {
+            const res = await apiRequest("POST", `/api/tasks/${task?.id}/comments`, { content, mentions });
             return res.json();
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: [`/api/tasks/${taskId}/comments`] });
+            queryClient.invalidateQueries({ queryKey: [`/api/tasks/${task?.id}/comments`] });
             setComment("");
         },
     });
 
+    const handleSendComment = () => {
+        if (!comment.trim() || !task) return;
+
+        // Extract mentions from text (e.g. @FirstName LastName)
+        const mentionMatches = comment.match(/@([a-zA-Z]+\s[a-zA-Z]+)/g) || [];
+        const mentions: string[] = [];
+
+        mentionMatches.forEach(match => {
+            const name = match.substring(1);
+            // Search in both org members and project members
+            const member = (orgMembers || members)?.find(m => `${m.user.firstName} ${m.user.lastName}` === name);
+            if (member) {
+                mentions.push(member.userId);
+            }
+        });
+
+        createCommentMutation.mutate({ content: comment, mentions });
+    };
+
+    const handleCommentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        const val = e.target.value;
+        const lastChar = val.slice(-1);
+        const cursorPosition = e.target.selectionStart;
+        const textBeforeCursor = val.slice(0, cursorPosition);
+        const mentionMatch = textBeforeCursor.match(/@(\w*)$/);
+
+        setComment(val);
+
+        if (mentionMatch) {
+            setShowMentions(true);
+            setMentionQuery(mentionMatch[1].toLowerCase());
+            setSelectedMentionIndex(0);
+        } else {
+            setShowMentions(false);
+        }
+    };
+
+    const handleSelectMention = (member: any) => {
+        const cursorPosition = comment.length; // Simplified for now
+        const textBeforeMention = comment.slice(0, comment.lastIndexOf("@"));
+        const newComment = textBeforeMention + `@${member.user.firstName} ${member.user.lastName} ` + comment.slice(cursorPosition);
+        setComment(newComment);
+        setShowMentions(false);
+    };
+
+    const filteredMentions = (orgMembers || members)?.filter(m =>
+        `${m.user.firstName} ${m.user.lastName}`.toLowerCase().includes(mentionQuery)
+    ) || [];
+
     const deleteTaskMutation = useMutation({
         mutationFn: async () => {
-            await apiRequest("DELETE", `/api/tasks/${taskId}`);
+            await apiRequest("DELETE", `/api/tasks/${task?.id}`);
         },
         onSuccess: () => {
             toast({ title: "Task deleted" });
@@ -161,8 +236,7 @@ export default function TaskView() {
     if (taskLoading) return <div className="p-8">Loading task...</div>;
     if (!task) return <div className="p-8">Task not found</div>;
 
-    const usersMap = new Map<string, User>();
-    members?.forEach(m => usersMap.set(m.userId, m.user));
+
 
     return (
         <div className="flex flex-col h-full bg-background">
@@ -335,49 +409,116 @@ export default function TaskView() {
                         </div>
 
                         <Separator className="my-8" />
-                        <TaskAttachments taskId={taskId!} />
+                        <TaskAttachments taskId={task.id!} />
                         <Separator className="my-8" />
 
                         {/* Activity / Comments */}
                         <div className="space-y-4">
                             <h3 className="font-semibold text-lg">Activity</h3>
                             <div className="space-y-4">
-                                {comments?.map((comment) => (
-                                    <div key={comment.id} className="flex gap-4">
-                                        <Avatar className="h-8 w-8">
-                                            <AvatarFallback>{comment.authorId.toString()[0]}</AvatarFallback>
-                                        </Avatar>
-                                        <div className="flex-1 space-y-1">
-                                            <div className="flex items-center justify-between">
-                                                <span className="font-medium text-sm">User {comment.authorId}</span>
-                                                <span className="text-xs text-muted-foreground">{comment.createdAt ? format(new Date(comment.createdAt), "MMM d, h:mm a") : ""}</span>
+                                {comments?.map((comment) => {
+                                    const author = usersMap.get(comment.authorId);
+                                    const authorName = author ? `${author.firstName} ${author.lastName}` : `User ${comment.authorId}`;
+                                    const initials = author ? ((author.firstName?.[0] || "") + (author.lastName?.[0] || "")).toUpperCase() : "?";
+
+                                    return (
+                                        <div key={comment.id} className="flex gap-4">
+                                            <Avatar className="h-8 w-8">
+                                                <AvatarImage src={author?.profileImageUrl || undefined} />
+                                                <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+                                            </Avatar>
+                                            <div className="flex-1 space-y-1">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="font-medium text-sm">{authorName}</span>
+                                                    <span className="text-xs text-muted-foreground">{comment.createdAt ? format(new Date(comment.createdAt), "MMM d, h:mm a") : ""}</span>
+                                                </div>
+                                                <div className="text-sm text-muted-foreground bg-muted p-3 rounded-md">
+                                                    {comment.content.split(/(@[a-zA-Z]+\s[a-zA-Z]+)/).map((part, i) => (
+                                                        part.startsWith("@") ? (
+                                                            <span key={i} className="text-primary font-semibold">
+                                                                {part}
+                                                            </span>
+                                                        ) : (
+                                                            <span key={i}>{part}</span>
+                                                        )
+                                                    ))}
+                                                </div>
                                             </div>
-                                            <p className="text-sm text-muted-foreground bg-muted p-3 rounded-md">
-                                                {comment.content}
-                                            </p>
                                         </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
 
                                 <div className="flex gap-4 pt-4">
                                     <Avatar className="h-8 w-8">
-                                        <AvatarFallback>Me</AvatarFallback>
+                                        <AvatarImage src={currentUser?.profileImageUrl || undefined} />
+                                        <AvatarFallback className="text-xs">
+                                            {currentUser ? ((currentUser.firstName?.[0] || "") + (currentUser.lastName?.[0] || "")).toUpperCase() : "Me"}
+                                        </AvatarFallback>
                                     </Avatar>
-                                    <div className="flex-1 flex gap-2">
-                                        <Textarea
-                                            value={comment}
-                                            onChange={(e) => setComment(e.target.value)}
-                                            placeholder="Write a comment..."
-                                            className="min-h-[80px]"
-                                        />
-                                        <Button
-                                            size="icon"
-                                            className="h-[80px]"
-                                            disabled={!comment.trim()}
-                                            onClick={() => createCommentMutation.mutate(comment)}
-                                        >
-                                            <Send className="h-4 w-4" />
-                                        </Button>
+                                    <div className="flex-1 flex flex-col gap-2 relative">
+                                        {showMentions && filteredMentions.length > 0 && (
+                                            <div className="absolute bottom-full left-0 w-64 bg-popover border rounded-md shadow-lg mb-2 overflow-hidden z-50">
+                                                <div className="p-2 border-b bg-muted/50">
+                                                    <span className="text-xs font-semibold text-muted-foreground uppercase">Mention Member</span>
+                                                </div>
+                                                <ScrollArea className="max-h-48">
+                                                    <div className="p-1">
+                                                        {filteredMentions.map((m, i) => (
+                                                            <button
+                                                                key={m.userId}
+                                                                onClick={() => handleSelectMention(m)}
+                                                                className={cn(
+                                                                    "w-full flex items-center gap-2 p-2 text-sm rounded-sm hover:bg-accent transition-colors",
+                                                                    selectedMentionIndex === i && "bg-accent"
+                                                                )}
+                                                            >
+                                                                <Avatar className="h-6 w-6">
+                                                                    <AvatarImage src={m.user.profileImageUrl || undefined} />
+                                                                    <AvatarFallback className="text-[10px]">
+                                                                        {((m.user.firstName?.[0] || "") + (m.user.lastName?.[0] || "")).toUpperCase()}
+                                                                    </AvatarFallback>
+                                                                </Avatar>
+                                                                <span className="font-medium">{m.user.firstName} {m.user.lastName}</span>
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </ScrollArea>
+                                            </div>
+                                        )}
+                                        <div className="flex gap-2">
+                                            <Textarea
+                                                value={comment}
+                                                onChange={handleCommentChange}
+                                                onKeyDown={(e) => {
+                                                    if (showMentions) {
+                                                        if (e.key === "ArrowDown") {
+                                                            e.preventDefault();
+                                                            setSelectedMentionIndex(prev => (prev + 1) % filteredMentions.length);
+                                                        } else if (e.key === "ArrowUp") {
+                                                            e.preventDefault();
+                                                            setSelectedMentionIndex(prev => (prev - 1 + filteredMentions.length) % filteredMentions.length);
+                                                        } else if (e.key === "Enter" || e.key === "Tab") {
+                                                            e.preventDefault();
+                                                            if (filteredMentions[selectedMentionIndex]) {
+                                                                handleSelectMention(filteredMentions[selectedMentionIndex]);
+                                                            }
+                                                        } else if (e.key === "Escape") {
+                                                            setShowMentions(false);
+                                                        }
+                                                    }
+                                                }}
+                                                placeholder="Write a comment..."
+                                                className="min-h-[80px]"
+                                            />
+                                            <Button
+                                                size="icon"
+                                                className="h-[80px]"
+                                                disabled={!comment.trim() || createCommentMutation.isPending}
+                                                onClick={handleSendComment}
+                                            >
+                                                <Send className="h-4 w-4" />
+                                            </Button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -604,7 +745,7 @@ export default function TaskView() {
                 projectId={task.projectId}
                 parentId={task.id}
                 onSuccess={() => {
-                    queryClient.invalidateQueries({ queryKey: ["/api/tasks/search"] });
+                    queryClient.invalidateQueries({ queryKey: ["/api/tasks/search", task.projectId, { parentId: task.id }] });
                     setShowCreateSubtask(false);
                 }}
                 projects={[project]}

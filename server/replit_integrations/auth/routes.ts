@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { authStorage } from "./storage";
 import { isAuthenticated } from "./replitAuth";
+import { storage } from "../../storage";
 
 // Register auth-specific routes
 export function registerAuthRoutes(app: Express): void {
@@ -15,8 +16,12 @@ export function registerAuthRoutes(app: Express): void {
       if (!user) {
         return res.status(401).json({ message: "User not found" });
       }
+      const isAdmin = await storage.isGlobalAdmin(userId);
       const { password: _, ...safeUser } = user;
-      res.json(safeUser);
+      res.json({
+        ...safeUser,
+        isAdmin: !!isAdmin
+      });
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });

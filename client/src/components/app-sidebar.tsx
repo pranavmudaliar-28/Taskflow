@@ -88,8 +88,11 @@ export function AppSidebar({ projects, onCreateProject }: AppSidebarProps) {
       title: "Billing",
       url: "/billing",
       icon: CreditCard,
+      adminOnly: true,
     },
   ];
+
+  const visibleNavItems = mainNavItems.filter(item => !item.adminOnly || user?.isAdmin);
 
   const getUserInitials = () => {
     if (user?.firstName && user?.lastName) {
@@ -136,7 +139,7 @@ export function AppSidebar({ projects, onCreateProject }: AppSidebarProps) {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {mainNavItems.map((item) => (
+              {visibleNavItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     asChild

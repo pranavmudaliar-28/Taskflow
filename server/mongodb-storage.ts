@@ -307,7 +307,10 @@ export class MongoStorage implements IStorage {
     }
 
     async canUserAccessTask(userId: string, taskId: string): Promise<boolean> {
-        const task = await this.getTask(taskId);
+        let task = await this.getTask(taskId);
+        if (!task) {
+            task = await this.getTaskBySlug(taskId);
+        }
         if (!task) return false;
         return this.isUserInProject(userId, task.projectId);
     }
@@ -611,5 +614,20 @@ export class MongoStorage implements IStorage {
             totalTimeLogged,
             projectCount: projects.length
         };
+    }
+
+    async isGlobalAdmin(userId: string): Promise<boolean> {
+        const memberships = await this.getMembershipsByUserId(userId);
+        if (memberships.length === 0) return true; // Allow personal/onboarding users
+
+        return memberships.some(m => {
+            const role = m.role.toLowerCase().trim();
+            return role === "admin" || role === "administrator" || role === "owner";
+        });
+    }
+
+    async getMembershipsByUserId(userId: string): Promise<OrganizationMember[]> {
+        const memberships = await OrganizationMemberMongo.find({ userId });
+        return this.transformArray<OrganizationMember>(memberships);
     }
 }

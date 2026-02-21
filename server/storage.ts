@@ -158,6 +158,9 @@ export interface IStorage {
     projectCount: number;
   }>;
 
+  isGlobalAdmin(userId: string): Promise<boolean>;
+  getMembershipsByUserId(userId: string): Promise<OrganizationMember[]>;
+
 
 }
 
@@ -169,18 +172,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.email, email));
+    const [user] = await db!.select().from(users).where(eq(users.email, email));
     return user || undefined;
   }
 
   async getUsersByIds(ids: string[]): Promise<User[]> {
     if (ids.length === 0) return [];
-    const result = await db.select().from(users).where(inArray(users.id, ids));
+    const result = await db!.select().from(users).where(inArray(users.id, ids));
     return result;
   }
 
   async updateUser(id: string, updates: Partial<User>): Promise<User | undefined> {
-    const result = await db.update(users)
+    const result = await db!.update(users)
       .set(updates)
       .where(eq(users.id, id))
       .returning();
@@ -189,39 +192,39 @@ export class DatabaseStorage implements IStorage {
 
   // Organizations
   async createOrganization(org: InsertOrganization): Promise<Organization> {
-    const [created] = await db.insert(organizations).values(org).returning();
+    const [created] = await db!.insert(organizations).values(org).returning();
     return created;
   }
 
   async getOrganization(id: string): Promise<Organization | undefined> {
-    const [org] = await db.select().from(organizations).where(eq(organizations.id, id));
+    const [org] = await db!.select().from(organizations).where(eq(organizations.id, id));
     return org || undefined;
   }
 
   async getOrganizationsByUser(userId: string): Promise<Organization[]> {
-    const memberRecords = await db.select().from(organizationMembers)
+    const memberRecords = await db!.select().from(organizationMembers)
       .where(eq(organizationMembers.userId, userId));
 
     if (memberRecords.length === 0) return [];
 
     const orgIds = memberRecords.map(m => m.organizationId);
-    const orgs = await db.select().from(organizations).where(inArray(organizations.id, orgIds));
+    const orgs = await db!.select().from(organizations).where(inArray(organizations.id, orgIds));
     return orgs;
   }
 
   async addOrganizationMember(member: InsertOrganizationMember): Promise<OrganizationMember> {
-    const [created] = await db.insert(organizationMembers).values(member).returning();
+    const [created] = await db!.insert(organizationMembers).values(member).returning();
     return created;
   }
 
   async getOrganizationMembers(orgId: string): Promise<OrganizationMember[]> {
-    return db.select().from(organizationMembers)
+    return db!.select().from(organizationMembers)
       .where(eq(organizationMembers.organizationId, orgId));
   }
 
   async getOrganizationMembersForUser(userId: string, orgIds: string[]): Promise<OrganizationMember[]> {
     if (orgIds.length === 0) return [];
-    return db.select().from(organizationMembers)
+    return db!.select().from(organizationMembers)
       .where(and(
         eq(organizationMembers.userId, userId),
         inArray(organizationMembers.organizationId, orgIds)
@@ -229,7 +232,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async isUserInOrganization(userId: string, orgId: string): Promise<boolean> {
-    const [member] = await db.select().from(organizationMembers)
+    const [member] = await db!.select().from(organizationMembers)
       .where(and(eq(organizationMembers.userId, userId), eq(organizationMembers.organizationId, orgId)));
     return !!member;
   }
@@ -240,7 +243,7 @@ export class DatabaseStorage implements IStorage {
     const orgIds = myOrgs.map(o => o.id);
 
     // We need to join users to search by name/email efficiently
-    const members = await db.select({
+    const members = await db!.select({
       id: organizationMembers.id,
       organizationId: organizationMembers.organizationId,
       userId: organizationMembers.userId,
@@ -263,13 +266,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async backfillOrganizationInvitations(orgId: string): Promise<void> {
-    const projectInvites = await db.select().from(projectInvitations)
+    const projectInvites = await db!.select().from(projectInvitations)
       .where(and(
         eq(projectInvitations.organizationId, orgId),
         eq(projectInvitations.status, "pending")
       ));
 
-    const orgInvites = await db.select().from(organizationInvitations)
+    const orgInvites = await db!.select().from(organizationInvitations)
       .where(and(
         eq(organizationInvitations.organizationId, orgId),
         eq(organizationInvitations.status, "pending")
@@ -336,17 +339,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getProject(id: string): Promise<Project | undefined> {
-    const [project] = await db.select().from(projects).where(eq(projects.id, id));
+    const [project] = await db!.select().from(projects).where(eq(projects.id, id));
     return project || undefined;
   }
 
   async getProjectBySlug(slug: string): Promise<Project | undefined> {
-    const [project] = await db.select().from(projects).where(eq(projects.slug, slug));
+    const [project] = await db!.select().from(projects).where(eq(projects.slug, slug));
     return project || undefined;
   }
 
   async getProjectsByOrganization(orgId: string): Promise<Project[]> {
-    return db.select().from(projects).where(eq(projects.organizationId, orgId));
+    return db!.select().from(projects).where(eq(projects.organizationId, orgId));
   }
 
   async getProjectsByUser(userId: string): Promise<Project[]> {
@@ -355,7 +358,7 @@ export class DatabaseStorage implements IStorage {
     if (orgs.length === 0) return [];
 
     const orgIds = orgs.map(o => o.id);
-    return db.select().from(projects)
+    return db!.select().from(projects)
       .where(inArray(projects.organizationId, orgIds))
       .orderBy(desc(projects.createdAt));
   }
@@ -365,7 +368,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateProject(id: string, updates: Partial<Project>): Promise<Project | undefined> {
-    const [updated] = await db.update(projects)
+    const [updated] = await db!.update(projects)
       .set({ ...updates, updatedAt: new Date() })
       .where(eq(projects.id, id))
       .returning();
@@ -374,24 +377,24 @@ export class DatabaseStorage implements IStorage {
 
   async deleteProject(id: string): Promise<void> {
     // Delete related tasks first
-    await db.delete(tasks).where(eq(tasks.projectId, id));
-    await db.delete(projectMembers).where(eq(projectMembers.projectId, id));
-    await db.delete(projects).where(eq(projects.id, id));
+    await db!.delete(tasks).where(eq(tasks.projectId, id));
+    await db!.delete(projectMembers).where(eq(projectMembers.projectId, id));
+    await db!.delete(projects).where(eq(projects.id, id));
   }
 
   async addProjectMember(member: InsertProjectMember): Promise<ProjectMember> {
-    const existing = await db.select().from(projectMembers)
+    const existing = await db!.select().from(projectMembers)
       .where(and(
         eq(projectMembers.projectId, member.projectId),
         eq(projectMembers.userId, member.userId),
       ));
     if (existing.length > 0) return existing[0];
-    const [created] = await db.insert(projectMembers).values(member).returning();
+    const [created] = await db!.insert(projectMembers).values(member).returning();
     return created;
   }
 
   async isUserProjectMember(userId: string, projectId: string): Promise<boolean> {
-    const [row] = await db.select().from(projectMembers)
+    const [row] = await db!.select().from(projectMembers)
       .where(and(
         eq(projectMembers.projectId, projectId),
         eq(projectMembers.userId, userId),
@@ -400,7 +403,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getProjectMembers(projectId: string): Promise<ProjectMemberWithUser[]> {
-    const members = await db.select().from(projectMembers)
+    const members = await db!.select().from(projectMembers)
       .where(eq(projectMembers.projectId, projectId));
     if (members.length === 0) return [];
     const userIds = members.map(m => m.userId);
@@ -422,7 +425,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getProjectMemberRole(userId: string, projectId: string): Promise<string | null> {
-    const [row] = await db.select().from(projectMembers)
+    const [row] = await db!.select().from(projectMembers)
       .where(and(
         eq(projectMembers.projectId, projectId),
         eq(projectMembers.userId, userId),
@@ -431,7 +434,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateProjectMemberRole(userId: string, projectId: string, role: string): Promise<void> {
-    await db.update(projectMembers)
+    await db!.update(projectMembers)
       .set({ role: role as any })
       .where(and(
         eq(projectMembers.projectId, projectId),
@@ -451,23 +454,23 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getTask(id: string): Promise<Task | undefined> {
-    const [task] = await db.select().from(tasks).where(eq(tasks.id, id));
+    const [task] = await db!.select().from(tasks).where(eq(tasks.id, id));
     return task || undefined;
   }
 
   async getTaskBySlug(slug: string): Promise<Task | undefined> {
-    const [task] = await db.select().from(tasks).where(eq(tasks.slug, slug));
+    const [task] = await db!.select().from(tasks).where(eq(tasks.slug, slug));
     return task || undefined;
   }
 
   async getTasksByProject(projectId: string): Promise<Task[]> {
-    return db.select().from(tasks)
+    return db!.select().from(tasks)
       .where(eq(tasks.projectId, projectId))
       .orderBy(tasks.order);
   }
 
   async getTasksByUser(userId: string): Promise<Task[]> {
-    return db.select().from(tasks)
+    return db!.select().from(tasks)
       .where(eq(tasks.assigneeId, userId))
       .orderBy(desc(tasks.createdAt));
   }
@@ -477,7 +480,7 @@ export class DatabaseStorage implements IStorage {
     if (userProjects.length === 0) return [];
 
     const projectIds = userProjects.map(p => p.id);
-    return db.select().from(tasks)
+    return db!.select().from(tasks)
       .where(inArray(tasks.projectId, projectIds))
       .orderBy(desc(tasks.updatedAt))
       .limit(limit);
@@ -488,7 +491,7 @@ export class DatabaseStorage implements IStorage {
     if (userProjects.length === 0) return [];
 
     const projectIds = userProjects.map(p => p.id);
-    return db.select().from(tasks)
+    return db!.select().from(tasks)
       .where(inArray(tasks.projectId, projectIds))
       .orderBy(desc(tasks.createdAt));
   }
@@ -557,14 +560,14 @@ export class DatabaseStorage implements IStorage {
     const whereClause = and(...conditions);
 
     // Get total count
-    const [countResult] = await db.select({ count: sql<number>`count(*)` })
+    const [countResult] = await db!.select({ count: sql<number>`count(*)` })
       .from(tasks)
       .where(whereClause);
 
     const total = Number(countResult?.count || 0);
 
     // Get tasks
-    const query = db.select().from(tasks).where(whereClause).$dynamic();
+    const query = db!.select().from(tasks).where(whereClause).$dynamic();
 
     // Sorting
     if (filters.sortBy === 'priority') {
@@ -608,7 +611,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateTask(id: string, updates: Partial<Task>): Promise<Task | undefined> {
-    const [updated] = await db.update(tasks)
+    const [updated] = await db!.update(tasks)
       .set({ ...updates, updatedAt: new Date() })
       .where(eq(tasks.id, id))
       .returning();
@@ -616,23 +619,23 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteTask(id: string): Promise<void> {
-    await db.delete(timeLogs).where(eq(timeLogs.taskId, id));
-    await db.delete(comments).where(eq(comments.taskId, id));
-    await db.delete(tasks).where(eq(tasks.id, id));
+    await db!.delete(timeLogs).where(eq(timeLogs.taskId, id));
+    await db!.delete(comments).where(eq(comments.taskId, id));
+    await db!.delete(tasks).where(eq(tasks.id, id));
   }
 
   async bulkUpdateTasks(userId: string, ids: string[], updates: Partial<Task>): Promise<Task[]> {
     const userProjects = await this.getProjectsByUser(userId);
     const projectIds = userProjects.map(p => p.id);
 
-    await db.update(tasks)
+    await db!.update(tasks)
       .set({ ...updates, updatedAt: new Date() })
       .where(and(
         inArray(tasks.id, ids),
         inArray(tasks.projectId, projectIds)
       ));
 
-    return db.select().from(tasks)
+    return db!.select().from(tasks)
       .where(and(
         inArray(tasks.id, ids),
         inArray(tasks.projectId, projectIds)
@@ -643,7 +646,7 @@ export class DatabaseStorage implements IStorage {
     const userProjects = await this.getProjectsByUser(userId);
     const projectIds = userProjects.map(p => p.id);
 
-    await db.delete(tasks)
+    await db!.delete(tasks)
       .where(and(
         inArray(tasks.id, ids),
         inArray(tasks.projectId, projectIds)
@@ -657,7 +660,7 @@ export class DatabaseStorage implements IStorage {
     // Ideally we check if user is member of project of these tasks.
 
     // Perform updates in transaction or batch
-    await db.transaction(async (tx) => {
+    await db!.transaction(async (tx) => {
       for (const item of items) {
         await tx.update(tasks)
           .set({ order: item.order })
@@ -668,36 +671,36 @@ export class DatabaseStorage implements IStorage {
 
   // Attachments
   async getAttachmentsByTask(taskId: string): Promise<Attachment[]> {
-    return db.select()
+    return db!.select()
       .from(attachments)
       .where(eq(attachments.taskId, taskId))
       .orderBy(asc(attachments.createdAt));
   }
 
   async createAttachment(attachment: InsertAttachment): Promise<Attachment> {
-    const [newAttachment] = await db.insert(attachments)
+    const [newAttachment] = await db!.insert(attachments)
       .values(attachment)
       .returning();
     return newAttachment;
   }
 
   async deleteAttachment(id: string): Promise<void> {
-    await db.delete(attachments).where(eq(attachments.id, id));
+    await db!.delete(attachments).where(eq(attachments.id, id));
   }
 
   // Time Logs
   async createTimeLog(log: InsertTimeLog): Promise<TimeLog> {
-    const [created] = await db.insert(timeLogs).values(log).returning();
+    const [created] = await db!.insert(timeLogs).values(log).returning();
     return created;
   }
 
   async getTimeLog(id: string): Promise<TimeLog | undefined> {
-    const [log] = await db.select().from(timeLogs).where(eq(timeLogs.id, id));
+    const [log] = await db!.select().from(timeLogs).where(eq(timeLogs.id, id));
     return log || undefined;
   }
 
   async getActiveTimeLogs(userId: string): Promise<TimeLog[]> {
-    return db.select().from(timeLogs)
+    return db!.select().from(timeLogs)
       .where(and(eq(timeLogs.userId, userId), isNull(timeLogs.endTime)));
   }
 
@@ -707,7 +710,7 @@ export class DatabaseStorage implements IStorage {
 
     const duration = Math.floor((endTime.getTime() - new Date(log.startTime).getTime()) / 1000);
 
-    const [updated] = await db.update(timeLogs)
+    const [updated] = await db!.update(timeLogs)
       .set({ endTime, duration })
       .where(eq(timeLogs.id, id))
       .returning();
@@ -715,26 +718,26 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getTimeLogsByUser(userId: string): Promise<TimeLog[]> {
-    return db.select().from(timeLogs)
+    return db!.select().from(timeLogs)
       .where(eq(timeLogs.userId, userId))
       .orderBy(desc(timeLogs.startTime));
   }
 
   async getTimeLogsByTask(taskId: string): Promise<TimeLog[]> {
-    return db.select().from(timeLogs)
+    return db!.select().from(timeLogs)
       .where(eq(timeLogs.taskId, taskId))
       .orderBy(desc(timeLogs.startTime));
   }
 
   async getRecentTimeLogs(userId: string, limit = 10): Promise<TimeLog[]> {
-    return db.select().from(timeLogs)
+    return db!.select().from(timeLogs)
       .where(eq(timeLogs.userId, userId))
       .orderBy(desc(timeLogs.startTime))
       .limit(limit);
   }
 
   async approveTimeLog(id: string): Promise<TimeLog | undefined> {
-    const [updated] = await db.update(timeLogs)
+    const [updated] = await db!.update(timeLogs)
       .set({ approved: true })
       .where(eq(timeLogs.id, id))
       .returning();
@@ -743,70 +746,59 @@ export class DatabaseStorage implements IStorage {
 
   // Comments
   async createComment(comment: InsertComment): Promise<Comment> {
-    const [created] = await db.insert(comments).values(comment).returning();
+    const [created] = await db!.insert(comments).values(comment).returning();
     return created;
   }
 
   async getCommentsByTask(taskId: string): Promise<Comment[]> {
-    return db.select().from(comments)
+    return db!.select().from(comments)
       .where(eq(comments.taskId, taskId))
       .orderBy(comments.createdAt);
   }
 
   // Notifications
   async createNotification(notification: InsertNotification): Promise<Notification> {
-    const [created] = await db.insert(notifications).values(notification).returning();
+    const [created] = await db!.insert(notifications).values(notification).returning();
     return created;
   }
 
   async getNotificationsByUser(userId: string): Promise<Notification[]> {
-    return db.select().from(notifications)
+    return db!.select().from(notifications)
       .where(eq(notifications.userId, userId))
       .orderBy(desc(notifications.createdAt));
   }
 
   async markNotificationRead(id: string, userId: string): Promise<void> {
-    await db.update(notifications)
+    await db!.update(notifications)
       .set({ read: true })
       .where(and(eq(notifications.id, id), eq(notifications.userId, userId)));
   }
 
   async markAllNotificationsRead(userId: string): Promise<void> {
-    await db.update(notifications)
+    await db!.update(notifications)
       .set({ read: true })
       .where(eq(notifications.userId, userId));
   }
 
   // Project Invitations
   async createProjectInvitation(invitation: InsertProjectInvitation): Promise<ProjectInvitation> {
-    const [created] = await db.insert(projectInvitations).values(invitation).returning();
+    const [created] = await db!.insert(projectInvitations).values(invitation).returning();
     return created;
   }
 
   async getProjectInvitations(projectId: string): Promise<ProjectInvitation[]> {
-    return db.select().from(projectInvitations)
+    return db!.select().from(projectInvitations)
       .where(and(eq(projectInvitations.projectId, projectId), eq(projectInvitations.status, "pending")))
       .orderBy(desc(projectInvitations.createdAt));
   }
 
   async getPendingInvitationsByEmail(email: string): Promise<ProjectInvitation[]> {
-    return db.select().from(projectInvitations)
+    return db!.select().from(projectInvitations)
       .where(and(eq(projectInvitations.email, email.toLowerCase()), eq(projectInvitations.status, "pending")));
   }
 
   async deleteProjectInvitation(id: string): Promise<void> {
-    await db.delete(projectInvitations).where(eq(projectInvitations.id, id));
-  }
-
-  async getOrganizationInvitations(orgId: string): Promise<OrganizationInvitation[]> {
-    return db.select().from(organizationInvitations)
-      .where(and(eq(organizationInvitations.organizationId, orgId), eq(organizationInvitations.status, "pending")))
-      .orderBy(desc(organizationInvitations.createdAt));
-  }
-
-  async getPendingOrganizationInvitationsByEmail(email: string): Promise<OrganizationInvitation[]> {
-    return db.select().from(organizationInvitations)
-      .where(and(eq(organizationInvitations.email, email.toLowerCase()), eq(organizationInvitations.status, "pending")));
+    await db!.delete(projectInvitations).where(eq(projectInvitations.id, id));
   }
 
   async getProjectInvitation(token: string): Promise<ProjectInvitation | undefined> {
@@ -835,7 +827,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateProjectInvitationStatus(id: string, status: string): Promise<void> {
-    await db.update(projectInvitations).set({ status }).where(eq(projectInvitations.id, id));
+    await db!.update(projectInvitations).set({ status }).where(eq(projectInvitations.id, id));
   }
 
   // Dashboard Stats
@@ -861,7 +853,7 @@ export class DatabaseStorage implements IStorage {
       };
     }
 
-    const allTasks = await db.select().from(tasks)
+    const allTasks = await db!.select().from(tasks)
       .where(inArray(tasks.projectId, projectIds));
 
     const now = new Date();
@@ -883,12 +875,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createOrganizationInvitation(invitation: InsertOrganizationInvitation): Promise<OrganizationInvitation> {
-    const [created] = await db.insert(organizationInvitations).values(invitation).returning();
+    const [created] = await db!.insert(organizationInvitations).values(invitation).returning();
     return created;
   }
 
   async getOrganizationInvitations(organizationId: string): Promise<OrganizationInvitation[]> {
-    return db.select().from(organizationInvitations)
+    return db!.select().from(organizationInvitations)
       .where(and(
         eq(organizationInvitations.organizationId, organizationId),
         eq(organizationInvitations.status, "pending")
@@ -896,12 +888,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getPendingOrganizationInvitationsByEmail(email: string): Promise<OrganizationInvitation[]> {
-    return db.select().from(organizationInvitations)
+    return db!.select().from(organizationInvitations)
       .where(and(eq(organizationInvitations.email, email.toLowerCase()), eq(organizationInvitations.status, "pending")));
   }
 
   async getOrganizationInvitation(token: string): Promise<OrganizationInvitation | undefined> {
-    const [invitation] = await db.select().from(organizationInvitations).where(eq(organizationInvitations.token, token));
+    const [invitation] = await db!.select().from(organizationInvitations).where(eq(organizationInvitations.token, token));
     return invitation;
   }
 
@@ -951,21 +943,21 @@ export class DatabaseStorage implements IStorage {
     if (orgProjects.length === 0) return [];
 
     const projectIds = orgProjects.map(p => p.id);
-    return db.select()
+    return db!.select()
       .from(milestones)
       .where(inArray(milestones.projectId, projectIds))
       .orderBy(desc(milestones.createdAt));
   }
 
   async deleteOrganizationInvitation(id: string): Promise<void> {
-    await db.delete(organizationInvitations).where(eq(organizationInvitations.id, id));
+    await db!.delete(organizationInvitations).where(eq(organizationInvitations.id, id));
   }
 
   async acceptOrganizationInvitation(token: string, userId: string): Promise<void> {
     const invitation = await this.getOrganizationInvitation(token);
     if (!invitation || invitation.status !== "pending") return;
 
-    await db.transaction(async (tx) => {
+    await db!.transaction(async (tx) => {
       // Add user to organization
       await tx.insert(organizationMembers).values({
         organizationId: invitation.organizationId,
@@ -978,6 +970,16 @@ export class DatabaseStorage implements IStorage {
         .set({ status: "accepted" })
         .where(eq(organizationInvitations.id, invitation.id));
     });
+  }
+
+  async isGlobalAdmin(userId: string): Promise<boolean> {
+    const memberships = await this.getMembershipsByUserId(userId);
+    if (memberships.length === 0) return true; // Allow personal/onboarding users
+    return memberships.some(m => m.role === "admin");
+  }
+
+  async getMembershipsByUserId(userId: string): Promise<OrganizationMember[]> {
+    return db!.select().from(organizationMembers).where(eq(organizationMembers.userId, userId));
   }
 }
 

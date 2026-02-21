@@ -9,6 +9,7 @@ import type { Express, Request, Response } from "express";
 import Stripe from "stripe";
 import { UserMongo } from "../shared/mongodb-schema";
 import { isAuthenticated } from "./replit_integrations/auth";
+import { storage } from "./storage";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
     apiVersion: "2026-01-28.clover" as any,
@@ -55,10 +56,13 @@ function getAppUrl(req: Request): string {
 export function registerStripeRoutes(app: Express) {
 
     // ── 1. Create Checkout Session ──────────────────────────────────────────────
-    app.post("/api/stripe/create-checkout-session", async (req: Request, res: Response) => {
+    app.post("/api/stripe/create-checkout-session", isAuthenticated, async (req: Request, res: Response) => {
         try {
             const user = (req as any).user;
-            if (!user) return res.status(401).json({ message: "Unauthorized" });
+            const isAdmin = await storage.isGlobalAdmin(user.id);
+            if (!isAdmin) {
+                return res.status(403).json({ message: "Only organization admins can manage billing." });
+            }
 
             const { plan, returnTo } = req.body as { plan: string; returnTo?: string };
             if (!plan || plan === "free") {
@@ -92,14 +96,16 @@ export function registerStripeRoutes(app: Express) {
                 ? `${appUrl}/onboarding?step=verify&session_id={CHECKOUT_SESSION_ID}&plan=${plan}`
                 : `${appUrl}/billing?success=true&session_id={CHECKOUT_SESSION_ID}&plan=${plan}`;
 
+            const cancelUrl = returnTo === "onboarding"
+                ? `${appUrl}/onboarding?canceled=true`
+                : `${appUrl}/billing?canceled=true`;
+
             const session = await stripe.checkout.sessions.create({
                 customer: customerId,
                 payment_method_types: ["card"],
                 line_items: [{ price: planConfig.priceId, quantity: 1 }],
                 success_url: successUrl,
-                cancel_url: returnTo === "onboarding"
-                    ? `${appUrl}/onboarding?canceled=true`
-                    : `${appUrl}/billing?canceled=true`,
+                cancel_url: cancelUrl,
                 subscription_data: { metadata: { userId, plan } },
                 metadata: { userId, plan },
                 allow_promotion_codes: true,
@@ -113,10 +119,13 @@ export function registerStripeRoutes(app: Express) {
     });
 
     // ── 2. Create Billing Portal Session ───────────────────────────────────────
-    app.post("/api/stripe/create-portal-session", async (req: Request, res: Response) => {
+    app.post("/api/stripe/create-portal-session", isAuthenticated, async (req: Request, res: Response) => {
         try {
             const user = (req as any).user;
-            if (!user) return res.status(401).json({ message: "Unauthorized" });
+            const isAdmin = await storage.isGlobalAdmin(user.id);
+            if (!isAdmin) {
+                return res.status(403).json({ message: "Only organization admins can manage billing." });
+            }
 
             const userId = user.id || user.claims?.sub;
             const userDoc = await UserMongo.findById(userId);

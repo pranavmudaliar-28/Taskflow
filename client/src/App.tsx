@@ -10,7 +10,7 @@ import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/s
 import { AppSidebar } from "@/components/app-sidebar";
 import { CreateProjectDialog } from "@/components/create-project-dialog";
 import { useAuth } from "@/hooks/use-auth";
-import { Bell, User, LogOut, Settings } from "lucide-react";
+import { Bell, User, LogOut, Settings, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -24,22 +24,23 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { Project, Notification } from "@shared/schema";
 
-import Landing from "@/pages/landing";
-import Login from "@/pages/login";
-import Signup from "@/pages/signup";
-import Dashboard from "@/pages/dashboard";
-import TasksPage from "@/pages/tasks";
-import TaskView from "@/pages/task-view";
-import ProjectPage from "@/pages/project";
-import TimeTracking from "@/pages/time-tracking";
-import Analytics from "@/pages/analytics";
-import Notifications from "@/pages/notifications";
-import SettingsPage from "@/pages/settings";
-import OrganizationSettings from "@/pages/organization-settings";
-import AcceptInvitation from "@/pages/accept-invitation";
-import Onboarding from "@/pages/onboarding";
-import NotFound from "@/pages/not-found";
-import BillingPage from "@/pages/billing";
+import { lazy, Suspense } from "react";
+const Landing = lazy(() => import("@/pages/landing"));
+const Login = lazy(() => import("@/pages/login"));
+const Signup = lazy(() => import("@/pages/signup"));
+const Dashboard = lazy(() => import("@/pages/dashboard"));
+const TasksPage = lazy(() => import("@/pages/tasks"));
+const TaskView = lazy(() => import("@/pages/task-view"));
+const ProjectPage = lazy(() => import("@/pages/project"));
+const TimeTracking = lazy(() => import("@/pages/time-tracking"));
+const Analytics = lazy(() => import("@/pages/analytics"));
+const Notifications = lazy(() => import("@/pages/notifications"));
+const SettingsPage = lazy(() => import("@/pages/settings"));
+const OrganizationSettings = lazy(() => import("@/pages/organization-settings"));
+const AcceptInvitation = lazy(() => import("@/pages/accept-invitation"));
+const Onboarding = lazy(() => import("@/pages/onboarding"));
+const BillingPage = lazy(() => import("@/pages/billing"));
+const NotFound = lazy(() => import("@/pages/not-found"));
 
 
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
@@ -220,7 +221,9 @@ function AppRouter() {
       <Switch>
         <Route path="/onboarding" component={Onboarding} />
         <Route path="/accept-invitation" component={AcceptInvitation} />
-        <Route path="/billing" component={BillingPage} />
+        <Route path="/billing">
+          {user.isAdmin ? <BillingPage /> : <Redirect to="/onboarding" />}
+        </Route>
         <Route>
           <Redirect to="/onboarding" />
         </Route>
@@ -245,7 +248,9 @@ function AppRouter() {
         <Route path="/onboarding">
           <Redirect to="/dashboard" />
         </Route>
-        <Route path="/billing" component={BillingPage} />
+        <Route path="/billing">
+          {user.isAdmin ? <BillingPage /> : <Redirect to="/dashboard" />}
+        </Route>
         {/* Redirect auth pages → dashboard for logged-in users */}
         <Route path="/login"><Redirect to="/dashboard" /></Route>
         <Route path="/signup"><Redirect to="/dashboard" /></Route>
@@ -261,7 +266,13 @@ function App() {
     <ThemeProvider defaultTheme="light">
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
-          <AppRouter />
+          <Suspense fallback={
+            <div className="min-h-screen flex items-center justify-center bg-background">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          }>
+            <AppRouter />
+          </Suspense>
           <Toaster />
         </TooltipProvider>
       </QueryClientProvider>
