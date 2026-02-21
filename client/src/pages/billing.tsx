@@ -174,7 +174,14 @@ export default function BillingPage() {
 
     const handleUpgrade = (planId: string) => {
         setLoadingPlan(planId);
-        checkoutMutation.mutate(planId);
+        // If user already has an active subscription, changes (including
+        // downgrades) must go through the Stripe billing portal — Stripe
+        // does not allow creating a new checkout session over an existing sub.
+        if (hasPaidSub) {
+            portalMutation.mutate();
+        } else {
+            checkoutMutation.mutate(planId);
+        }
     };
 
     const isCurrentPlan = (planId: string) => planId === currentPlan;
@@ -338,7 +345,7 @@ export default function BillingPage() {
                                     ) : (
                                         <ArrowRight className="h-3.5 w-3.5 mr-1.5" />
                                     )}
-                                    {plan.cta}
+                                    {hasPaidSub ? "Switch Plan" : plan.cta}
                                 </Button>
                             ) : (
                                 <Button className="w-full h-8 text-xs" variant="ghost" disabled>
