@@ -43,6 +43,14 @@ async function getOrCreateCustomer(userId: string, email: string, name?: string)
     return customer.id;
 }
 
+// ── Helper: resolve app URL ────────────────────────────────────────────────────
+function getAppUrl(req: Request): string {
+    if (process.env.APP_URL) return process.env.APP_URL;
+    const protocol = req.headers["x-forwarded-proto"] || req.protocol;
+    const host = req.get("host");
+    return `${protocol}://${host}`;
+}
+
 // ── Register routes ────────────────────────────────────────────────────────────
 export function registerStripeRoutes(app: Express) {
 
@@ -74,11 +82,7 @@ export function registerStripeRoutes(app: Express) {
                 `${userDoc.firstName || ""} ${userDoc.lastName || ""}`.trim()
             );
 
-            const appUrl =
-                process.env.APP_URL ||
-                (process.env.NODE_ENV === "production"
-                    ? "https://your-domain.com"
-                    : `http://localhost:${process.env.PORT || 5002}`);
+            const appUrl = getAppUrl(req);
 
             // Build success_url based on where the user started checkout from:
             // - "onboarding": return to /onboarding?step=verify so the onboarding
@@ -123,11 +127,7 @@ export function registerStripeRoutes(app: Express) {
                 });
             }
 
-            const appUrl =
-                process.env.APP_URL ||
-                (process.env.NODE_ENV === "production"
-                    ? "https://your-domain.com"
-                    : `http://localhost:${process.env.PORT || 5002}`);
+            const appUrl = getAppUrl(req);
 
             const portalSession = await stripe.billingPortal.sessions.create({
                 customer: userDoc.stripeCustomerId,
