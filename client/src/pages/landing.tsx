@@ -1,461 +1,1073 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
-    CheckCircle2, Clock, Users, BarChart3, Zap, Shield,
-    ArrowRight, Kanban, Star, Play, ChevronRight,
-    Globe, Lock, Layers, Sparkles, TrendingUp,
+    ArrowRight,
+    CheckCircle2,
+    Zap,
+    Users,
+    BarChart3,
+    Clock,
+    Bell,
+    Shield,
+    Star,
+    Kanban,
+    Play,
+    LayoutDashboard,
+    ListTodo,
+    Settings,
+    ChevronRight,
+    Twitter,
+    Linkedin,
+    Github,
+    Globe,
+    Layers,
+    Target,
+    TrendingUp,
 } from "lucide-react";
 
-/* ── Hero Mockup ─────────────────── */
-function HeroMockup() {
-    const tasks = [
-        { title: "Design system update", dot: "bg-emerald-400", badge: "high", bc: "text-orange-600 bg-orange-50" },
-        { title: "User research synthesis", dot: "bg-violet-400", badge: "medium", bc: "text-blue-600 bg-blue-50" },
-        { title: "API integration sprint", dot: "bg-blue-400", badge: "urgent", bc: "text-red-600 bg-red-50" },
-        { title: "Launch campaign docs", dot: "bg-slate-300", badge: "low", bc: "text-slate-500 bg-slate-100" },
-    ];
+/* ─────────────────────────────────────────────────────────────
+   DATA (updated to match the screenshot layout + vibe)
+   NOTE: Company/brand name kept as "TaskFlow"
+───────────────────────────────────────────────────────────── */
 
-    return (
-        <div className="relative w-full max-w-md mx-auto select-none">
-            {/* Board card */}
-            <div className="relative z-10 rounded-2xl border border-slate-200/80 dark:border-slate-700/60 bg-white dark:bg-slate-900 shadow-xl p-5 animate-float">
-                <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                        <div className="h-5 w-5 rounded-md bg-gradient-violet flex items-center justify-center">
-                            <Kanban className="h-3 w-3 text-white" />
-                        </div>
-                        <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">Active Sprint</span>
-                    </div>
-                    <div className="flex gap-1">
-                        <div className="h-2 w-2 rounded-full bg-red-400" />
-                        <div className="h-2 w-2 rounded-full bg-yellow-400" />
-                        <div className="h-2 w-2 rounded-full bg-green-400" />
-                    </div>
-                </div>
-
-                <div className="space-y-1.5">
-                    {tasks.map((t, i) => (
-                        <div key={i} className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-                            <div className={`h-1.5 w-1.5 rounded-full shrink-0 ${t.dot}`} />
-                            <span className="text-xs flex-1 text-slate-700 dark:text-slate-300 truncate">{t.title}</span>
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-medium ${t.bc}`}>{t.badge}</span>
-                        </div>
-                    ))}
-                </div>
-
-                <div className="mt-3.5 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                    <div className="flex -space-x-1.5">
-                        {[{ l: "A", c: "bg-violet-500" }, { l: "B", c: "bg-blue-500" }, { l: "C", c: "bg-emerald-500" }].map(({ l, c }, i) => (
-                            <div key={i} className={`h-5 w-5 rounded-full border-2 border-white dark:border-slate-900 flex items-center justify-center text-[8px] font-bold text-white ${c}`}>{l}</div>
-                        ))}
-                    </div>
-                    <span className="text-[10px] text-slate-400">4 tasks · 2 active</span>
-                </div>
-            </div>
-
-            {/* Stat float — top right */}
-            <div className="absolute -top-3 -right-3 z-20 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 shadow-md animate-float-slow delay-200">
-                <div className="flex items-center gap-2">
-                    <div className="h-6 w-6 rounded-lg bg-emerald-50 dark:bg-emerald-950 flex items-center justify-center">
-                        <TrendingUp className="h-3 w-3 text-emerald-600" />
-                    </div>
-                    <div>
-                        <p className="text-[9px] text-slate-400 leading-none mb-0.5">Productivity</p>
-                        <p className="text-xs font-bold text-emerald-600 leading-none">+38%</p>
-                    </div>
-                </div>
-            </div>
-
-            {/* Timer float — bottom left */}
-            <div className="absolute -bottom-3 -left-3 z-20 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 shadow-md animate-float delay-300">
-                <div className="flex items-center gap-2">
-                    <div className="h-6 w-6 rounded-lg bg-violet-50 dark:bg-violet-950 flex items-center justify-center">
-                        <Clock className="h-3 w-3 text-violet-600" />
-                    </div>
-                    <div>
-                        <p className="text-[9px] text-slate-400 leading-none mb-0.5">Time logged</p>
-                        <p className="text-xs font-bold text-violet-600 leading-none">12h 40m</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-}
-
-/* ── Mini feature mockups ─── */
-function TaskMockup() {
-    return (
-        <div className="rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 p-3 space-y-1.5 mt-3">
-            {["Design mockups", "Review PR #42", "Write docs"].map((t, i) => (
-                <div key={i} className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800/60">
-                    <div className={`h-1.5 w-1.5 rounded-full shrink-0 ${i < 2 ? "bg-violet-400" : "bg-slate-300"}`} />
-                    <span className="text-[11px] flex-1 text-slate-600 dark:text-slate-400">{t}</span>
-                    {i < 2 && <CheckCircle2 className="h-3 w-3 text-emerald-500" />}
-                </div>
-            ))}
-        </div>
-    );
-}
-
-function ChartMockup() {
-    return (
-        <div className="rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 p-3 mt-3">
-            <div className="flex items-end gap-1 h-14">
-                {[35, 60, 45, 78, 55, 90, 68].map((h, i) => (
-                    <div key={i} className="flex-1 rounded-sm" style={{ height: `${h}%`, background: `hsl(${262 + i * 4} 60% ${55 + i * 2}%)` }} />
-                ))}
-            </div>
-            <p className="text-[10px] text-slate-400 mt-2 leading-none">7-day completion rate</p>
-        </div>
-    );
-}
-
-function TeamMockup() {
-    return (
-        <div className="rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 p-3 mt-3 space-y-2">
-            {[
-                { name: "Sarah K.", role: "Designer", c: "bg-pink-400" },
-                { name: "James L.", role: "Dev", c: "bg-blue-400" },
-                { name: "Priya M.", role: "PM", c: "bg-violet-400" },
-            ].map((m, i) => (
-                <div key={i} className="flex items-center gap-2">
-                    <div className={`h-5 w-5 rounded-full ${m.c} flex items-center justify-center text-[8px] font-bold text-white shrink-0`}>{m.name[0]}</div>
-                    <div className="flex-1">
-                        <p className="text-[11px] font-medium text-slate-700 dark:text-slate-200 leading-none">{m.name}</p>
-                        <p className="text-[9px] text-slate-400 leading-none mt-0.5">{m.role}</p>
-                    </div>
-                    <div className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                </div>
-            ))}
-        </div>
-    );
-}
-
-const features = [
-    { icon: Kanban, title: "Kanban Boards", desc: "Drag-and-drop boards with real-time sync. See your entire workflow at a glance.", mockup: <TaskMockup />, grad: "from-violet-50 to-purple-50/50 dark:from-violet-950/20 dark:to-purple-950/10", ic: "bg-violet-100 dark:bg-violet-950 text-violet-600 dark:text-violet-400" },
-    { icon: BarChart3, title: "Analytics", desc: "Track completion rates, team velocity, and project health in one view.", mockup: <ChartMockup />, grad: "from-blue-50 to-sky-50/50 dark:from-blue-950/20 dark:to-sky-950/10", ic: "bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400" },
-    { icon: Users, title: "Team Collaboration", desc: "Assign tasks, add reviewers, and manage permissions across your organization.", mockup: <TeamMockup />, grad: "from-emerald-50 to-teal-50/50 dark:from-emerald-950/20 dark:to-teal-950/10", ic: "bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400" },
-    { icon: Clock, title: "Time Tracking", desc: "One-click time logs on every task. Export timesheets in seconds.", grad: "from-amber-50 to-orange-50/50 dark:from-amber-950/20 dark:to-orange-950/10", ic: "bg-amber-100 dark:bg-amber-950 text-amber-600 dark:text-amber-400" },
-    { icon: Shield, title: "Role-Based Access", desc: "Fine-grained permissions for admins, leads, and members.", grad: "from-rose-50 to-red-50/50 dark:from-rose-950/20 dark:to-red-950/10", ic: "bg-rose-100 dark:bg-rose-950 text-rose-600 dark:text-rose-400" },
-    { icon: Zap, title: "Real-Time Updates", desc: "Live sync keeps everyone aligned without refreshing the page.", grad: "from-indigo-50 to-violet-50/50 dark:from-indigo-950/20 dark:to-violet-950/10", ic: "bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400" },
+const featureCards = [
+    {
+        icon: ListTodo,
+        title: "Task Progress",
+        desc: "Track progress at a glance with a clean, simple workflow.",
+        bg: "#FFF7ED",
+        dot: "#FB923C",
+    },
+    {
+        icon: Clock,
+        title: "Plan Calendar",
+        desc: "Plan tasks with a calm calendar and timeline planning.",
+        bg: "#F5F3FF",
+        dot: "#8B5CF6",
+    },
+    {
+        icon: Users,
+        title: "Collaborations",
+        desc: "Stay aligned with comments, mentions and team updates.",
+        bg: "#ECFDF5",
+        dot: "#10B981",
+    },
 ];
 
-const testimonials = [
-    { name: "Ananya Sharma", role: "Lead Designer @ Aerolabs", initials: "AS", col: "bg-violet-500", quote: "TaskFlow completely changed how our team ships work. The Kanban view is stunning and time tracking is actually useful." },
-    { name: "Marcus Boateng", role: "CTO @ Nexvio", initials: "MB", col: "bg-blue-500", quote: "We replaced 3 tools with TaskFlow. Role-based access and real-time updates are exactly what a distributed team needs." },
-    { name: "Chen Wei", role: "Product Manager @ Strata", initials: "CW", col: "bg-emerald-500", quote: "The analytics dashboard gives us insights we were missing. Completion rates have gone up 40% since we started." },
+const bigFeatures = [
+    {
+        badge: "Simple",
+        title: "Simple to use,\npowerful when need.",
+        desc: "Create tasks fast, organize them clearly, and keep your team aligned without extra clutter.",
+        bullets: ["Create tasks in seconds", "Customize view for your workflow", "Work with your team in real-time"],
+        bgColor: "#F34B27",
+        flip: false,
+    },
+    {
+        badge: "Projects",
+        title: "Take complex\nprojects with ease",
+        desc: "Plan, assign, and execute work smoothly with clean structure and fast updates.",
+        bullets: ["Keep everyone accountable", "Team overview in one place", "Make work visible to everyone"],
+        bgColor: "#0E7A4C",
+        flip: true,
+    },
+    {
+        badge: "Integrations",
+        title: "Create calm with\nintegrations.",
+        desc: "Connect the tools you already use and keep everything in sync with fewer handoffs.",
+        bullets: ["Connect Slack / Outlook", "Bring tasks from other tools", "Automate updates"],
+        bgColor: "#7C3AED",
+        flip: false,
+    },
 ];
 
 const plans = [
-    { name: "Free", price: "$0", per: "forever", desc: "For individuals and small projects", features: ["Up to 3 projects", "Basic task management", "Time tracking", "Email support"], cta: "Get Started", popular: false, slug: "free" },
-    { name: "Pro", price: "$29", per: "/mo", desc: "For growing teams", features: ["Unlimited projects", "Advanced analytics", "Priority support", "Custom fields", "Role-based access"], cta: "Start Free Trial", popular: true, slug: "pro" },
-    { name: "Team", price: "$99", per: "/mo", desc: "For large organizations", features: ["Everything in Pro", "Advanced reporting", "Dedicated support", "SSO & compliance", "Audit logs"], cta: "Contact Sales", popular: false, slug: "team" },
+    {
+        name: "Basic",
+        price: "$9.99",
+        period: "per month",
+        desc: "For small teams",
+        cta: "Get started",
+        highlight: false,
+        features: ["Basic boards", "Team collaboration", "Core integrations", "Email support"],
+    },
+    {
+        name: "Pro",
+        price: "$12.99",
+        period: "per month",
+        desc: "Best for growing teams",
+        cta: "Get started",
+        highlight: true,
+        features: ["Everything in Basic", "Unlimited projects", "Advanced views", "Priority support"],
+    },
+    {
+        name: "Enterprise",
+        price: "Contact",
+        period: "custom",
+        desc: "For large orgs",
+        cta: "Contact sales",
+        highlight: false,
+        features: ["Custom setup", "SSO / SAML", "Dedicated support", "Custom SLA"],
+    },
 ];
+
+const testimonials = [
+    { name: "Alen Baran", role: "Product Manager", avatar: "AB", color: "#7C3AED", text: "Fast, clean, and keeps our work organized without the usual noise." },
+    { name: "Monika H.", role: "Founder", avatar: "MH", color: "#FB923C", text: "The calm UI helps our team stay focused. Planning is finally painless." },
+    { name: "Grave K.", role: "Design Lead", avatar: "GK", color: "#10B981", text: "My team actually likes updating tasks now. That’s the biggest win." },
+];
+
+const footerLinks: Record<string, string[]> = {
+    Explore: ["Features", "Benefits", "Integrations", "Pricing"],
+    Support: ["Help center", "Documentation", "Status"],
+    Legal: ["Privacy", "Terms", "Cookies"],
+};
+
+/* ─────────────────────────────────────────────────────────────
+   SUB-COMPONENTS
+───────────────────────────────────────────────────────────── */
+
+function Stars({ n = 5 }: { n?: number }) {
+    return (
+        <div className="flex gap-0.5">
+            {Array.from({ length: n }).map((_, i) => (
+                <Star key={i} style={{ height: 14, width: 14 }} className="fill-amber-400 text-amber-400" />
+            ))}
+        </div>
+    );
+}
+
+function MiniFeatureMock() {
+    return (
+        <div
+            style={{
+                borderRadius: 16,
+                border: "1px solid #EEF2F7",
+                background: "#FFFFFF",
+                overflow: "hidden",
+            }}
+        >
+            <div style={{ padding: 12, display: "flex", gap: 10, alignItems: "center" }}>
+                <div style={{ height: 10, width: 10, borderRadius: 99, background: "#7C3AED" }} />
+                <div style={{ height: 10, width: "55%", borderRadius: 999, background: "#E2E8F0" }} />
+            </div>
+            <div style={{ padding: 12, paddingTop: 0, display: "flex", flexDirection: "column", gap: 8 }}>
+                {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} style={{ height: 28, borderRadius: 12, background: "#F1F5F9" }} />
+                ))}
+                <div style={{ height: 48, borderRadius: 14, background: "#FEF3C7" }} />
+            </div>
+        </div>
+    );
+}
+
+/** Hero mock (matches screenshot vibe: centered app card + marker strokes) */
+function HeroDashboard() {
+    return (
+        <div style={{ position: "relative", width: "100%", maxWidth: 980, margin: "0 auto", padding: "0 18px" }}>
+            {/* marker strokes */}
+            <div
+                style={{
+                    position: "absolute",
+                    left: 14,
+                    top: 60,
+                    width: 150,
+                    height: 18,
+                    background: "#FB7185",
+                    borderRadius: 999,
+                    transform: "rotate(-6deg)",
+                    opacity: 0.55,
+                }}
+            />
+            <div
+                style={{
+                    position: "absolute",
+                    right: 26,
+                    top: 36,
+                    width: 180,
+                    height: 18,
+                    background: "#FB923C",
+                    borderRadius: 999,
+                    transform: "rotate(7deg)",
+                    opacity: 0.55,
+                }}
+            />
+            <div
+                style={{
+                    position: "absolute",
+                    left: 86,
+                    bottom: -10,
+                    width: 220,
+                    height: 18,
+                    background: "#F472B6",
+                    borderRadius: 999,
+                    transform: "rotate(4deg)",
+                    opacity: 0.5,
+                }}
+            />
+
+            {/* app card */}
+            <div
+                style={{
+                    position: "relative",
+                    background: "#FFFFFF",
+                    border: "1px solid #EEF2F7",
+                    borderRadius: 18,
+                    boxShadow: "0 18px 50px rgba(15,23,42,0.10)",
+                    overflow: "hidden",
+                }}
+            >
+                {/* top browser bar */}
+                <div
+                    style={{
+                        padding: "10px 14px",
+                        borderBottom: "1px solid #EEF2F7",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        background: "#FFFFFF",
+                    }}
+                >
+                    <div style={{ display: "flex", gap: 6 }}>
+                        {["#FF5F57", "#FFBD2E", "#27C840"].map((c) => (
+                            <div key={c} style={{ height: 10, width: 10, borderRadius: 99, background: c }} />
+                        ))}
+                    </div>
+                    <div style={{ flex: 1 }} />
+                    <div style={{ height: 10, width: 90, borderRadius: 999, background: "#F1F5F9" }} />
+                </div>
+
+                {/* body */}
+                <div style={{ display: "flex", minHeight: 270 }}>
+                    {/* left */}
+                    <div style={{ width: 180, borderRight: "1px solid #EEF2F7", padding: 14 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+                            <span style={{ height: 10, width: 10, borderRadius: 99, background: "#F43F5E" }} />
+                            <span style={{ fontWeight: 950, fontSize: 13, color: "#0F172A" }}>TaskFlow</span>
+                        </div>
+
+                        {["Overview", "Projects", "Calendar", "Teams", "Settings"].map((l, i) => (
+                            <div
+                                key={l}
+                                style={{
+                                    padding: "8px 10px",
+                                    borderRadius: 10,
+                                    fontSize: 12,
+                                    fontWeight: 800,
+                                    color: i === 1 ? "#7C3AED" : "#64748B",
+                                    background: i === 1 ? "#F5F3FF" : "transparent",
+                                    marginBottom: 6,
+                                }}
+                            >
+                                {l}
+                            </div>
+                        ))}
+
+                        <div
+                            style={{
+                                marginTop: 12,
+                                padding: 12,
+                                borderRadius: 14,
+                                background: "#FDF4FF",
+                                border: "1px solid #F5D0FE",
+                            }}
+                        >
+                            <div style={{ fontSize: 11, fontWeight: 950, color: "#6D28D9", marginBottom: 8 }}>Upgrade</div>
+                            <div style={{ height: 8, borderRadius: 999, background: "#E9D5FF" }} />
+                        </div>
+                    </div>
+
+                    {/* main */}
+                    <div style={{ flex: 1, padding: 14, background: "#FBFBFE" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+                            <div>
+                                <div style={{ fontWeight: 950, fontSize: 14, color: "#0F172A" }}>TaskFlow Landing Page</div>
+                                <div style={{ fontSize: 11, color: "#94A3B8", marginTop: 2 }}>Overview · Tasks · Calendar</div>
+                            </div>
+                            <div
+                                style={{
+                                    height: 28,
+                                    width: 28,
+                                    borderRadius: 99,
+                                    background: "#7C3AED",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                }}
+                            >
+                                <span style={{ color: "#fff", fontWeight: 950, fontSize: 11 }}>U</span>
+                            </div>
+                        </div>
+
+                        <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: 12, marginTop: 12 }}>
+                            <div style={{ background: "#fff", border: "1px solid #EEF2F7", borderRadius: 14, padding: 12 }}>
+                                <div style={{ fontSize: 12, fontWeight: 950, color: "#0F172A", marginBottom: 10 }}>November 16</div>
+                                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                                    {["Design", "Wireframes", "Copy", "QA"].map((t, i) => (
+                                        <div
+                                            key={t}
+                                            style={{
+                                                padding: "6px 10px",
+                                                borderRadius: 999,
+                                                border: "1px solid #EEF2F7",
+                                                background: i === 0 ? "#F5F3FF" : "#FFFFFF",
+                                                color: i === 0 ? "#7C3AED" : "#475569",
+                                                fontSize: 11,
+                                                fontWeight: 900,
+                                            }}
+                                        >
+                                            {t}
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+                                    {[
+                                        { t: "Homepage section updates", c: "#FDE68A" },
+                                        { t: "Pricing plan polish", c: "#A7F3D0" },
+                                        { t: "Integration icons", c: "#DDD6FE" },
+                                    ].map((row) => (
+                                        <div
+                                            key={row.t}
+                                            style={{
+                                                padding: "10px 12px",
+                                                borderRadius: 12,
+                                                background: "#FFFFFF",
+                                                border: "1px solid #EEF2F7",
+                                                display: "flex",
+                                                alignItems: "center",
+                                                gap: 10,
+                                            }}
+                                        >
+                                            <span style={{ height: 10, width: 10, borderRadius: 99, background: row.c }} />
+                                            <span
+                                                style={{
+                                                    fontSize: 12,
+                                                    fontWeight: 800,
+                                                    color: "#334155",
+                                                    overflow: "hidden",
+                                                    textOverflow: "ellipsis",
+                                                    whiteSpace: "nowrap",
+                                                }}
+                                            >
+                                                {row.t}
+                                            </span>
+                                            <div style={{ marginLeft: "auto", height: 18, width: 54, borderRadius: 999, background: "#F1F5F9" }} />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                                <div style={{ background: "#fff", border: "1px solid #EEF2F7", borderRadius: 14, padding: 12 }}>
+                                    <div style={{ fontSize: 11, fontWeight: 950, color: "#0F172A", marginBottom: 8 }}>Status</div>
+                                    <div style={{ height: 10, borderRadius: 999, background: "#E9D5FF", overflow: "hidden" }}>
+                                        <div style={{ height: "100%", width: "64%", background: "#7C3AED" }} />
+                                    </div>
+                                    <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8, fontSize: 11, color: "#64748B", fontWeight: 900 }}>
+                                        <span>Progress</span>
+                                        <span>64%</span>
+                                    </div>
+                                </div>
+
+                                <div style={{ background: "#FFF7ED", border: "1px solid #FED7AA", borderRadius: 14, padding: 12 }}>
+                                    <div style={{ fontSize: 11, fontWeight: 950, color: "#9A3412", marginBottom: 8 }}>Today</div>
+                                    <div style={{ height: 26, borderRadius: 12, background: "#FFFFFF", border: "1px solid #FDE68A" }} />
+                                    <div style={{ height: 26, borderRadius: 12, background: "#FFFFFF", border: "1px solid #FDE68A", marginTop: 8 }} />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+/** Card mock inside colored bands */
+function BandMockup({ accent }: { accent: string }) {
+    return (
+        <div
+            style={{
+                width: "100%",
+                maxWidth: 520,
+                background: "rgba(255,255,255,0.16)",
+                border: "1px solid rgba(255,255,255,0.24)",
+                borderRadius: 22,
+                padding: 18,
+                boxShadow: "0 24px 70px rgba(0,0,0,0.22)",
+                backdropFilter: "blur(10px)",
+            }}
+        >
+            <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 14 }}>
+                <div style={{ height: 10, width: 10, borderRadius: 99, background: "rgba(255,255,255,0.9)" }} />
+                <div style={{ height: 10, width: 120, borderRadius: 999, background: "rgba(255,255,255,0.35)" }} />
+                <div style={{ marginLeft: "auto", height: 10, width: 70, borderRadius: 999, background: "rgba(255,255,255,0.25)" }} />
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <div style={{ background: "rgba(255,255,255,0.14)", borderRadius: 16, padding: 12 }}>
+                    <div style={{ height: 10, width: "70%", borderRadius: 999, background: "rgba(255,255,255,0.45)", marginBottom: 10 }} />
+                    <div style={{ height: 34, borderRadius: 14, background: "rgba(255,255,255,0.22)" }} />
+                    <div style={{ height: 10, width: "55%", borderRadius: 999, background: "rgba(255,255,255,0.30)", marginTop: 10 }} />
+                </div>
+                <div style={{ background: "rgba(255,255,255,0.14)", borderRadius: 16, padding: 12 }}>
+                    <div style={{ height: 10, width: "62%", borderRadius: 999, background: "rgba(255,255,255,0.45)", marginBottom: 10 }} />
+                    <div style={{ height: 60, borderRadius: 14, background: "rgba(255,255,255,0.22)" }} />
+                </div>
+            </div>
+
+            <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+                {["Design sprint", "Bug fixes", "Team sync", "Release"].map((t, i) => (
+                    <div
+                        key={t}
+                        style={{
+                            padding: "10px 12px",
+                            borderRadius: 14,
+                            background: "rgba(255,255,255,0.14)",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 10,
+                        }}
+                    >
+                        <span
+                            style={{
+                                height: 9,
+                                width: 9,
+                                borderRadius: 99,
+                                background: ["#FDE68A", "#A7F3D0", "#DDD6FE", "#FED7AA"][i],
+                                flexShrink: 0,
+                            }}
+                        />
+                        <span style={{ fontSize: 12, fontWeight: 900, color: "rgba(255,255,255,0.92)" }}>{t}</span>
+                        <span style={{ marginLeft: "auto", height: 10, width: 70, borderRadius: 999, background: "rgba(255,255,255,0.20)" }} />
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+/* ─────────────────────────────────────────────────────────────
+   MAIN PAGE (layout updated to match screenshot)
+   NOTE: Company/brand name kept as "TaskFlow"
+───────────────────────────────────────────────────────────── */
 
 export default function Landing() {
     return (
-        <div className="min-h-screen bg-white dark:bg-slate-950 overflow-x-hidden">
+        <div style={{ fontFamily: "'Inter', system-ui, -apple-system, sans-serif", background: "#fff", color: "#0F172A" }}>
+            {/* NAV */}
+            <nav
+                style={{
+                    position: "sticky",
+                    top: 0,
+                    zIndex: 50,
+                    background: "rgba(255,255,255,0.92)",
+                    borderBottom: "1px solid #EEF2F7",
+                    backdropFilter: "blur(12px)",
+                }}
+            >
+                <div
+                    style={{
+                        maxWidth: 1120,
+                        margin: "0 auto",
+                        padding: "0 22px",
+                        height: 72,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 20,
+                    }}
+                >
+                    {/* Logo (dot + brand like screenshot) */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+                        <span style={{ height: 10, width: 10, borderRadius: 999, background: "#F43F5E" }} />
+                        <span style={{ fontWeight: 950, fontSize: 16, letterSpacing: "-0.02em" }}>TaskFlow</span>
+                    </div>
 
-            {/* ── NAV ───────────────────────────────────────── */}
-            <nav className="fixed top-0 inset-x-0 z-50 h-14 glass-nav flex items-center">
-                <div className="max-w-6xl mx-auto px-4 sm:px-6 w-full flex items-center justify-between">
-                    <Link href="/">
-                        <div className="flex items-center gap-2 cursor-pointer">
-                            <div className="h-7 w-7 rounded-lg bg-gradient-violet flex items-center justify-center">
-                                <Kanban className="h-3.5 w-3.5 text-white" />
-                            </div>
-                            <span className="font-bold text-sm tracking-tight">TaskFlow Pro</span>
-                        </div>
-                    </Link>
-
-                    <div className="hidden md:flex items-center gap-7 text-sm text-slate-500 dark:text-slate-400 font-medium">
-                        {["Features", "Pricing", "Testimonials"].map(l => (
-                            <a key={l} href={`#${l.toLowerCase()}`} className="hover:text-slate-900 dark:hover:text-white transition-colors" data-testid={`link-${l.toLowerCase()}`}>{l}</a>
+                    {/* Links */}
+                    <div className="hidden md:flex" style={{ display: "flex", alignItems: "center", gap: 24 }}>
+                        {["Features", "Benefits", "Integrations", "Pricing"].map((l) => (
+                            <a
+                                key={l}
+                                href={`#${l.toLowerCase()}`}
+                                style={{ fontSize: 13, fontWeight: 800, color: "#64748B", textDecoration: "none" }}
+                                onMouseEnter={(e) => (e.currentTarget.style.color = "#0F172A")}
+                                onMouseLeave={(e) => (e.currentTarget.style.color = "#64748B")}
+                            >
+                                {l}
+                            </a>
                         ))}
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    {/* Action: Login pill (screenshot style) */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
                         <Link href="/login">
-                            <Button variant="ghost" size="sm" className="text-sm h-8" data-testid="button-signin">Sign in</Button>
-                        </Link>
-                        <Link href="/signup">
-                            <Button size="sm" className="h-8 text-sm bg-gradient-violet text-white hover:opacity-90 transition-opacity" data-testid="button-login">
-                                Get started <ArrowRight className="ml-1 h-3.5 w-3.5" />
-                            </Button>
+                            <a
+                                style={{
+                                    height: 36,
+                                    padding: "0 14px",
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    borderRadius: 999,
+                                    border: "1px solid #E2E8F0",
+                                    textDecoration: "none",
+                                    color: "#0F172A",
+                                    fontWeight: 900,
+                                    fontSize: 13,
+                                    background: "#fff",
+                                }}
+                            >
+                                Login
+                            </a>
                         </Link>
                     </div>
                 </div>
             </nav>
 
-            {/* ── HERO ──────────────────────────────────────── */}
-            <section className="relative pt-28 pb-24 px-4 sm:px-6 overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-hero" />
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-80 violet-glow opacity-20 rounded-full -mt-24 pointer-events-none" />
-
-                <div className="relative max-w-6xl mx-auto grid lg:grid-cols-2 gap-14 items-center">
-                    {/* Text */}
-                    <div className="space-y-6 animate-fade-in-up">
-                        <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full bg-violet-50 dark:bg-violet-950/60 text-violet-700 dark:text-violet-300 border border-violet-100 dark:border-violet-800">
-                            <Sparkles className="h-3 w-3" />
-                            Smart Task Management
+            {/* HERO */}
+            <section style={{ padding: "64px 0 20px" }}>
+                <div style={{ maxWidth: 980, margin: "0 auto", padding: "0 18px", textAlign: "center" }}>
+                    <h1
+                        style={{
+                            fontSize: "clamp(34px, 5.4vw, 58px)",
+                            fontWeight: 950,
+                            lineHeight: 1.08,
+                            letterSpacing: "-0.03em",
+                            margin: "0 0 14px",
+                        }}
+                    >
+                        Manage Your <span style={{ fontSize: "0.95em" }}>👩‍💻</span> Team&apos;s{" "}
+                        <span style={{ position: "relative", display: "inline-block" }}>
+                            <span style={{ position: "relative", zIndex: 1 }}>Productivity</span>
+                            {/* orange marker underline */}
+                            <span
+                                style={{
+                                    position: "absolute",
+                                    left: -6,
+                                    right: -6,
+                                    bottom: 6,
+                                    height: "34%",
+                                    background: "rgba(251, 146, 60, 0.55)",
+                                    borderRadius: 10,
+                                    zIndex: 0,
+                                    transform: "rotate(-1deg)",
+                                }}
+                            />
                         </span>
+                    </h1>
 
-                        <h1 className="text-5xl sm:text-6xl font-extrabold tracking-tight leading-[1.06] text-slate-900 dark:text-white">
-                            Manage Work with
+                    <p style={{ fontSize: 15, color: "#64748B", lineHeight: 1.7, maxWidth: 560, margin: "0 auto 22px" }}>
+                        Plan your tasks with simple boards, calendars and team collaboration — without switching tools.
+                    </p>
+
+                    <div style={{ display: "flex", justifyContent: "center", gap: 12, flexWrap: "wrap", marginBottom: 10 }}>
+                        <Link href="/signup">
+                            <a
+                                style={{
+                                    height: 44,
+                                    padding: "0 18px",
+                                    borderRadius: 999,
+                                    background: "#7C3AED",
+                                    color: "#fff",
+                                    fontWeight: 950,
+                                    fontSize: 13,
+                                    textDecoration: "none",
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: 8,
+                                    boxShadow: "0 10px 26px rgba(124,58,237,0.26)",
+                                }}
+                            >
+                                Try For Free <ArrowRight style={{ height: 16, width: 16 }} />
+                            </a>
+                        </Link>
+
+                        <a
+                            href="#"
+                            style={{
+                                height: 44,
+                                padding: "0 16px",
+                                borderRadius: 999,
+                                background: "#fff",
+                                border: "1px solid #E2E8F0",
+                                color: "#0F172A",
+                                fontWeight: 950,
+                                fontSize: 13,
+                                textDecoration: "none",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 10,
+                            }}
+                        >
+                            <span
+                                style={{
+                                    height: 26,
+                                    width: 26,
+                                    borderRadius: 999,
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    background: "#F1F5F9",
+                                }}
+                            >
+                                <Play style={{ height: 12, width: 12, color: "#7C3AED", fill: "#7C3AED", marginLeft: 2 }} />
+                            </span>
+                            Watch demo
+                        </a>
+                    </div>
+
+                    <p style={{ fontSize: 12, color: "#94A3B8", fontWeight: 800 }}>No credit card required · Free plan forever</p>
+                </div>
+
+                <div style={{ marginTop: 28 }}>
+                    <HeroDashboard />
+                </div>
+            </section>
+
+            {/* LOGOS STRIP */}
+            <section style={{ padding: "26px 0 10px" }}>
+                <div style={{ maxWidth: 980, margin: "0 auto", padding: "0 18px", textAlign: "center" }}>
+                    <div style={{ display: "flex", justifyContent: "center", gap: 28, flexWrap: "wrap", opacity: 0.85 }}>
+                        {[
+                            { name: "Notion", dot: "#111827" },
+                            { name: "Google", dot: "#60A5FA" },
+                            { name: "Trello", dot: "#3B82F6" },
+                            { name: "Slack", dot: "#A78BFA" },
+                            { name: "Outlook", dot: "#2563EB" },
+                        ].map((x) => (
+                            <div key={x.name} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <span style={{ height: 10, width: 10, borderRadius: 3, background: x.dot }} />
+                                <span style={{ fontWeight: 950, color: "#94A3B8", fontSize: 13 }}>{x.name}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
+            {/* FEATURES */}
+            <section id="features" style={{ padding: "56px 0 20px" }}>
+                <div style={{ maxWidth: 980, margin: "0 auto", padding: "0 18px" }}>
+                    <div style={{ textAlign: "center", marginBottom: 28 }}>
+                        <div style={{ fontSize: 12, fontWeight: 950, color: "#7C3AED", marginBottom: 10 }}>The features</div>
+                        <div style={{ fontSize: "clamp(22px, 3.4vw, 34px)", fontWeight: 950, letterSpacing: "-0.02em", lineHeight: 1.15 }}>
+                            Both familiar and new.
+                        </div>
+                    </div>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 16 }}>
+                        {featureCards.map(({ icon: Icon, title, desc, bg, dot }) => (
+                            <div
+                                key={title}
+                                style={{
+                                    background: bg,
+                                    borderRadius: 22,
+                                    padding: 18,
+                                    border: "1px solid rgba(15,23,42,0.06)",
+                                }}
+                            >
+                                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+                                    <div
+                                        style={{
+                                            height: 32,
+                                            width: 32,
+                                            borderRadius: 12,
+                                            background: dot,
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            boxShadow: "0 10px 20px rgba(15,23,42,0.10)",
+                                        }}
+                                    >
+                                        <Icon style={{ height: 16, width: 16, color: "#fff" }} />
+                                    </div>
+                                    <div style={{ fontWeight: 950, letterSpacing: "-0.01em" }}>{title}</div>
+                                </div>
+
+                                <div style={{ fontSize: 13, color: "#64748B", lineHeight: 1.6, marginBottom: 12 }}>{desc}</div>
+
+                                <MiniFeatureMock />
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
+            {/* TRUST TAGLINE + CTA */}
+            <section style={{ padding: "44px 0 18px" }}>
+                <div style={{ maxWidth: 980, margin: "0 auto", padding: "0 18px", textAlign: "center" }}>
+                    <div style={{ fontSize: "clamp(22px, 3.6vw, 36px)", fontWeight: 950, letterSpacing: "-0.02em" }}>
+                        A task manager you can
+                        <br />
+                        trust for teams
+                    </div>
+
+                    <div style={{ marginTop: 16 }}>
+                        <Link href="/signup">
+                            <a
+                                style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: 8,
+                                    height: 44,
+                                    padding: "0 18px",
+                                    borderRadius: 999,
+                                    background: "#7C3AED",
+                                    color: "#fff",
+                                    textDecoration: "none",
+                                    fontWeight: 950,
+                                    fontSize: 13,
+                                    boxShadow: "0 10px 26px rgba(124,58,237,0.22)",
+                                }}
+                            >
+                                Get Started <ArrowRight style={{ height: 16, width: 16 }} />
+                            </a>
+                        </Link>
+                    </div>
+                </div>
+            </section>
+
+            {/* BANDS (rounded blocks like screenshot) */}
+            <section id="benefits" style={{ padding: "28px 0 10px" }}>
+                <div style={{ maxWidth: 980, margin: "0 auto", padding: "0 18px", display: "flex", flexDirection: "column", gap: 18 }}>
+                    {bigFeatures.map(({ badge, title, desc, bullets, bgColor, flip }) => (
+                        <div
+                            key={badge}
+                            style={{
+                                background: bgColor,
+                                borderRadius: 26,
+                                padding: "26px 22px",
+                                overflow: "hidden",
+                            }}
+                        >
+                            <div
+                                style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "space-between",
+                                    gap: 18,
+                                    flexWrap: "wrap",
+                                    flexDirection: flip ? ("row-reverse" as const) : ("row" as const),
+                                }}
+                            >
+                                {/* text */}
+                                <div style={{ flex: 1, minWidth: 260, color: "#fff" }}>
+                                    <div
+                                        style={{
+                                            display: "inline-flex",
+                                            alignItems: "center",
+                                            gap: 8,
+                                            padding: "6px 12px",
+                                            borderRadius: 999,
+                                            background: "rgba(255,255,255,0.18)",
+                                            border: "1px solid rgba(255,255,255,0.22)",
+                                            fontSize: 11,
+                                            fontWeight: 950,
+                                            letterSpacing: "0.08em",
+                                            textTransform: "uppercase",
+                                            marginBottom: 14,
+                                        }}
+                                    >
+                                        {badge}
+                                    </div>
+
+                                    <div style={{ fontSize: 22, fontWeight: 950, letterSpacing: "-0.02em", lineHeight: 1.15, whiteSpace: "pre-line" }}>{title}</div>
+                                    <div style={{ marginTop: 10, fontSize: 13, lineHeight: 1.75, color: "rgba(255,255,255,0.85)", maxWidth: 520 }}>{desc}</div>
+
+                                    <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 10 }}>
+                                        {bullets.map((x) => (
+                                            <div key={x} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                                                <span
+                                                    style={{
+                                                        height: 22,
+                                                        width: 22,
+                                                        borderRadius: 999,
+                                                        background: "rgba(255,255,255,0.22)",
+                                                        display: "inline-flex",
+                                                        alignItems: "center",
+                                                        justifyContent: "center",
+                                                        flexShrink: 0,
+                                                        marginTop: 1,
+                                                    }}
+                                                >
+                                                    <CheckCircle2 style={{ height: 14, width: 14, color: "#fff" }} />
+                                                </span>
+                                                <span style={{ fontSize: 13, fontWeight: 900, color: "rgba(255,255,255,0.92)" }}>{x}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <div style={{ marginTop: 18 }}>
+                                        <Link href="/signup">
+                                            <a
+                                                style={{
+                                                    display: "inline-flex",
+                                                    alignItems: "center",
+                                                    gap: 8,
+                                                    height: 42,
+                                                    padding: "0 16px",
+                                                    borderRadius: 999,
+                                                    background: "#fff",
+                                                    color: "#0F172A",
+                                                    textDecoration: "none",
+                                                    fontWeight: 950,
+                                                    fontSize: 13,
+                                                }}
+                                            >
+                                                Get started <ArrowRight style={{ height: 16, width: 16 }} />
+                                            </a>
+                                        </Link>
+                                    </div>
+                                </div>
+
+                                {/* mock */}
+                                <div style={{ flex: 1, minWidth: 260, display: "flex", justifyContent: flip ? "flex-start" : "flex-end" }}>
+                                    <BandMockup accent={bgColor} />
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </section>
+
+            {/* PRICING */}
+            <section id="pricing" style={{ padding: "56px 0 24px" }}>
+                <div style={{ maxWidth: 980, margin: "0 auto", padding: "0 18px" }}>
+                    <div style={{ textAlign: "center", marginBottom: 24 }}>
+                        <div style={{ fontSize: 12, fontWeight: 950, color: "#7C3AED", marginBottom: 10 }}>Pricing</div>
+                        <div style={{ fontSize: "clamp(22px, 3.6vw, 36px)", fontWeight: 950, letterSpacing: "-0.02em", lineHeight: 1.15 }}>
+                            Choose a plan that fits
                             <br />
-                            <span className="gradient-text">Clarity & Focus</span>
-                        </h1>
-
-                        <p className="text-base text-slate-500 dark:text-slate-400 max-w-md leading-relaxed">
-                            Real-time task tracking, time management, and team collaboration — all in one clean, focused workspace.
-                        </p>
-
-                        <div className="flex flex-col sm:flex-row gap-2.5">
-                            <Link href="/signup">
-                                <Button size="lg" className="h-10 px-6 text-sm font-semibold bg-gradient-violet text-white hover:opacity-90 transition-opacity" data-testid="button-get-started">
-                                    Start for free <ArrowRight className="ml-2 h-4 w-4" />
-                                </Button>
-                            </Link>
-                            <Button size="lg" variant="outline" className="h-10 px-5 text-sm border-slate-200 dark:border-slate-700 gap-2" data-testid="button-learn-more">
-                                <Play className="h-3.5 w-3.5 fill-current" /> Watch demo
-                            </Button>
-                        </div>
-
-                        {/* Social proof */}
-                        <div className="flex flex-wrap items-center gap-5 pt-1">
-                            <div className="flex items-center gap-2.5">
-                                <div className="flex -space-x-1.5">
-                                    {[
-                                        { l: "S", c: "bg-violet-500" }, { l: "M", c: "bg-blue-500" },
-                                        { l: "J", c: "bg-emerald-500" }, { l: "P", c: "bg-pink-500" },
-                                    ].map(({ l, c }, i) => (
-                                        <Avatar key={i} className="h-6 w-6 border-2 border-white dark:border-slate-950">
-                                            <AvatarFallback className={`text-[9px] font-bold text-white ${c}`}>{l}</AvatarFallback>
-                                        </Avatar>
-                                    ))}
-                                </div>
-                                <div>
-                                    <div className="flex gap-0.5">
-                                        {[...Array(5)].map((_, i) => <Star key={i} className="h-3 w-3 fill-amber-400 text-amber-400" />)}
-                                    </div>
-                                    <p className="text-xs text-slate-400 dark:text-slate-500">10,000+ happy teams</p>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-1.5 text-xs text-slate-400">
-                                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-                                No credit card required
-                            </div>
+                            your team.
                         </div>
                     </div>
 
-                    {/* Mockup */}
-                    <div className="animate-fade-in-up delay-200">
-                        <HeroMockup />
-                    </div>
-                </div>
-            </section>
-
-            {/* ── LOGOS ─────────────────────────────────────── */}
-            <div className="border-y border-slate-100 dark:border-slate-800/60 py-8 px-4 bg-slate-50/60 dark:bg-slate-900/30">
-                <div className="max-w-6xl mx-auto">
-                    <p className="text-center text-[11px] uppercase tracking-widest font-semibold text-slate-400 mb-6">Trusted by teams at</p>
-                    <div className="flex flex-wrap justify-center gap-8">
-                        {["Aerolabs", "Nexvio", "Strata", "Orbotech", "Helix", "Quantum"].map(c => (
-                            <span key={c} className="text-sm font-bold text-slate-300 dark:text-slate-700">{c}</span>
-                        ))}
-                    </div>
-                </div>
-            </div>
-
-            {/* ── FEATURES ──────────────────────────────────── */}
-            <section id="features" className="py-20 px-4 sm:px-6">
-                <div className="max-w-6xl mx-auto">
-                    <div className="text-center mb-12">
-                        <p className="text-xs font-semibold uppercase tracking-widest text-violet-600 dark:text-violet-400 mb-3">Features</p>
-                        <h2 className="text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-3">
-                            All You Need to <span className="gradient-text">Ship Faster</span>
-                        </h2>
-                        <p className="text-slate-500 dark:text-slate-400 max-w-xl mx-auto text-sm">One platform for tasks, time, and team — designed for focus.</p>
-                    </div>
-
-                    {/* Top 3 — with mockups */}
-                    <div className="grid md:grid-cols-3 gap-4 mb-4">
-                        {features.slice(0, 3).map((f, i) => (
-                            <div key={i} className={`rounded-2xl p-5 bg-gradient-to-br ${f.grad} border border-slate-100 dark:border-slate-800/60 card-hover-lift`}>
-                                <div className={`h-9 w-9 rounded-xl flex items-center justify-center ${f.ic} mb-3`}>
-                                    <f.icon className="h-4.5 w-4.5 h-4 w-4" />
-                                </div>
-                                <h3 className="font-semibold text-slate-900 dark:text-white mb-1">{f.title}</h3>
-                                <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{f.desc}</p>
-                                {f.mockup}
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* Bottom 3 — compact */}
-                    <div className="grid md:grid-cols-3 gap-4">
-                        {features.slice(3).map((f, i) => (
-                            <div key={i} className={`rounded-2xl p-5 bg-gradient-to-br ${f.grad} border border-slate-100 dark:border-slate-800/60 card-hover-lift flex gap-3.5`}>
-                                <div className={`h-9 w-9 rounded-xl flex items-center justify-center shrink-0 ${f.ic}`}>
-                                    <f.icon className="h-4 w-4" />
-                                </div>
-                                <div>
-                                    <h3 className="font-semibold text-slate-900 dark:text-white mb-1">{f.title}</h3>
-                                    <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{f.desc}</p>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
-
-            {/* ── TESTIMONIALS ──────────────────────────────── */}
-            <section id="testimonials" className="py-20 px-4 sm:px-6 bg-slate-50/60 dark:bg-slate-900/30">
-                <div className="max-w-6xl mx-auto">
-                    <div className="text-center mb-12">
-                        <p className="text-xs font-semibold uppercase tracking-widest text-violet-600 dark:text-violet-400 mb-3">Testimonials</p>
-                        <h2 className="text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-                            Loved by <span className="gradient-text">Real Teams</span>
-                        </h2>
-                    </div>
-
-                    <div className="grid md:grid-cols-3 gap-5">
-                        {testimonials.map((t, i) => (
-                            <div key={i} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-5 card-hover-lift">
-                                <div className="flex gap-0.5 mb-3.5">
-                                    {[...Array(5)].map((_, s) => <Star key={s} className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />)}
-                                </div>
-                                <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed mb-4">"{t.quote}"</p>
-                                <div className="flex items-center gap-2.5">
-                                    <Avatar className="h-8 w-8">
-                                        <AvatarFallback className={`text-xs font-bold text-white ${t.col}`}>{t.initials}</AvatarFallback>
-                                    </Avatar>
-                                    <div>
-                                        <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">{t.name}</p>
-                                        <p className="text-xs text-slate-400">{t.role}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
-
-            {/* ── PRICING ───────────────────────────────────── */}
-            <section id="pricing" className="py-20 px-4 sm:px-6">
-                <div className="max-w-5xl mx-auto">
-                    <div className="text-center mb-12">
-                        <p className="text-xs font-semibold uppercase tracking-widest text-violet-600 dark:text-violet-400 mb-3">Pricing</p>
-                        <h2 className="text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-2">
-                            Simple, Transparent Pricing
-                        </h2>
-                        <p className="text-slate-500 dark:text-slate-400 text-sm">Start free, upgrade when ready. No hidden fees.</p>
-                    </div>
-
-                    <div className="grid md:grid-cols-3 gap-5">
-                        {plans.map((p, i) => (
-                            <div key={i} className={`relative rounded-2xl p-6 border card-hover-lift ${p.popular
-                                ? "border-violet-300 dark:border-violet-600 shadow-lg bg-gradient-to-b from-violet-50 to-white dark:from-violet-950/20 dark:to-slate-900 card-shadow-violet"
-                                : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
-                                }`}>
-                                {p.popular && (
-                                    <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                                        <span className="bg-gradient-violet text-white text-xs font-semibold px-3 py-1 rounded-full">Most Popular</span>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: 16 }}>
+                        {plans.map(({ name, price, period, desc, cta, highlight, features }) => (
+                            <div
+                                key={name}
+                                style={{
+                                    borderRadius: 22,
+                                    padding: 18,
+                                    border: highlight ? "2px solid #FDE047" : "1px solid #EEF2F7",
+                                    background: highlight ? "#FEF9C3" : "#fff",
+                                    position: "relative",
+                                    boxShadow: highlight ? "0 16px 44px rgba(234,179,8,0.22)" : "0 10px 28px rgba(15, 23, 42, 0.06)",
+                                }}
+                            >
+                                {highlight && (
+                                    <div
+                                        style={{
+                                            position: "absolute",
+                                            top: -12,
+                                            left: "50%",
+                                            transform: "translateX(-50%)",
+                                            background: "#7C3AED",
+                                            color: "#fff",
+                                            fontSize: 11,
+                                            fontWeight: 950,
+                                            padding: "6px 14px",
+                                            borderRadius: 999,
+                                            whiteSpace: "nowrap",
+                                            boxShadow: "0 10px 24px rgba(124,58,237,0.22)",
+                                        }}
+                                    >
+                                        Most popular
                                     </div>
                                 )}
-                                <div className="mb-5">
-                                    <h3 className="font-bold text-slate-900 dark:text-white mb-1">{p.name}</h3>
-                                    <div className="flex items-baseline gap-0.5 mb-1.5">
-                                        <span className="text-3xl font-extrabold text-slate-900 dark:text-white">{p.price}</span>
-                                        <span className="text-slate-400 text-sm">{p.per}</span>
-                                    </div>
-                                    <p className="text-xs text-slate-400">{p.desc}</p>
+
+                                <div style={{ fontSize: 12, fontWeight: 950, color: "#0F172A", marginBottom: 10 }}>{name}</div>
+                                <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                                    <div style={{ fontSize: 34, fontWeight: 950, letterSpacing: "-0.03em" }}>{price}</div>
+                                    <div style={{ fontSize: 12, color: "#64748B", fontWeight: 900 }}>{period}</div>
                                 </div>
-                                <ul className="space-y-2 mb-5">
-                                    {p.features.map((f, fi) => (
-                                        <li key={fi} className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
-                                            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" /> {f}
-                                        </li>
+
+                                <div style={{ marginTop: 6, fontSize: 13, color: "#64748B", fontWeight: 800 }}>{desc}</div>
+
+                                <div style={{ marginTop: 14 }}>
+                                    <Link href={name === "Enterprise" ? "/contact" : "/signup"}>
+                                        <a
+                                            style={{
+                                                height: 42,
+                                                width: "100%",
+                                                display: "inline-flex",
+                                                alignItems: "center",
+                                                justifyContent: "center",
+                                                borderRadius: 999,
+                                                textDecoration: "none",
+                                                fontWeight: 950,
+                                                fontSize: 13,
+                                                background: highlight ? "#7C3AED" : "#fff",
+                                                color: highlight ? "#fff" : "#0F172A",
+                                                border: highlight ? "none" : "1px solid #E2E8F0",
+                                                boxShadow: highlight ? "0 12px 28px rgba(124,58,237,0.20)" : "none",
+                                            }}
+                                        >
+                                            {cta}
+                                        </a>
+                                    </Link>
+                                </div>
+
+                                <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 10 }}>
+                                    {features.map((f) => (
+                                        <div key={f} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                            <CheckCircle2 style={{ height: 16, width: 16, color: highlight ? "#7C3AED" : "#10B981" }} />
+                                            <div style={{ fontSize: 13, color: "#475569", fontWeight: 850 }}>{f}</div>
+                                        </div>
                                     ))}
-                                </ul>
-                                <Link href="/signup">
-                                    <Button
-                                        className={`w-full text-sm font-medium ${p.popular ? "bg-gradient-violet text-white hover:opacity-90" : ""}`}
-                                        variant={p.popular ? "default" : "outline"}
-                                        data-testid={`button-plan-${p.slug}`}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
+            {/* TESTIMONIALS */}
+            <section style={{ padding: "44px 0 22px" }}>
+                <div style={{ maxWidth: 980, margin: "0 auto", padding: "0 18px" }}>
+                    <div style={{ textAlign: "center", marginBottom: 18 }}>
+                        <div style={{ fontSize: 12, fontWeight: 950, color: "#7C3AED", marginBottom: 10 }}>Testimonials</div>
+                        <div style={{ fontSize: "clamp(22px, 3.4vw, 34px)", fontWeight: 950, letterSpacing: "-0.02em" }}>Loved by product people</div>
+                    </div>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 14 }}>
+                        {testimonials.map(({ name, role, avatar, color, text }) => (
+                            <div
+                                key={name}
+                                style={{
+                                    borderRadius: 20,
+                                    border: "1px solid #EEF2F7",
+                                    background: "#fff",
+                                    padding: 16,
+                                    boxShadow: "0 10px 26px rgba(15, 23, 42, 0.06)",
+                                }}
+                            >
+                                <Stars />
+                                <div style={{ marginTop: 10, fontSize: 13, lineHeight: 1.75, color: "#475569" }}>“{text}”</div>
+
+                                <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #F1F5F9", display: "flex", gap: 10, alignItems: "center" }}>
+                                    <div
+                                        style={{
+                                            height: 34,
+                                            width: 34,
+                                            borderRadius: 999,
+                                            background: color,
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            color: "#fff",
+                                            fontWeight: 950,
+                                            fontSize: 12,
+                                        }}
                                     >
-                                        {p.cta} <ChevronRight className="ml-1 h-3.5 w-3.5" />
-                                    </Button>
-                                </Link>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
-
-            {/* ── CTA BANNER ────────────────────────────────── */}
-            <section className="px-4 sm:px-6 mb-16">
-                <div className="max-w-6xl mx-auto rounded-2xl px-8 py-14 text-center text-white"
-                    style={{ background: "linear-gradient(135deg, hsl(262 65% 50%), hsl(280 65% 54%))" }}>
-                    <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight mb-3">Ready to Transform Your Workflow?</h2>
-                    <p className="text-violet-200 mb-7 max-w-lg mx-auto text-sm">Join 10,000+ teams already shipping faster with TaskFlow Pro.</p>
-                    <div className="flex flex-col sm:flex-row gap-2.5 justify-center">
-                        <Link href="/signup">
-                            <Button size="lg" className="h-10 px-6 text-sm font-semibold bg-white text-violet-700 hover:bg-violet-50" data-testid="button-cta-signup">
-                                Start for free <ArrowRight className="ml-2 h-4 w-4" />
-                            </Button>
-                        </Link>
-                        <Button size="lg" variant="outline" className="h-10 px-5 text-sm border-white/30 text-white hover:bg-white/10 gap-2">
-                            <Play className="h-3.5 w-3.5 fill-current" /> Watch demo
-                        </Button>
-                    </div>
-                    <p className="text-violet-300 text-xs mt-4">No credit card required · Set up in 2 minutes</p>
-                </div>
-            </section>
-
-            {/* ── FOOTER ────────────────────────────────────── */}
-            <footer className="border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 py-12 px-4 sm:px-6">
-                <div className="max-w-6xl mx-auto">
-                    <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-8 mb-10">
-                        <div className="lg:col-span-2">
-                            <div className="flex items-center gap-2 mb-3">
-                                <div className="h-7 w-7 rounded-lg bg-gradient-violet flex items-center justify-center">
-                                    <Kanban className="h-3.5 w-3.5 text-white" />
-                                </div>
-                                <span className="font-bold text-sm">TaskFlow Pro</span>
-                            </div>
-                            <p className="text-xs text-slate-400 leading-relaxed max-w-xs">The focused task management platform for modern teams.</p>
-                            <div className="flex gap-2 mt-4">
-                                {[Globe, Lock, Layers].map((Icon, i) => (
-                                    <div key={i} className="h-7 w-7 rounded-lg border border-slate-200 dark:border-slate-700 flex items-center justify-center hover:border-violet-400 transition-colors cursor-pointer">
-                                        <Icon className="h-3.5 w-3.5 text-slate-400" />
+                                        {avatar}
                                     </div>
-                                ))}
-                            </div>
-                        </div>
-                        {[
-                            { h: "Product", l: ["Features", "Pricing", "Roadmap", "Changelog"] },
-                            { h: "Company", l: ["About", "Blog", "Careers", "Contact"] },
-                            { h: "Legal", l: ["Privacy", "Terms", "Cookies", "Security"] },
-                        ].map(c => (
-                            <div key={c.h}>
-                                <h4 className="text-xs font-semibold uppercase tracking-wider mb-3 text-slate-600 dark:text-slate-300">{c.h}</h4>
-                                <ul className="space-y-2">
-                                    {c.l.map(l => (
-                                        <li key={l}><a href="#" className="text-xs text-slate-400 hover:text-violet-600 dark:hover:text-violet-400 transition-colors">{l}</a></li>
-                                    ))}
-                                </ul>
+                                    <div>
+                                        <div style={{ fontWeight: 950, fontSize: 13 }}>{name}</div>
+                                        <div style={{ fontSize: 12, color: "#94A3B8", fontWeight: 900 }}>{role}</div>
+                                    </div>
+                                </div>
                             </div>
                         ))}
                     </div>
 
-                    <div className="pt-6 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-2">
-                        <p className="text-xs text-slate-400">© 2026 TaskFlow Pro. All rights reserved.</p>
-                        <div className="flex items-center gap-1.5 text-xs text-slate-400">
-                            <div className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                            All systems operational
+                    <div style={{ textAlign: "center", marginTop: 18 }}>
+                        <Link href="/signup">
+                            <a
+                                style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: 8,
+                                    height: 44,
+                                    padding: "0 18px",
+                                    borderRadius: 999,
+                                    background: "#fff",
+                                    border: "1px solid #E2E8F0",
+                                    color: "#0F172A",
+                                    textDecoration: "none",
+                                    fontWeight: 950,
+                                    fontSize: 13,
+                                }}
+                            >
+                                Try For Free <ArrowRight style={{ height: 16, width: 16 }} />
+                            </a>
+                        </Link>
+                    </div>
+                </div>
+            </section>
+
+            {/* FOOTER (light like screenshot) */}
+            <footer style={{ padding: "44px 0 28px", borderTop: "1px solid #EEF2F7", background: "#fff" }}>
+                <div style={{ maxWidth: 980, margin: "0 auto", padding: "0 18px" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr 1fr 1fr", gap: 18, alignItems: "start" }}>
+                        <div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                <span style={{ height: 10, width: 10, borderRadius: 999, background: "#F43F5E" }} />
+                                <span style={{ fontWeight: 950 }}>TaskFlow</span>
+                            </div>
+                            <div style={{ marginTop: 10, fontSize: 13, lineHeight: 1.7, color: "#64748B", maxWidth: 320 }}>
+                                Organize team work with a calm, focused task manager.
+                            </div>
                         </div>
+
+                        {Object.entries(footerLinks).map(([group, links]) => (
+                            <div key={group}>
+                                <div style={{ fontSize: 12, fontWeight: 950, color: "#0F172A", marginBottom: 10 }}>{group}</div>
+                                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                                    {links.map((l) => (
+                                        <a
+                                            key={l}
+                                            href="#"
+                                            style={{
+                                                fontSize: 13,
+                                                color: "#64748B",
+                                                textDecoration: "none",
+                                                fontWeight: 900,
+                                            }}
+                                            onMouseEnter={(e) => (e.currentTarget.style.color = "#0F172A")}
+                                            onMouseLeave={(e) => (e.currentTarget.style.color = "#64748B")}
+                                        >
+                                            {l}
+                                        </a>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div
+                        style={{
+                            marginTop: 18,
+                            paddingTop: 16,
+                            borderTop: "1px solid #EEF2F7",
+                            display: "flex",
+                            justifyContent: "space-between",
+                            flexWrap: "wrap",
+                            gap: 10,
+                            alignItems: "center",
+                        }}
+                    >
+                        <div style={{ fontSize: 12, color: "#94A3B8", fontWeight: 900 }}>© {new Date().getFullYear()} TaskFlow</div>
+                        <Link href="/signup">
+                            <a
+                                style={{
+                                    height: 36,
+                                    padding: "0 14px",
+                                    borderRadius: 999,
+                                    background: "#7C3AED",
+                                    color: "#fff",
+                                    textDecoration: "none",
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: 8,
+                                    fontWeight: 950,
+                                    fontSize: 12,
+                                    boxShadow: "0 10px 24px rgba(124,58,237,0.18)",
+                                }}
+                            >
+                                Get started <ArrowRight style={{ height: 14, width: 14 }} />
+                            </a>
+                        </Link>
                     </div>
                 </div>
             </footer>

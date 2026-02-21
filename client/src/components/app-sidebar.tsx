@@ -1,7 +1,7 @@
 import { useLocation, Link } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import {
   Sidebar,
   SidebarContent,
@@ -17,13 +17,6 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
@@ -34,97 +27,91 @@ import {
   BarChart3,
   Settings,
   LogOut,
-  ChevronUp,
   Plus,
   Bell,
-  Kanban,
   Building2,
-  FolderKanban,
   ListTodo,
   CreditCard,
 } from "lucide-react";
 import type { Project } from "@shared/schema";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 
 interface AppSidebarProps {
   projects: Project[];
   onCreateProject: () => void;
 }
 
+const navItems = [
+  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+  { title: "All Tasks", url: "/tasks", icon: ListTodo },
+  { title: "Time Tracking", url: "/time-tracking", icon: Clock },
+  { title: "Analytics", url: "/analytics", icon: BarChart3 },
+  { title: "Notifications", url: "/notifications", icon: Bell },
+  { title: "Organization", url: "/organization-settings", icon: Building2 },
+];
+
+const bottomNavItems = [
+  { title: "Settings", url: "/settings", icon: Settings },
+  { title: "Billing", url: "/billing", icon: CreditCard, adminOnly: true },
+];
+
+const projectColors = [
+  { bg: "bg-blue-500", text: "text-blue-500" },
+  { bg: "bg-violet-500", text: "text-violet-500" },
+  { bg: "bg-emerald-500", text: "text-emerald-500" },
+  { bg: "bg-amber-500", text: "text-amber-500" },
+  { bg: "bg-pink-500", text: "text-pink-500" },
+  { bg: "bg-cyan-500", text: "text-cyan-500" },
+];
+
 export function AppSidebar({ projects, onCreateProject }: AppSidebarProps) {
   const [location] = useLocation();
   const { user, logout } = useAuth();
   const { state } = useSidebar();
   const isMobile = useIsMobile();
+
   const isCollapsed = state === "collapsed" && !isMobile;
 
-  const mainNavItems = [
-    {
-      title: "Dashboard",
-      url: "/dashboard",
-      icon: LayoutDashboard,
-    },
-    {
-      title: "All Tasks",
-      url: "/tasks",
-      icon: ListTodo,
-    },
-    {
-      title: "Time Tracking",
-      url: "/time-tracking",
-      icon: Clock,
-    },
-    {
-      title: "Analytics",
-      url: "/analytics",
-      icon: BarChart3,
-    },
-    {
-      title: "Organization",
-      url: "/organization-settings",
-      icon: Building2,
-    },
-    {
-      title: "Billing",
-      url: "/billing",
-      icon: CreditCard,
-      adminOnly: true,
-    },
-  ];
+  const { data: notifications } = useQuery<any[]>({
+    queryKey: ["/api/notifications"],
+    refetchInterval: 30_000,
+  });
 
-  const visibleNavItems = mainNavItems.filter(item => !item.adminOnly || user?.isAdmin);
+  const unreadCount = notifications?.filter((n) => !n.read).length ?? 0;
 
   const getUserInitials = () => {
-    if (user?.firstName && user?.lastName) {
-      return `${user.firstName[0]}${user.lastName[0]}`.toUpperCase();
-    }
-    if (user?.email) {
-      return user.email[0].toUpperCase();
-    }
+    if (user?.firstName && user?.lastName) return `${user.firstName[0]}${user.lastName[0]}`.toUpperCase();
+    if (user?.email) return user.email[0].toUpperCase();
     return "U";
   };
 
   const getUserDisplayName = () => {
-    if (user?.firstName && user?.lastName) {
-      return `${user.firstName} ${user.lastName}`;
-    }
+    if (user?.firstName && user?.lastName) return `${user.firstName} ${user.lastName}`;
     return user?.email || "User";
   };
 
   return (
-    <Sidebar collapsible="icon">
-      <SidebarHeader className="p-3">
+    <Sidebar
+      collapsible={isMobile ? "offcanvas" : "icon"}
+      className="border-r border-slate-100 bg-white"
+    >
+      <SidebarHeader className="px-4 py-4">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild tooltip="TaskFlow Pro">
+            <SidebarMenuButton size="lg" asChild tooltip="TaskFlow">
               <Link href="/dashboard">
-                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 shrink-0">
-                  <Kanban className="h-3.5 w-3.5 text-white" />
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-transparent shrink-0">
+                  <div className="h-2.5 w-2.5 rounded-full bg-violet-600" />
                 </div>
                 {!isCollapsed && (
-                  <div className="grid flex-1 text-left text-sm leading-tight transition-all duration-200">
-                    <span className="truncate font-semibold text-sm">TaskFlow Pro</span>
-                    <span className="truncate text-[11px] text-muted-foreground">Project Management</span>
+                  <div className="flex flex-col text-left">
+                    <span className="font-extrabold text-lg text-slate-900 leading-none tracking-tighter">
+                      taskflow
+                    </span>
+                    <span className="text-[10px] text-slate-400 mt-0.5">
+                      Project Management
+                    </span>
                   </div>
                 )}
               </Link>
@@ -135,159 +122,157 @@ export function AppSidebar({ projects, onCreateProject }: AppSidebarProps) {
 
       <SidebarSeparator />
 
-      <SidebarContent>
+      <SidebarContent className="px-2 py-4">
         <SidebarGroup>
+          <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">
+            Menu
+          </SidebarGroupLabel>
+
           <SidebarGroupContent>
-            <SidebarMenu>
-              {visibleNavItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={location === item.url}
-                    tooltip={item.title}
-                    data-testid={`nav-${item.title.toLowerCase().replace(/\s+/g, "-")}`}
-                  >
-                    <Link href={item.url}>
-                      <item.icon />
-                      {!isCollapsed && <span>{item.title}</span>}
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+            <SidebarMenu className="gap-1">
+              {navItems.map((item) => {
+                const isActive = location === item.url || location.startsWith(item.url + "/");
+                const showBadge = item.title === "Notifications" && unreadCount > 0;
+
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive}
+                      tooltip={item.title}
+                    >
+                      <Link href={item.url}>
+                        <div className="relative shrink-0">
+                          <item.icon className={cn("h-4 w-4", isActive ? "text-violet-600" : "text-slate-500")} />
+                          {showBadge && isCollapsed && (
+                            <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-red-500 border-2 border-white" />
+                          )}
+                        </div>
+
+                        <span className="flex-1 text-sm font-medium">{item.title}</span>
+
+                        {showBadge && !isCollapsed && (
+                          <span className="ml-auto h-5 min-w-5 flex items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
+                            {unreadCount > 99 ? "99+" : unreadCount}
+                          </span>
+                        )}
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarSeparator />
+        <SidebarSeparator className="my-2" />
 
         <SidebarGroup>
-          <SidebarGroupLabel>
-            {!isCollapsed ? (
-              <>
-                <span>Spaces</span>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={onCreateProject}
-                      data-testid="button-create-project"
-                      className="ml-auto"
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="right">New Space</TooltipContent>
-                </Tooltip>
-              </>
-            ) : (
-              <span className="sr-only">Spaces</span>
-            )}
+          <SidebarGroupLabel className="flex items-center justify-between group-data-[collapsible=icon]:hidden">
+            <span>Spaces</span>
+            <button
+              onClick={onCreateProject}
+              className="h-5 w-5 rounded flex items-center justify-center hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+            >
+              <Plus className="h-3 w-3" />
+            </button>
           </SidebarGroupLabel>
+
           <SidebarGroupContent>
-            <SidebarMenu>
-              {isCollapsed ? (
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    tooltip="New Space"
-                    onClick={onCreateProject}
-                    data-testid="button-create-project-collapsed"
-                  >
-                    <Plus />
-                    <span className="sr-only">New Space</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ) : projects.length === 0 ? (
-                <div className="px-3 py-4 text-center">
-                  <p className="text-xs text-sidebar-foreground/60 mb-2">No spaces yet</p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full text-xs"
-                    onClick={onCreateProject}
-                    data-testid="button-create-first-project"
-                  >
-                    <Plus className="h-3 w-3 mr-1" />
-                    Create Space
-                  </Button>
-                </div>
-              ) : (
-                projects.map((project) => (
+            <SidebarMenu className="gap-1">
+              {projects.slice(0, 8).map((project, i) => {
+                const color = projectColors[i % projectColors.length];
+                const isActive =
+                  location.startsWith(`/projects/${project.id}`) ||
+                  location.startsWith(`/projects/${project.slug}`);
+
+                return (
                   <SidebarMenuItem key={project.id}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={
-                        location === `/projects/${project.slug || project.id}` ||
-                        location === `/projects/${project.id}`
-                      }
-                      tooltip={project.name}
-                      data-testid={`nav-project-${project.id}`}
-                    >
+                    <SidebarMenuButton asChild isActive={isActive} tooltip={project.name}>
                       <Link href={`/projects/${project.slug || project.id}`}>
-                        <FolderKanban />
-                        <span className="truncate">{project.name}</span>
+                        <div className={`h-2 w-2 rounded-full shrink-0 ${color.bg}`} />
+                        <span className="text-sm font-medium truncate">{project.name}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                ))
+                );
+              })}
+
+              {!isCollapsed && (
+                <SidebarMenuItem>
+                  <button
+                    onClick={onCreateProject}
+                    className="flex items-center gap-3 px-3 py-2 rounded-lg w-full text-slate-400 hover:text-slate-900 hover:bg-slate-50 transition-colors text-sm font-medium"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    <span>New Space</span>
+                  </button>
+                </SidebarMenuItem>
               )}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarSeparator className="my-2" />
+
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu className="gap-1">
+              {bottomNavItems
+                .filter((i) => !i.adminOnly || user?.isAdmin)
+                .map((item) => {
+                  const isActive = location === item.url;
+
+                  return (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton asChild isActive={isActive} tooltip={item.title}>
+                        <Link href={item.url}>
+                          <item.icon className={cn("h-4 w-4 shrink-0", isActive ? "text-violet-600" : "text-slate-500")} />
+                          <span className="text-sm font-medium">{item.title}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="p-2">
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <SidebarMenuButton
-                  size="lg"
-                  data-testid="button-user-menu"
-                >
-                  <Avatar className="h-6 w-6 shrink-0">
-                    <AvatarImage src={user?.profileImageUrl || undefined} alt={getUserDisplayName()} />
-                    <AvatarFallback className="bg-gradient-to-br from-violet-500 to-purple-600 text-white text-[10px] font-bold">
-                      {getUserInitials()}
-                    </AvatarFallback>
-                  </Avatar>
-                  {!isCollapsed && (
-                    <>
-                      <div className="grid flex-1 text-left text-sm leading-tight transition-all duration-200">
-                        <span className="truncate font-semibold">{getUserDisplayName()}</span>
-                        <span className="truncate text-xs text-muted-foreground">{user?.email}</span>
-                      </div>
-                      <ChevronUp className="ml-auto size-4 shrink-0" />
-                    </>
-                  )}
-                </SidebarMenuButton>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent side="top" align="start" className="w-56">
-                <DropdownMenuItem asChild>
-                  <Link href="/settings" data-testid="menu-settings">
-                    <Settings className="h-4 w-4 mr-2" />
-                    Settings
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/notifications" data-testid="menu-notifications">
-                    <Bell className="h-4 w-4 mr-2" />
-                    Notifications
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={() => logout()}
-                  className="text-destructive focus:text-destructive"
-                  data-testid="menu-logout"
-                >
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Log out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </SidebarMenuItem>
-        </SidebarMenu>
+      <SidebarSeparator />
+      <SidebarFooter className="p-4">
+        <div
+          className={cn(
+            "flex items-center gap-3 rounded-xl p-2 bg-slate-50 border border-slate-100",
+            isCollapsed && "justify-center p-1"
+          )}
+        >
+          <div className="relative shrink-0">
+            <Avatar className="h-8 w-8">
+              <AvatarImage src={user?.profileImageUrl || undefined} />
+              <AvatarFallback className="bg-violet-600 text-white text-xs font-bold">
+                {getUserInitials()}
+              </AvatarFallback>
+            </Avatar>
+            <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 border-2 border-white" />
+          </div>
+
+          {!isCollapsed && (
+            <>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-slate-900 truncate">{getUserDisplayName()}</p>
+                <p className="text-[10px] text-slate-400 truncate">{user?.email}</p>
+              </div>
+              <button
+                onClick={() => logout()}
+                className="text-slate-400 hover:text-red-500 transition-colors"
+                title="Logout"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+              </button>
+            </>
+          )}
+        </div>
       </SidebarFooter>
     </Sidebar>
   );

@@ -13,7 +13,6 @@ export default function AcceptInvitation() {
     const { user, isLoading: authLoading } = useAuth();
     const { toast } = useToast();
 
-    // Parse token from URL query string
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get("token");
 
@@ -29,8 +28,7 @@ export default function AcceptInvitation() {
         onSuccess: () => {
             setSuccess(true);
             toast({ title: "Welcome!", description: "You have successfully joined the organization." });
-            // Redirect to dashboard after a short delay
-            setTimeout(() => setLocation("/onboarding"), 3000);
+            setTimeout(() => setLocation("/onboarding"), 2500);
         },
         onError: (err: any) => {
             setError(err.message || "Failed to accept invitation. It may have expired or already been used.");
@@ -46,19 +44,19 @@ export default function AcceptInvitation() {
 
     if (!token) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
-                <Card className="max-w-md w-full">
-                    <CardHeader>
-                        <CardTitle className="text-destructive flex items-center gap-2">
-                            <AlertCircle className="h-5 w-5" />
-                            Invalid Link
-                        </CardTitle>
-                        <CardDescription>
-                            The invitation link appears to be invalid or incomplete.
+            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-600 via-violet-700 to-fuchsia-600 p-6">
+                <Card className="max-w-md w-full border-none shadow-2xl rounded-3xl overflow-hidden animate-fade-in">
+                    <CardHeader className="text-center pt-10">
+                        <div className="h-16 w-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <AlertCircle className="h-8 w-8 text-red-500" />
+                        </div>
+                        <CardTitle className="text-2xl font-bold text-slate-900">Invalid Link</CardTitle>
+                        <CardDescription className="text-slate-500 mt-2 px-6">
+                            The invitation link appears to be invalid or has expired. Please contact your administrator.
                         </CardDescription>
                     </CardHeader>
-                    <CardFooter>
-                        <Button asChild className="w-full">
+                    <CardFooter className="pb-10 pt-4 px-10">
+                        <Button asChild className="w-full h-12 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl shadow-lg transition-all active:scale-[0.98]">
                             <Link href="/">Return to Home</Link>
                         </Button>
                     </CardFooter>
@@ -69,40 +67,41 @@ export default function AcceptInvitation() {
 
     if (authLoading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-muted/30">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <div className="min-h-screen flex items-center justify-center bg-slate-50">
+                <div className="flex flex-col items-center gap-4">
+                    <Loader2 className="h-10 w-10 animate-spin text-violet-600" />
+                    <span className="text-sm font-bold text-slate-400 uppercase tracking-widest">Checking Authentication...</span>
+                </div>
             </div>
         );
     }
 
     if (!user) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
-                <Card className="max-w-md w-full shadow-lg border-primary/20">
-                    <CardHeader className="text-center pb-2">
-                        <div className="h-12 w-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <CheckCircle2 className="h-6 w-6 text-primary" />
+            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-600 via-violet-700 to-fuchsia-600 p-6">
+                <Card className="max-w-md w-full border-none shadow-2xl rounded-3xl overflow-hidden animate-fade-in">
+                    <CardHeader className="text-center pt-10">
+                        <div className="h-20 w-20 bg-violet-50 rounded-full flex items-center justify-center mx-auto mb-6 ring-8 ring-violet-50/50">
+                            <CheckCircle2 className="h-10 w-10 text-violet-600" />
                         </div>
-                        <CardTitle className="text-2xl">You're Invited!</CardTitle>
-                        <CardDescription className="text-base">
-                            You've been invited to join an organization on TaskFlow Pro.
+                        <CardTitle className="text-3xl font-extrabold text-slate-900 tracking-tight">You're Invited!</CardTitle>
+                        <CardDescription className="text-slate-500 mt-3 text-lg px-4 leading-relaxed">
+                            You've been invited to collaborate on <strong>Taskflow Pro</strong>.
                         </CardDescription>
                     </CardHeader>
-                    <CardContent className="text-center space-y-4 pt-4">
-                        <p className="text-muted-foreground">
-                            Please sign in or create an account to accept your invitation and start collaborating.
-                        </p>
+                    <CardContent className="text-center py-6 px-10">
+                        <p className="text-slate-400 text-sm font-medium">Please sign in or create an account to accept your invitation.</p>
                     </CardContent>
-                    <CardFooter className="flex flex-col gap-3 pt-6">
-                        <Button asChild className="w-full group">
+                    <CardFooter className="flex flex-col gap-4 pb-12 pt-2 px-10">
+                        <Button asChild className="w-full h-14 bg-violet-600 hover:bg-violet-700 text-white font-bold text-lg rounded-2xl shadow-xl shadow-violet-200 transition-all active:scale-[0.98] group">
                             <Link href={`/login?redirect=/accept-invitation?token=${token}`}>
                                 Login to Accept
-                                <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                                <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                             </Link>
                         </Button>
-                        <Button asChild variant="outline" className="w-full">
+                        <Button asChild variant="ghost" className="w-full h-12 text-slate-500 hover:text-slate-900 font-bold rounded-2xl">
                             <Link href={`/signup?redirect=/accept-invitation?token=${token}`}>
-                                Create New Account
+                                Create new account
                             </Link>
                         </Button>
                     </CardFooter>
@@ -112,46 +111,49 @@ export default function AcceptInvitation() {
     }
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
-            <Card className="max-w-md w-full shadow-lg">
-                <CardHeader className="text-center">
-                    {success ? (
-                        <div className="h-16 w-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <CheckCircle2 className="h-8 w-8 text-green-600" />
-                        </div>
-                    ) : error ? (
-                        <div className="h-16 w-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <AlertCircle className="h-8 w-8 text-destructive" />
-                        </div>
-                    ) : (
-                        <div className="h-16 w-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                        </div>
-                    )}
-                    <CardTitle className="text-2xl">
-                        {success ? "Success!" : error ? "Invitation Error" : "Processing..."}
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-600 via-violet-700 to-fuchsia-600 p-6">
+            <Card className="max-w-md w-full border-none shadow-2xl rounded-3xl overflow-hidden animate-scale-in">
+                <CardHeader className="text-center pt-10">
+                    <div className="mb-8">
+                        {success ? (
+                            <div className="h-24 w-24 bg-emerald-50 rounded-full flex items-center justify-center mx-auto ring-8 ring-emerald-50/50 animate-bounce">
+                                <CheckCircle2 className="h-12 w-12 text-emerald-500" />
+                            </div>
+                        ) : error ? (
+                            <div className="h-24 w-24 bg-red-50 rounded-full flex items-center justify-center mx-auto ring-8 ring-red-50/50">
+                                <AlertCircle className="h-12 w-12 text-red-500" />
+                            </div>
+                        ) : (
+                            <div className="h-24 w-24 bg-violet-50 rounded-full flex items-center justify-center mx-auto ring-8 ring-violet-50/50">
+                                <Loader2 className="h-12 w-12 animate-spin text-violet-600" />
+                            </div>
+                        )}
+                    </div>
+                    <CardTitle className="text-3xl font-extrabold text-slate-900 tracking-tight">
+                        {success ? "Welcome Aboard!" : error ? "Invitation Error" : "Processing..."}
                     </CardTitle>
-                    <CardDescription className="text-base mt-2">
+                    <CardDescription className="text-slate-500 mt-4 text-lg px-6 leading-relaxed">
                         {success
-                            ? "You are now a member of the organization. Redirecting to dashboard..."
+                            ? "You've successfully joined. We're redirecting you to your workspace now..."
                             : error
                                 ? error
-                                : "Validating and accepting your invitation."}
+                                : "Give us a moment while we validate your invitation link."}
                     </CardDescription>
                 </CardHeader>
-                <CardFooter className="pt-6">
+                <CardFooter className="pb-12 pt-8 px-10">
                     {error && (
-                        <Button asChild variant="outline" className="w-full">
-                            <Link href="/onboarding">Go to Onboarding</Link>
+                        <Button asChild variant="outline" className="w-full h-12 border-slate-200 text-slate-600 font-bold rounded-xl active:scale-[0.98]">
+                            <Link href="/onboarding">Return to Workspace</Link>
                         </Button>
                     )}
                     {success && (
-                        <Button asChild className="w-full">
-                            <Link href="/onboarding">Click here if not redirected</Link>
-                        </Button>
+                        <div className="w-full flex justify-center">
+                            <Loader2 className="h-6 w-6 animate-spin text-violet-200" />
+                        </div>
                     )}
                 </CardFooter>
             </Card>
         </div>
     );
 }
+

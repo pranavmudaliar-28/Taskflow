@@ -1,17 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
-import { 
-  BarChart3, 
-  CheckCircle2, 
-  Clock, 
-  TrendingUp, 
-  Users,
-  FolderKanban
+import {
+  BarChart3, CheckCircle2, Clock, TrendingUp, FolderKanban, Activity, AlertTriangle,
 } from "lucide-react";
 import type { Task, Project, TimeLog } from "@shared/schema";
 import { TASK_STATUSES } from "@/lib/constants";
+import { cn } from "@/lib/utils";
 
 interface AnalyticsData {
   totalTasks: number;
@@ -24,241 +19,191 @@ interface AnalyticsData {
   tasksByPriority: Record<string, number>;
 }
 
+const statusColors: Record<string, string> = {
+  todo: "bg-slate-400",
+  in_progress: "bg-blue-500",
+  in_review: "bg-violet-500",
+  testing: "bg-amber-500",
+  done: "bg-emerald-500",
+};
+
+const projectColors = ["bg-blue-500", "bg-violet-500", "bg-emerald-500", "bg-amber-500", "bg-pink-500", "bg-cyan-500"];
+
 export default function Analytics() {
-  const { data: stats, isLoading: statsLoading } = useQuery<AnalyticsData>({
-    queryKey: ["/api/dashboard/stats"],
-  });
-
-  const { data: projects } = useQuery<Project[]>({
-    queryKey: ["/api/projects"],
-  });
-
-  const { data: tasks } = useQuery<Task[]>({
-    queryKey: ["/api/tasks"],
-  });
-
-  const { data: timeLogs } = useQuery<TimeLog[]>({
-    queryKey: ["/api/timelogs"],
-  });
+  const { data: stats, isLoading: statsLoading } = useQuery<AnalyticsData>({ queryKey: ["/api/dashboard/stats"] });
+  const { data: projects } = useQuery<Project[]>({ queryKey: ["/api/projects"] });
+  const { data: tasks } = useQuery<Task[]>({ queryKey: ["/api/tasks"] });
+  const { data: timeLogs } = useQuery<TimeLog[]>({ queryKey: ["/api/timelogs"] });
 
   const formatDuration = (seconds: number) => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    if (hours > 0) {
-      return `${hours}h ${minutes}m`;
-    }
-    return `${minutes}m`;
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    return h > 0 ? `${h}h ${m}m` : `${m}m`;
   };
 
-  const completionRate = stats && stats.totalTasks > 0 
-    ? Math.round((stats.completedTasks / stats.totalTasks) * 100) 
-    : 0;
+  const completionRate = stats && stats.totalTasks > 0
+    ? Math.round((stats.completedTasks / stats.totalTasks) * 100) : 0;
 
-  const tasksByProject = projects?.map((project) => {
-    const projectTasks = tasks?.filter((t) => t.projectId === project.id) || [];
-    const completed = projectTasks.filter((t) => t.status === "done").length;
-    return {
-      name: project.name,
-      total: projectTasks.length,
-      completed,
-      progress: projectTasks.length > 0 ? Math.round((completed / projectTasks.length) * 100) : 0,
-    };
+  const tasksByProject = projects?.map((p, i) => {
+    const pt = tasks?.filter((t) => t.projectId === p.id) || [];
+    const done = pt.filter((t) => t.status === "done").length;
+    return { name: p.name, total: pt.length, done, pct: pt.length > 0 ? Math.round((done / pt.length) * 100) : 0, color: projectColors[i % projectColors.length] };
   }) || [];
 
-  const statusCounts = TASK_STATUSES.map((status) => ({
-    ...status,
-    count: tasks?.filter((t) => t.status === status.id).length || 0,
+  const statusCounts = TASK_STATUSES.map((s) => ({
+    ...s,
+    count: tasks?.filter((t) => t.status === s.id).length || 0,
+    dot: statusColors[s.id] || "bg-slate-400",
   }));
 
+  const kpis = [
+    { label: "Total Tasks", value: stats?.totalTasks ?? 0, icon: BarChart3, iconBg: "bg-blue-50", iconColor: "text-blue-500", accent: "border-l-blue-500" },
+    { label: "Completed", value: stats?.completedTasks ?? 0, icon: CheckCircle2, iconBg: "bg-emerald-50", iconColor: "text-emerald-500", accent: "border-l-emerald-500" },
+    { label: "Active Projects", value: stats?.projectCount ?? 0, icon: FolderKanban, iconBg: "bg-violet-50", iconColor: "text-violet-500", accent: "border-l-violet-500" },
+    { label: "Time Tracked", value: stats?.totalTimeLogged ? formatDuration(stats.totalTimeLogged) : "0m", icon: Clock, iconBg: "bg-amber-50", iconColor: "text-amber-500", accent: "border-l-amber-500" },
+  ];
+
   return (
-    <div className="p-6 space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold">Analytics</h1>
-        <p className="text-muted-foreground">Track your team's productivity and progress</p>
+    <div className="flex flex-col min-h-full bg-slate-50">
+      {/* Header */}
+      <div className="bg-white border-b border-slate-100 px-6 py-5">
+        <h1 className="text-xl font-bold text-slate-900">Analytics</h1>
+        <p className="text-sm text-slate-500 mt-0.5">Track your team's productivity and progress</p>
       </div>
 
-      {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Tasks
-            </CardTitle>
-            <BarChart3 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            {statsLoading ? (
-              <Skeleton className="h-8 w-20" />
-            ) : (
-              <div className="text-2xl font-bold" data-testid="stat-total-tasks">
-                {stats?.totalTasks || 0}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Completion Rate
-            </CardTitle>
-            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-          </CardHeader>
-          <CardContent>
-            {statsLoading ? (
-              <Skeleton className="h-8 w-20" />
-            ) : (
-              <div className="space-y-2">
-                <div className="text-2xl font-bold" data-testid="stat-completion-rate">
-                  {completionRate}%
-                </div>
-                <Progress value={completionRate} className="h-2" />
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Active Projects
-            </CardTitle>
-            <FolderKanban className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            {statsLoading ? (
-              <Skeleton className="h-8 w-20" />
-            ) : (
-              <div className="text-2xl font-bold" data-testid="stat-projects">
-                {stats?.projectCount || projects?.length || 0}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Time Tracked
-            </CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            {statsLoading ? (
-              <Skeleton className="h-8 w-20" />
-            ) : (
-              <div className="text-2xl font-bold" data-testid="stat-time-tracked">
-                {stats?.totalTimeLogged ? formatDuration(stats.totalTimeLogged) : "0m"}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Charts Row */}
-      <div className="grid lg:grid-cols-2 gap-6">
-        {/* Task Status Distribution */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Task Status Distribution</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {statusCounts.map((status) => (
-                <div key={status.id} className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2">
-                      <div className={`h-3 w-3 rounded-full ${status.color}`} />
-                      <span>{status.label}</span>
-                    </div>
-                    <span className="font-medium">{status.count}</span>
+      <div className="p-6 space-y-6">
+        {/* KPI grid */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {kpis.map(({ label, value, icon: Icon, iconBg, iconColor, accent }) => (
+            <div key={label} className={cn("bg-white rounded-xl border border-slate-100 shadow-sm p-5 border-l-4", accent)}>
+              {statsLoading ? (
+                <div className="space-y-2"><Skeleton className="h-9 w-9 rounded-lg" /><Skeleton className="h-7 w-16" /><Skeleton className="h-3 w-20" /></div>
+              ) : (
+                <>
+                  <div className={cn("h-9 w-9 rounded-lg flex items-center justify-center mb-3", iconBg)}>
+                    <Icon className={cn("h-4.5 w-4.5", iconColor)} />
                   </div>
-                  <Progress 
-                    value={tasks && tasks.length > 0 ? (status.count / tasks.length) * 100 : 0} 
-                    className="h-2"
-                  />
+                  <p className="text-2xl font-bold text-slate-900">{value}</p>
+                  <p className="text-xs text-slate-500 mt-0.5 font-medium">{label}</p>
+                </>
+              )}
+            </div>
+          ))}
+        </div>
+
+        <div className="grid lg:grid-cols-2 gap-6">
+          {/* Status distribution */}
+          <div className="bg-white rounded-xl border border-slate-100 shadow-sm">
+            <div className="px-5 py-4 border-b border-slate-50">
+              <h2 className="text-sm font-semibold text-slate-900">Task Status Distribution</h2>
+            </div>
+            <div className="px-5 py-4 space-y-4">
+              {statusCounts.map((s) => {
+                const pct = tasks && tasks.length > 0 ? Math.round((s.count / tasks.length) * 100) : 0;
+                return (
+                  <div key={s.id}>
+                    <div className="flex items-center justify-between text-sm mb-1.5">
+                      <div className="flex items-center gap-2">
+                        <div className={cn("h-2.5 w-2.5 rounded-full", s.dot)} />
+                        <span className="text-slate-700 font-medium">{s.label}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-slate-500">{s.count}</span>
+                        <span className="text-slate-400 text-xs">({pct}%)</span>
+                      </div>
+                    </div>
+                    <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div className={cn("h-full rounded-full transition-all duration-500", s.dot)} style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Projects progress */}
+          <div className="bg-white rounded-xl border border-slate-100 shadow-sm">
+            <div className="px-5 py-4 border-b border-slate-50">
+              <h2 className="text-sm font-semibold text-slate-900">Projects Progress</h2>
+            </div>
+            <div className="px-5 py-4 space-y-4">
+              {tasksByProject.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8">
+                  <FolderKanban className="h-10 w-10 text-slate-300 mb-2" />
+                  <p className="text-sm text-slate-400">No projects yet</p>
+                </div>
+              ) : tasksByProject.map((p) => (
+                <div key={p.name}>
+                  <div className="flex items-center justify-between text-sm mb-1.5">
+                    <div className="flex items-center gap-2">
+                      <div className={cn("h-2.5 w-2.5 rounded-full", p.color)} />
+                      <span className="text-slate-700 font-medium truncate max-w-36">{p.name}</span>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-slate-500 text-xs">{p.done}/{p.total}</span>
+                      <span className="text-xs font-semibold text-slate-600 min-w-8 text-right">{p.pct}%</span>
+                    </div>
+                  </div>
+                  <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div className={cn("h-full rounded-full transition-all duration-500", p.color)} style={{ width: `${p.pct}%` }} />
+                  </div>
                 </div>
               ))}
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Projects Progress */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Projects Progress</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {tasksByProject.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12">
-                <FolderKanban className="h-12 w-12 text-muted-foreground/30 mb-3" />
-                <p className="text-muted-foreground">No projects yet</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {tasksByProject.map((project, i) => (
-                  <div key={i} className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="font-medium truncate flex-1 mr-4">{project.name}</span>
-                      <span className="text-muted-foreground shrink-0">
-                        {project.completed}/{project.total} tasks
-                      </span>
-                    </div>
-                    <Progress value={project.progress} className="h-2" />
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Productivity Insights */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-emerald-500" />
-            Productivity Insights
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid md:grid-cols-3 gap-6">
-            <div className="space-y-2 p-4 rounded-lg bg-muted/30">
-              <p className="text-sm text-muted-foreground">Tasks Completed This Week</p>
-              <p className="text-3xl font-bold">
-                {tasks?.filter((t) => {
-                  if (t.status !== "done" || !t.updatedAt) return false;
-                  const updated = new Date(t.updatedAt);
-                  const weekAgo = new Date();
-                  weekAgo.setDate(weekAgo.getDate() - 7);
-                  return updated >= weekAgo;
-                }).length || 0}
-              </p>
-            </div>
-            <div className="space-y-2 p-4 rounded-lg bg-muted/30">
-              <p className="text-sm text-muted-foreground">Average Task Completion Time</p>
-              <p className="text-3xl font-bold">
-                {timeLogs && timeLogs.length > 0 
-                  ? formatDuration(
-                      Math.round(
-                        timeLogs.reduce((acc, log) => acc + (log.duration || 0), 0) / timeLogs.length
-                      )
-                    )
-                  : "N/A"}
-              </p>
-            </div>
-            <div className="space-y-2 p-4 rounded-lg bg-muted/30">
-              <p className="text-sm text-muted-foreground">Overdue Tasks</p>
-              <p className="text-3xl font-bold text-destructive">
-                {tasks?.filter((t) => {
-                  if (t.status === "done" || !t.dueDate) return false;
-                  return new Date(t.dueDate) < new Date();
-                }).length || 0}
-              </p>
-            </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+
+        {/* Productivity insights */}
+        <div className="bg-white rounded-xl border border-slate-100 shadow-sm">
+          <div className="px-5 py-4 border-b border-slate-50">
+            <h2 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-emerald-500" />
+              Productivity Insights
+            </h2>
+          </div>
+          <div className="grid md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-slate-100">
+            {[
+              {
+                label: "Completed This Week",
+                icon: CheckCircle2,
+                iconBg: "bg-emerald-50",
+                iconColor: "text-emerald-500",
+                value: tasks?.filter((t) => {
+                  if (t.status !== "done" || !t.updatedAt) return false;
+                  const w = new Date(); w.setDate(w.getDate() - 7);
+                  return new Date(t.updatedAt) >= w;
+                }).length ?? 0,
+              },
+              {
+                label: "Avg. Session Duration",
+                icon: Clock,
+                iconBg: "bg-blue-50",
+                iconColor: "text-blue-500",
+                value: timeLogs && timeLogs.length > 0
+                  ? formatDuration(Math.round(timeLogs.reduce((a, l) => a + (l.duration || 0), 0) / timeLogs.length))
+                  : "N/A",
+              },
+              {
+                label: "Overdue Tasks",
+                icon: AlertTriangle,
+                iconBg: "bg-red-50",
+                iconColor: "text-red-500",
+                value: tasks?.filter((t) => t.status !== "done" && t.dueDate && new Date(t.dueDate) < new Date()).length ?? 0,
+              },
+            ].map(({ label, icon: Icon, iconBg, iconColor, value }) => (
+              <div key={label} className="flex items-center gap-4 px-5 py-5">
+                <div className={cn("h-10 w-10 rounded-lg flex items-center justify-center shrink-0", iconBg)}>
+                  <Icon className={cn("h-5 w-5", iconColor)} />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-slate-900">{value}</p>
+                  <p className="text-xs text-slate-400 mt-0.5">{label}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

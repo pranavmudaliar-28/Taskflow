@@ -79,6 +79,7 @@ interface TaskTableProps {
     users: Map<string, User>;
     milestones: Milestone[];
     onTaskClick: (task: Task) => void;
+    getTaskUrl?: (task: Task) => string;
     onTaskUpdate?: (taskId: string, updates: Partial<Task>) => void;
     onReorder?: (items: { id: string; order: number }[]) => void;
     onCreateSubtask?: (parentId: string) => void;
@@ -118,7 +119,7 @@ function SortableRow({ row, onTaskClick }: SortableRowProps) {
             style={style}
             data-state={row.getIsSelected() && "selected"}
             onClick={() => onTaskClick(row.original)}
-            className={cn("cursor-pointer hover:bg-muted/50", isDragging && "bg-muted opacity-50")}
+            className={cn("cursor-pointer border-b border-slate-50/50 hover:bg-slate-50 transition-colors duration-200", isDragging && "bg-slate-50 opacity-50")}
         >
             {row.getVisibleCells().map((cell: any) => {
                 if (cell.column.id === "drag") {
@@ -147,7 +148,7 @@ function SortableRow({ row, onTaskClick }: SortableRowProps) {
 
 const columnHelper = createColumnHelper<TaskWithChildren>();
 
-export function TaskTable({ tasks, users, milestones, onTaskClick, onTaskUpdate, onReorder, onCreateSubtask, rowSelection, setRowSelection, expanded: controlledExpanded, onExpandedChange }: TaskTableProps) {
+export function TaskTable({ tasks, users, milestones, onTaskClick, getTaskUrl, onTaskUpdate, onReorder, onCreateSubtask, rowSelection, setRowSelection, expanded: controlledExpanded, onExpandedChange }: TaskTableProps) {
     const [sorting, setSorting] = useState<SortingState>([]);
     const [internalExpanded, setInternalExpanded] = useState<ExpandedState>({});
     const [editingTitleId, setEditingTitleId] = useState<string | null>(null);
@@ -331,7 +332,8 @@ export function TaskTable({ tasks, users, milestones, onTaskClick, onTaskUpdate,
                                     variant="ghost"
                                     className="h-8 p-0 px-2 -ml-2 hover:bg-muted/50 w-full justify-start font-normal"
                                 >
-                                    <Badge variant="outline" className={`capitalize font-normal cursor-pointer ${status?.color || ''}`}>
+                                    <Badge variant="outline" className={cn("capitalize font-bold text-[10px] h-5 px-2 py-0 border-slate-200 transition-all", status?.color.replace("bg-", "text-"), "bg-slate-50/30 hover:bg-slate-50")}>
+                                        <div className={cn("w-1 h-1 rounded-full mr-1.5", status?.color)} />
                                         {status?.label || statusId}
                                     </Badge>
                                 </Button>
@@ -469,7 +471,7 @@ export function TaskTable({ tasks, users, milestones, onTaskClick, onTaskUpdate,
                                     variant="ghost"
                                     className="h-8 p-0 px-2 -ml-2 hover:bg-muted/50 w-full justify-start font-normal"
                                 >
-                                    <Badge variant="secondary" className="capitalize text-xs font-normal cursor-pointer">
+                                    <Badge variant="secondary" className="capitalize text-[10px] font-bold h-5 px-2 bg-slate-50 text-slate-400 border border-slate-100 group-hover:bg-slate-100 group-hover:text-slate-600 transition-all">
                                         {priority?.label || priorityId}
                                     </Badge>
                                 </Button>
@@ -614,8 +616,8 @@ export function TaskTable({ tasks, users, milestones, onTaskClick, onTaskUpdate,
                                     <Badge
                                         variant="outline"
                                         className={cn(
-                                            "text-[10px] h-5 font-medium border-purple-200/50 dark:border-purple-800/50 py-0 px-2 transition-all hover:border-purple-300 dark:hover:border-purple-700",
-                                            role ? "bg-purple-50/50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-300" : "text-muted-foreground/60 border-dashed bg-transparent"
+                                            "text-[10px] h-5 font-bold border-slate-200 py-0 px-2 transition-all",
+                                            role ? "bg-violet-50 text-violet-600 border-violet-100" : "text-slate-400 border-dashed bg-transparent"
                                         )}
                                     >
                                         {role || "+ Role"}
@@ -670,10 +672,10 @@ export function TaskTable({ tasks, users, milestones, onTaskClick, onTaskUpdate,
                                     <Badge
                                         variant="outline"
                                         className={cn(
-                                            "text-[10px] h-5 font-medium py-0 px-2 transition-all",
+                                            "text-[10px] h-5 font-bold py-0 px-2 transition-all",
                                             milestoneName
-                                                ? "bg-blue-50/50 text-blue-700 border-blue-200/50 hover:border-blue-300 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800/50 dark:hover:border-blue-700"
-                                                : "text-muted-foreground/60 border-dashed border-muted-foreground/30 bg-transparent hover:border-muted-foreground/50"
+                                                ? "bg-blue-50 text-blue-600 border-blue-100"
+                                                : "text-slate-400 border-dashed border-slate-200 bg-transparent"
                                         )}
                                     >
                                         {milestoneName || "+ Milestone"}
@@ -738,7 +740,8 @@ export function TaskTable({ tasks, users, milestones, onTaskClick, onTaskUpdate,
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={(e) => {
                             e.stopPropagation();
-                            const url = `${window.location.origin}/tasks/${row.original.slug || row.original.id}`;
+                            const taskUrl = getTaskUrl ? getTaskUrl(row.original) : `/tasks/${row.original.slug || row.original.id}`;
+                            const url = `${window.location.origin}${taskUrl}`;
                             navigator.clipboard.writeText(url);
                         }}>
                             <Share2 className="h-4 w-4 mr-2" />

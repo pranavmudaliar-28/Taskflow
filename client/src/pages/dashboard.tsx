@@ -1,25 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import {
-  CheckCircle2,
-  Clock,
-  AlertCircle,
-  BarChart3,
-  FolderKanban,
-  TrendingUp,
-  Users,
-  ArrowRight,
-  Plus,
-  Calendar,
+  CheckCircle2, Clock, AlertCircle, BarChart3,
+  FolderKanban, TrendingUp, ArrowRight, Plus, Calendar,
+  ListTodo, Activity, Users,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Link } from "wouter";
-import { TASK_STATUSES } from "@/lib/constants";
 import type { Task, Project, TimeLog } from "@shared/schema";
+import { cn } from "@/lib/utils";
 
 interface DashboardStats {
   totalTasks: number;
@@ -30,86 +21,37 @@ interface DashboardStats {
   projectCount: number;
 }
 
-const statCards = (stats: DashboardStats | undefined, isLoading: boolean, formatDuration: (s: number) => string) => [
-  {
-    label: "Total Tasks",
-    value: isLoading ? null : stats?.totalTasks ?? 0,
-    icon: BarChart3,
-    color: "text-violet-600 dark:text-violet-400",
-    iconBg: "bg-violet-100 dark:bg-violet-950/50",
-    border: "border-l-violet-500",
-    trend: stats?.totalTasks ? `${stats.projectCount} projects` : null,
-    trendColor: "text-violet-500",
-  },
-  {
-    label: "Completed",
-    value: isLoading ? null : stats?.completedTasks ?? 0,
-    icon: CheckCircle2,
-    color: "text-emerald-600 dark:text-emerald-400",
-    iconBg: "bg-emerald-100 dark:bg-emerald-950/50",
-    border: "border-l-emerald-500",
-    trend: stats && stats.totalTasks > 0
-      ? `${Math.round((stats.completedTasks / stats.totalTasks) * 100)}% rate`
-      : null,
-    trendColor: "text-emerald-500",
-  },
-  {
-    label: "In Progress",
-    value: isLoading ? null : stats?.inProgressTasks ?? 0,
-    icon: TrendingUp,
-    color: "text-blue-600 dark:text-blue-400",
-    iconBg: "bg-blue-100 dark:bg-blue-950/50",
-    border: "border-l-blue-500",
-    trend: stats?.overdueTasks ? `${stats.overdueTasks} overdue` : "On track",
-    trendColor: stats?.overdueTasks ? "text-red-500" : "text-blue-500",
-  },
-  {
-    label: "Time Logged",
-    value: isLoading ? null : formatDuration(stats?.totalTimeLogged ?? 0),
-    icon: Clock,
-    color: "text-amber-600 dark:text-amber-400",
-    iconBg: "bg-amber-100 dark:bg-amber-950/50",
-    border: "border-l-amber-500",
-    trend: "This week",
-    trendColor: "text-amber-500",
-  },
-];
+const statusConfig: Record<string, { label: string; cls: string; dot: string }> = {
+  todo: { label: "To Do", cls: "bg-slate-50 text-slate-500 border-slate-100", dot: "bg-slate-300" },
+  in_progress: { label: "In Progress", cls: "bg-blue-50/50 text-blue-600 border-blue-100/50", dot: "bg-blue-500" },
+  in_review: { label: "In Review", cls: "bg-violet-50/50 text-violet-600 border-violet-100/50", dot: "bg-violet-500" },
+  testing: { label: "Testing", cls: "bg-amber-50/50 text-amber-600 border-amber-100/50", dot: "bg-amber-500" },
+  done: { label: "Done", cls: "bg-emerald-50/50 text-emerald-600 border-emerald-100/50", dot: "bg-emerald-500" },
+};
+
+const priorityConfig: Record<string, { cls: string }> = {
+  low: { cls: "bg-slate-50 text-slate-500 border-slate-100" },
+  medium: { cls: "bg-blue-50/50 text-blue-500 border-blue-100/50" },
+  high: { cls: "bg-orange-50/50 text-orange-600 border-orange-100/50" },
+  urgent: { cls: "bg-red-50/50 text-red-600 border-red-100/50" },
+};
+
+const projectColors = ["bg-blue-500", "bg-violet-500", "bg-emerald-500", "bg-amber-500", "bg-pink-500", "bg-cyan-500"];
 
 export default function Dashboard() {
   const { user } = useAuth();
 
-  const { data: stats, isLoading: statsLoading } = useQuery<DashboardStats>({
-    queryKey: ["/api/dashboard/stats"],
-  });
-
-  const { data: recentTasks, isLoading: tasksLoading } = useQuery<Task[]>({
-    queryKey: ["/api/tasks/recent"],
-  });
-
-  const { data: projects, isLoading: projectsLoading } = useQuery<Project[]>({
-    queryKey: ["/api/projects"],
-  });
-
-  const { data: timeLogs, isLoading: timeLogsLoading } = useQuery<TimeLog[]>({
-    queryKey: ["/api/timelogs/recent"],
-  });
+  const { data: stats, isLoading: statsLoading } = useQuery<DashboardStats>({ queryKey: ["/api/dashboard/stats"] });
+  const { data: recentTasks, isLoading: tasksLoading } = useQuery<Task[]>({ queryKey: ["/api/tasks/recent"] });
+  const { data: projects, isLoading: projectsLoading } = useQuery<Project[]>({ queryKey: ["/api/projects"] });
+  const { data: timeLogs, isLoading: timeLogsLoading } = useQuery<TimeLog[]>({ queryKey: ["/api/timelogs/recent"] });
 
   const formatDuration = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    if (hours > 0) return `${hours}h ${minutes}m`;
-    return `${minutes}m`;
+    const mins = Math.floor((seconds % 3600) / 60);
+    if (hours > 0) return `${hours}h ${mins}m`;
+    return `${mins}m`;
   };
-
-  const getStatusLabel = (status: string) =>
-    TASK_STATUSES.find((s) => s.id === status)?.label || status;
-
-  const getStatusClass = (status: string) =>
-    `status-${status.replace("_", "-")}`;
-
-  const getPriorityClass = (priority: string) => `priority-${priority}`;
-
-  const cards = statCards(stats, statsLoading, formatDuration);
 
   const greeting = (() => {
     const h = new Date().getHours();
@@ -118,259 +60,274 @@ export default function Dashboard() {
     return "Good evening";
   })();
 
+  const completionRate = stats && stats.totalTasks > 0
+    ? Math.round((stats.completedTasks / stats.totalTasks) * 100)
+    : 0;
+
+  const kpiCards = [
+    {
+      label: "Total Tasks",
+      value: stats?.totalTasks ?? 0,
+      sub: `${stats?.projectCount ?? 0} active projects`,
+      icon: ListTodo,
+      iconBg: "bg-blue-50",
+      iconColor: "text-blue-500",
+      accent: "border-l-4 border-l-blue-500",
+    },
+    {
+      label: "Completed",
+      value: stats?.completedTasks ?? 0,
+      sub: `${completionRate}% completion rate`,
+      icon: CheckCircle2,
+      iconBg: "bg-emerald-50",
+      iconColor: "text-emerald-500",
+      accent: "border-l-4 border-l-emerald-500",
+    },
+    {
+      label: "In Progress",
+      value: stats?.inProgressTasks ?? 0,
+      sub: "Active right now",
+      icon: Activity,
+      iconBg: "bg-violet-50",
+      iconColor: "text-violet-500",
+      accent: "border-l-4 border-l-violet-500",
+    },
+    {
+      label: "Overdue",
+      value: stats?.overdueTasks ?? 0,
+      sub: "Need attention",
+      icon: AlertCircle,
+      iconBg: "bg-red-50",
+      iconColor: "text-red-500",
+      accent: "border-l-4 border-l-red-500",
+    },
+  ];
+
   return (
-    <div className="p-5 sm:p-6 space-y-5 max-w-screen-xl">
-      {/* ── Welcome Banner ── */}
-      <div
-        className="rounded-xl px-5 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3"
-        style={{ background: "linear-gradient(135deg, hsl(262 65% 52%), hsl(278 62% 56%))" }}
-      >
-        <div className="text-white">
-          <p className="text-violet-200 text-xs font-medium mb-0.5">{greeting} 👋</p>
-          <h1 className="text-lg font-bold leading-tight" data-testid="text-welcome">
-            {user?.firstName ? `Welcome back, ${user.firstName}!` : "Welcome back!"}
-          </h1>
-          <p className="text-violet-200/80 text-xs mt-0.5">Here's an overview of your projects today.</p>
-        </div>
-        <div className="flex gap-2 shrink-0">
-          <Link href="/tasks">
-            <Button size="sm" className="h-7 text-xs bg-white/15 hover:bg-white/25 text-white border-white/20 border" variant="outline">
-              <Plus className="h-3 w-3 mr-1" />
-              New Task
-            </Button>
-          </Link>
-          <Link href="/analytics">
-            <Button size="sm" className="h-7 text-xs bg-white text-violet-700 hover:bg-violet-50 font-semibold">
-              <BarChart3 className="h-3 w-3 mr-1" />
-              Analytics
-            </Button>
-          </Link>
-        </div>
-      </div>
-
-      {/* ── Stat Cards ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {cards.map((card, i) => (
-          <Card key={i} className={`border-l-4 ${card.border} hover:shadow-sm transition-shadow`}>
-            <CardContent className="p-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1.5">{card.label}</p>
-                  {card.value === null ? (
-                    <Skeleton className="h-7 w-16" />
-                  ) : (
-                    <p className="text-2xl font-bold tracking-tight" data-testid={`text-${card.label.toLowerCase().replace(/ /g, "-")}`}>
-                      {card.value}
-                    </p>
-                  )}
-                  {card.trend && (
-                    <p className={`text-[11px] mt-1 font-medium ${card.trendColor}`}>{card.trend}</p>
-                  )}
-                </div>
-                <div className={`h-8 w-8 rounded-lg ${card.iconBg} flex items-center justify-center`}>
-                  <card.icon className={`h-4 w-4 ${card.color}`} />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* ── Main Grid ── */}
-      <div className="grid lg:grid-cols-3 gap-5">
-        {/* Recent Tasks */}
-        <Card className="lg:col-span-2 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between gap-2 pb-3">
-            <div>
-              <CardTitle className="text-base font-semibold">Recent Tasks</CardTitle>
-              <p className="text-xs text-muted-foreground mt-0.5">Your latest activity</p>
+    <div className="flex flex-col min-h-full bg-slate-50">
+      {/* ── Page header ── */}
+      <div className="bg-white border-b border-slate-100 px-6 py-5">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-extrabold text-[#020617] tracking-tight">
+              {greeting}, {user?.firstName || "there"}
+            </h1>
+            <p className="text-sm text-slate-500 mt-1.5 font-medium">
+              Here's what's happening with your work today.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="text-right hidden sm:block">
+              <p className="text-sm font-medium text-slate-700">
+                {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+              </p>
             </div>
-            <Link href="/tasks">
-              <Button variant="ghost" size="sm" className="text-violet-600 dark:text-violet-400 hover:text-violet-700 text-xs" data-testid="link-view-all-tasks">
-                View all <ArrowRight className="ml-1 h-3 w-3" />
-              </Button>
-            </Link>
-          </CardHeader>
-          <CardContent>
-            {tasksLoading ? (
-              <div className="space-y-2.5">
-                {[...Array(5)].map((_, i) => (
-                  <div key={i} className="flex items-center gap-3">
-                    <Skeleton className="h-9 w-9 rounded-lg" />
-                    <div className="flex-1 space-y-1.5">
-                      <Skeleton className="h-3.5 w-3/4" />
-                      <Skeleton className="h-3 w-1/3" />
-                    </div>
+          </div>
+        </div>
+
+        {/* Completion progress bar */}
+        {!statsLoading && stats && (
+          <div className="mt-4 flex items-center gap-4">
+            <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-blue-500 rounded-full transition-all duration-700"
+                style={{ width: `${completionRate}%` }}
+              />
+            </div>
+            <span className="text-xs text-slate-500 shrink-0 font-medium">{completionRate}% complete</span>
+          </div>
+        )}
+      </div>
+
+      <div className="p-6 space-y-6">
+        {/* ── KPI Cards ── */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {kpiCards.map(({ label, value, sub, icon: Icon, iconBg, iconColor, accent }) => (
+            <div key={label} className={cn("bg-white rounded-2xl border border-slate-100 shadow-sm p-6 transition-all hover:shadow-md", accent)}>
+              {statsLoading ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-8 w-12" />
+                  <Skeleton className="h-3 w-28" />
+                </div>
+              ) : (
+                <>
+                  <div className={cn("h-9 w-9 rounded-lg flex items-center justify-center mb-3", iconBg)}>
+                    <Icon className={cn("h-4.5 w-4.5", iconColor)} />
                   </div>
-                ))}
+                  <p className="text-2xl font-bold text-slate-900">{value}</p>
+                  <p className="text-xs text-slate-500 mt-0.5 font-medium">{label}</p>
+                  <p className="text-xs text-slate-400 mt-1">{sub}</p>
+                </>
+              )}
+            </div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          {/* ── Recent Tasks ── */}
+          <div className="xl:col-span-2 bg-white rounded-xl border border-slate-100 shadow-sm">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-50">
+              <div>
+                <h2 className="text-base font-bold text-[#020617]">Recent Tasks</h2>
+                <p className="text-xs text-slate-500 mt-0.5 font-medium">Your latest task activity</p>
               </div>
-            ) : recentTasks && recentTasks.length > 0 ? (
-              <ScrollArea className="h-[300px]">
-                <div className="space-y-1.5">
-                  {recentTasks.map((task) => {
-                    const statusConfig = TASK_STATUSES.find((s) => s.id === task.status);
-                    return (
-                      <div
-                        key={task.id}
-                        className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-muted/50 cursor-pointer transition-colors group"
-                        data-testid={`task-item-${task.id}`}
-                      >
-                        <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${task.status === "done" ? "bg-emerald-100 dark:bg-emerald-950" :
-                          task.status === "in_progress" ? "bg-blue-100 dark:bg-blue-950" :
-                            "bg-muted"
-                          }`}>
-                          <div className={`h-2 w-2 rounded-full ${statusConfig?.color || "bg-slate-400"}`} />
-                        </div>
+              <Link href="/tasks">
+                <Button variant="ghost" size="sm" className="text-blue-500 hover:text-blue-600 hover:bg-blue-50 h-8 text-xs gap-1">
+                  View all <ArrowRight className="h-3.5 w-3.5" />
+                </Button>
+              </Link>
+            </div>
+
+            <div className="divide-y divide-slate-50">
+              {tasksLoading ? (
+                [...Array(5)].map((_, i) => (
+                  <div key={i} className="flex items-center gap-4 px-5 py-3.5">
+                    <Skeleton className="h-8 w-8 rounded-lg" />
+                    <div className="flex-1 space-y-1.5">
+                      <Skeleton className="h-4 w-3/4" />
+                      <Skeleton className="h-3 w-1/2" />
+                    </div>
+                    <Skeleton className="h-5 w-16 rounded-full" />
+                  </div>
+                ))
+              ) : recentTasks && recentTasks.length > 0 ? (
+                recentTasks.slice(0, 8).map((task) => {
+                  const sc = statusConfig[task.status] ?? statusConfig.todo;
+                  const pc = priorityConfig[task.priority ?? "medium"];
+                  const project = projects?.find(p => p.id === task.projectId);
+                  const projectSlug = project?.slug || project?.id || task.projectId;
+                  const taskPath = task.parentId
+                    ? `${task.parentId}/${task.slug || task.id}`
+                    : `${task.slug || task.id}`;
+                  return (
+                    <Link key={task.id} href={`/projects/${projectSlug}/${taskPath}`}>
+                      <div className="flex items-center gap-4 px-5 py-3.5 hover:bg-slate-50 transition-colors cursor-pointer group">
+                        <div className={cn("h-2 w-2 rounded-full shrink-0", sc.dot)} />
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors">
+                          <p className="text-sm font-medium text-slate-800 truncate group-hover:text-blue-600 transition-colors">
                             {task.title}
                           </p>
-                          <div className="flex items-center gap-1.5 mt-0.5">
-                            <Badge variant="secondary" className={`text-[10px] px-1.5 py-0 ${getStatusClass(task.status)}`}>
-                              {getStatusLabel(task.status)}
-                            </Badge>
-                            <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${getPriorityClass(task.priority)}`}>
+                          <div className="flex items-center gap-2 mt-1">
+                            {task.dueDate && (
+                              <span className="flex items-center gap-1 text-xs text-slate-400">
+                                <Calendar className="h-3 w-3" />
+                                {new Date(task.dueDate).toLocaleDateString()}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {task.priority && (
+                            <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full border capitalize", pc.cls)}>
                               {task.priority}
-                            </Badge>
-                          </div>
-                        </div>
-                        {task.dueDate && (
-                          <div className="flex items-center gap-1 shrink-0">
-                            <Calendar className="h-3 w-3 text-muted-foreground" />
-                            <span className="text-[11px] text-muted-foreground whitespace-nowrap">
-                              {new Date(task.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                             </span>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </ScrollArea>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-[200px] text-center">
-                <div className="h-14 w-14 rounded-2xl bg-muted flex items-center justify-center mb-3">
-                  <AlertCircle className="h-7 w-7 text-muted-foreground/50" />
-                </div>
-                <p className="text-sm font-medium text-muted-foreground">No tasks yet</p>
-                <p className="text-xs text-muted-foreground/70 mt-1">Create a project to start adding tasks</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Projects */}
-        <Card className="shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between gap-2 pb-3">
-            <div>
-              <CardTitle className="text-base font-semibold">Projects</CardTitle>
-              <p className="text-xs text-muted-foreground mt-0.5">{projects?.length ?? 0} active</p>
-            </div>
-            <div className="h-8 w-8 rounded-lg bg-violet-100 dark:bg-violet-950 flex items-center justify-center">
-              <FolderKanban className="h-4 w-4 text-violet-600 dark:text-violet-400" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            {projectsLoading ? (
-              <div className="space-y-2">
-                {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-14 w-full rounded-xl" />)}
-              </div>
-            ) : projects && projects.length > 0 ? (
-              <ScrollArea className="h-[300px]">
-                <div className="space-y-2">
-                  {projects.map((project, i) => {
-                    const colors = [
-                      "bg-violet-500", "bg-blue-500", "bg-emerald-500", "bg-amber-500", "bg-pink-500",
-                    ];
-                    return (
-                      <Link key={project.id} href={`/projects/${project.id}`} data-testid={`project-link-${project.id}`}>
-                        <div className="p-3 rounded-xl hover:bg-muted/50 cursor-pointer transition-colors group border border-transparent hover:border-border">
-                          <div className="flex items-center gap-3">
-                            <div className={`h-9 w-9 rounded-lg ${colors[i % colors.length]} flex items-center justify-center text-white font-bold text-sm shrink-0`}>
-                              {project.name[0].toUpperCase()}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium truncate group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors">
-                                {project.name}
-                              </p>
-                              {project.description && (
-                                <p className="text-xs text-muted-foreground truncate mt-0.5">
-                                  {project.description}
-                                </p>
-                              )}
-                            </div>
-                            <ArrowRight className="h-3.5 w-3.5 text-muted-foreground/40 group-hover:text-violet-500 transition-colors shrink-0" />
-                          </div>
+                          )}
+                          <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full border", sc.cls)}>
+                            {sc.label}
+                          </span>
                         </div>
-                      </Link>
-                    );
-                  })}
+                      </div>
+                    </Link>
+                  );
+                })
+              ) : (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <div className="h-12 w-12 rounded-xl bg-slate-100 flex items-center justify-center mb-3">
+                    <ListTodo className="h-6 w-6 text-slate-400" />
+                  </div>
+                  <p className="text-sm font-medium text-slate-600">No recent tasks</p>
+                  <p className="text-xs text-slate-400 mt-1">Tasks will appear here as you create them</p>
                 </div>
-              </ScrollArea>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-[200px] text-center">
-                <div className="h-14 w-14 rounded-2xl bg-muted flex items-center justify-center mb-3">
-                  <FolderKanban className="h-7 w-7 text-muted-foreground/50" />
-                </div>
-                <p className="text-sm font-medium text-muted-foreground">No projects yet</p>
-                <p className="text-xs text-muted-foreground/70 mt-1">Create your first project to get started</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+              )}
+            </div>
+          </div>
 
-      {/* ── Recent Time Logs ── */}
-      <Card className="shadow-sm">
-        <CardHeader className="flex flex-row items-center justify-between gap-2 pb-3">
-          <div>
-            <CardTitle className="text-base font-semibold">Recent Time Logs</CardTitle>
-            <p className="text-xs text-muted-foreground mt-0.5">Your tracked work sessions</p>
-          </div>
-          <div className="h-8 w-8 rounded-lg bg-amber-100 dark:bg-amber-950 flex items-center justify-center">
-            <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-          </div>
-        </CardHeader>
-        <CardContent>
-          {timeLogsLoading ? (
-            <div className="space-y-2">
-              {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-14 w-full rounded-xl" />)}
+          {/* ── Right column ── */}
+          <div className="space-y-5">
+            {/* Active Projects */}
+            <div className="bg-white rounded-xl border border-slate-100 shadow-sm">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-slate-50">
+                <h2 className="text-sm font-semibold text-slate-900">Active Projects</h2>
+                <Link href="/tasks">
+                  <button className="text-xs text-blue-500 hover:text-blue-600 flex items-center gap-1 font-medium">
+                    All <ArrowRight className="h-3 w-3" />
+                  </button>
+                </Link>
+              </div>
+              <div className="px-5 py-3 space-y-3">
+                {projectsLoading ? (
+                  [...Array(4)].map((_, i) => <Skeleton key={i} className="h-12 w-full rounded-lg" />)
+                ) : projects && projects.length > 0 ? (
+                  projects.slice(0, 5).map((project, i) => (
+                    <Link key={project.id} href={`/projects/${project.slug || project.id}`}>
+                      <div className="flex items-center gap-3 py-2 hover:bg-slate-50 rounded-lg px-2 -mx-2 transition-colors cursor-pointer">
+                        <div className={cn("h-8 w-8 rounded-lg flex items-center justify-center text-white text-xs font-bold shrink-0", projectColors[i % projectColors.length])}>
+                          {project.name[0].toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-slate-800 truncate">{project.name}</p>
+                          {project.description && (
+                            <p className="text-xs text-slate-400 truncate">{project.description}</p>
+                          )}
+                        </div>
+                      </div>
+                    </Link>
+                  ))
+                ) : (
+                  <p className="text-xs text-slate-400 text-center py-4">No projects yet</p>
+                )}
+              </div>
             </div>
-          ) : timeLogs && timeLogs.length > 0 ? (
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {timeLogs.slice(0, 6).map((log) => (
-                <div
-                  key={log.id}
-                  className="flex items-center gap-3 p-3 rounded-xl bg-muted/30 border border-border/50"
-                  data-testid={`timelog-${log.id}`}
-                >
-                  <div className="h-9 w-9 rounded-lg bg-amber-100 dark:bg-amber-950 flex items-center justify-center shrink-0">
-                    <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+
+            {/* Time logged */}
+            <div className="bg-white rounded-xl border border-slate-100 shadow-sm">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-slate-50">
+                <h2 className="text-sm font-semibold text-slate-900">Recent Time Logs</h2>
+                <Link href="/time-tracking">
+                  <button className="text-xs text-blue-500 hover:text-blue-600 flex items-center gap-1 font-medium">
+                    All <ArrowRight className="h-3 w-3" />
+                  </button>
+                </Link>
+              </div>
+              <div className="px-5 py-3 space-y-2">
+                {timeLogsLoading ? (
+                  [...Array(3)].map((_, i) => <Skeleton key={i} className="h-10 w-full rounded" />)
+                ) : timeLogs && timeLogs.length > 0 ? (
+                  timeLogs.slice(0, 4).map((log) => (
+                    <div key={log.id} className="flex items-center gap-3 py-1.5">
+                      <div className="h-7 w-7 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
+                        <Clock className="h-3.5 w-3.5 text-blue-500" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-slate-700 truncate">Task #{log.taskId?.slice(0, 8)}</p>
+                        <p className="text-[10px] text-slate-400">
+                          {log.startTime ? new Date(log.startTime).toLocaleDateString() : "—"}
+                        </p>
+                      </div>
+                      <span className="text-xs font-semibold text-blue-600 shrink-0">
+                        {log.duration ? formatDuration(log.duration) : "running"}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-xs text-slate-400 text-center py-4">No time logs yet</p>
+                )}
+              </div>
+
+              {stats?.totalTimeLogged != null && stats.totalTimeLogged > 0 && (
+                <div className="mx-5 mb-4 rounded-lg bg-blue-50 border border-blue-100 px-4 py-3 flex items-center gap-3">
+                  <TrendingUp className="h-4 w-4 text-blue-500 shrink-0" />
+                  <div>
+                    <p className="text-xs font-semibold text-blue-700">Total logged</p>
+                    <p className="text-sm font-bold text-blue-900">{formatDuration(stats.totalTimeLogged)}</p>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold">
-                      {log.duration ? formatDuration(log.duration) : "In progress"}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(log.startTime).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                    </p>
-                  </div>
-                  {log.approved && (
-                    <Badge variant="secondary" className="text-[10px] bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 shrink-0">
-                      Approved
-                    </Badge>
-                  )}
                 </div>
-              ))}
+              )}
             </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center h-[100px] text-center">
-              <Clock className="h-8 w-8 text-muted-foreground/40 mb-2" />
-              <p className="text-sm text-muted-foreground">No time logged yet</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

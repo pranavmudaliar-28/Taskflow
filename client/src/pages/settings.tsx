@@ -1,10 +1,13 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -13,33 +16,69 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Separator } from "@/components/ui/separator";
-import { Switch } from "@/components/ui/switch";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useTheme } from "@/components/theme-provider";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
-  User,
-  Bell,
-  Palette,
-  Shield,
-  LogOut,
-  Edit,
-  Save,
-  X,
-  Key,
-  CreditCard,
-  ExternalLink
+  User, Bell, Palette, Shield, LogOut,
+  Edit2, Save, X, Key, CreditCard, ExternalLink,
+  AlertTriangle, Check,
 } from "lucide-react";
 
+/* ── nav tab config ──────────────────────────────────────── */
+const TABS = [
+  { id: "profile", label: "Profile", icon: User },
+  { id: "security", label: "Security", icon: Shield },
+  { id: "notifications", label: "Notifications", icon: Bell },
+  { id: "appearance", label: "Appearance", icon: Palette },
+  { id: "billing", label: "Billing", icon: CreditCard },
+] as const;
+
+type TabId = typeof TABS[number]["id"];
+
+/* ── form field ──────────────────────────────────────────── */
+function Field({
+  id, label, type = "text", value, onChange, disabled,
+  placeholder, hint,
+}: {
+  id: string; label: string; type?: string;
+  value: string; onChange: (v: string) => void;
+  disabled?: boolean; placeholder?: string; hint?: string;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor={id} className="text-sm font-semibold text-slate-700">{label}</Label>
+      <Input
+        id={id} type={type} value={value} placeholder={placeholder}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.value)}
+        className="h-10 border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-100 disabled:bg-slate-50 disabled:text-slate-400"
+      />
+      {hint && <p className="text-xs text-slate-400">{hint}</p>}
+    </div>
+  );
+}
+
+/* ── notification row ────────────────────────────────────── */
+function NotifyRow({ label, desc, id }: { label: string; desc: string; id: string }) {
+  return (
+    <div className="flex items-start justify-between gap-4 py-4">
+      <div>
+        <p className="text-sm font-semibold text-slate-800">{label}</p>
+        <p className="text-xs text-slate-400 mt-0.5">{desc}</p>
+      </div>
+      <Switch defaultChecked data-testid={`switch-${id}`} className="mt-0.5" />
+    </div>
+  );
+}
+
+/* ── main component ──────────────────────────────────────── */
 export default function Settings() {
   const { user, logout } = useAuth();
   const { theme } = useTheme();
   const { toast } = useToast();
+  const [tab, setTab] = useState<TabId>("profile");
 
   const [isEditing, setIsEditing] = useState(false);
   const [firstName, setFirstName] = useState(user?.firstName || "");
@@ -47,65 +86,46 @@ export default function Settings() {
   const [email, setEmail] = useState(user?.email || "");
 
   const [passwordData, setPasswordData] = useState({
-    currentPassword: "",
-    newPassword: "",
-    confirmPassword: "",
+    currentPassword: "", newPassword: "", confirmPassword: "",
   });
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
 
-  const getUserInitials = () => {
-    if (user?.firstName && user?.lastName) {
-      return `${user.firstName[0]}${user.lastName[0]}`.toUpperCase();
-    }
-    if (user?.email) {
-      return user.email[0].toUpperCase();
-    }
-    return "U";
-  };
+  const initials = user?.firstName && user?.lastName
+    ? `${user.firstName[0]}${user.lastName[0]}`.toUpperCase()
+    : (user?.email?.[0]?.toUpperCase() || "U");
 
-  const getUserDisplayName = () => {
-    if (user?.firstName && user?.lastName) {
-      return `${user.firstName} ${user.lastName}`;
-    }
-    return user?.email || "User";
-  };
+  const displayName = user?.firstName && user?.lastName
+    ? `${user.firstName} ${user.lastName}` : user?.email || "User";
 
-  const updateProfileMutation = useMutation({
+  /* organizations */
+  const { data: organizations = [] } = useQuery<any[]>({ queryKey: ["/api/organizations"] });
+  const isOrgAdmin = organizations.some(o => o.role === "admin");
+
+  /* mutations */
+  const updateProfile = useMutation({
     mutationFn: async (data: { firstName?: string; lastName?: string; email?: string }) => {
       const res = await apiRequest("PATCH", "/api/user/profile", data);
-      return await res.json();
+      return res.json();
     },
-    onSuccess: (updatedUser) => {
-      queryClient.setQueryData(["/api/auth/user"], updatedUser);
-      toast({ title: "Profile updated successfully" });
+    onSuccess: (u) => {
+      queryClient.setQueryData(["/api/auth/user"], u);
+      toast({ title: "Profile saved" });
       setIsEditing(false);
     },
-    onError: (error: any) => {
-      toast({
-        title: "Failed to update profile",
-        description: error?.message || "Please try again",
-        variant: "destructive"
-      });
-    },
+    onError: (e: any) => toast({ title: "Failed to save", description: e?.message, variant: "destructive" }),
   });
 
-  const changePasswordMutation = useMutation({
+  const changePassword = useMutation({
     mutationFn: async (data: { currentPassword: string; newPassword: string }) => {
       const res = await apiRequest("POST", "/api/user/change-password", data);
-      return await res.json();
+      return res.json();
     },
     onSuccess: () => {
-      toast({ title: "Password changed successfully" });
+      toast({ title: "Password changed" });
       setPasswordDialogOpen(false);
       setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
     },
-    onError: (error: any) => {
-      toast({
-        title: "Failed to change password",
-        description: error?.message || "Please check your current password and try again",
-        variant: "destructive"
-      });
-    },
+    onError: (e: any) => toast({ title: "Failed to change password", description: e?.message, variant: "destructive" }),
   });
 
   const handleSaveProfile = () => {
@@ -113,398 +133,301 @@ export default function Settings() {
     if (firstName !== user?.firstName) updates.firstName = firstName;
     if (lastName !== user?.lastName) updates.lastName = lastName;
     if (email !== user?.email) updates.email = email;
-
-    if (Object.keys(updates).length > 0) {
-      updateProfileMutation.mutate(updates);
-    } else {
-      setIsEditing(false);
-    }
-  };
-
-  const handleCancelEdit = () => {
-    setFirstName(user?.firstName || "");
-    setLastName(user?.lastName || "");
-    setEmail(user?.email || "");
-    setIsEditing(false);
+    if (Object.keys(updates).length > 0) updateProfile.mutate(updates);
+    else setIsEditing(false);
   };
 
   const handleChangePassword = () => {
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      toast({
-        title: "Passwords don't match",
-        description: "Please make sure your passwords match",
-        variant: "destructive"
-      });
-      return;
+      toast({ title: "Passwords don't match", variant: "destructive" }); return;
     }
-
     if (passwordData.newPassword.length < 6) {
-      toast({
-        title: "Password too short",
-        description: "Password must be at least 6 characters",
-        variant: "destructive"
-      });
-      return;
+      toast({ title: "Password must be at least 6 characters", variant: "destructive" }); return;
     }
-
-    changePasswordMutation.mutate({
-      currentPassword: passwordData.currentPassword,
-      newPassword: passwordData.newPassword,
-    });
+    changePassword.mutate({ currentPassword: passwordData.currentPassword, newPassword: passwordData.newPassword });
   };
 
-  // Fetch user's organizations to check for admin role
-  const { data: organizations = [] } = useQuery<any[]>({
-    queryKey: ["/api/organizations"],
-  });
+  /* panel renderer */
+  const renderPanel = () => {
+    switch (tab) {
 
-  const isOrgAdmin = organizations.some(org => org.role === "admin");
+      /* ── Profile ── */
+      case "profile": return (
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900">Profile</h2>
+            <p className="text-sm text-slate-400 mt-0.5">Update your personal information</p>
+          </div>
 
-  return (
-    <div className="p-6 space-y-6 max-w-3xl">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold">Settings</h1>
-        <p className="text-muted-foreground">Manage your account and preferences</p>
-      </div>
-
-      {/* Profile Section */}
-      <Card>
-        {/* ... (keep existing content unchanged, just showing we modify the return) */}
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <User className="h-5 w-5" />
-              Profile
-            </div>
-            {!isEditing ? (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsEditing(true)}
-                data-testid="button-edit-profile"
-              >
-                <Edit className="h-4 w-4 mr-2" />
-                Edit
-              </Button>
-            ) : (
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleCancelEdit}
-                >
-                  <X className="h-4 w-4 mr-2" />
-                  Cancel
-                </Button>
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={handleSaveProfile}
-                  disabled={updateProfileMutation.isPending}
-                  data-testid="button-save-profile"
-                >
-                  <Save className="h-4 w-4 mr-2" />
-                  {updateProfileMutation.isPending ? "Saving..." : "Save"}
-                </Button>
-              </div>
-            )}
-          </CardTitle>
-          <CardDescription>Your personal information</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="flex items-center gap-4">
+          {/* Avatar row */}
+          <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
             <Avatar className="h-16 w-16">
-              <AvatarImage src={user?.profileImageUrl || undefined} alt={getUserDisplayName()} />
-              <AvatarFallback className="text-lg bg-primary text-primary-foreground">
-                {getUserInitials()}
-              </AvatarFallback>
+              <AvatarImage src={user?.profileImageUrl || undefined} />
+              <AvatarFallback className="text-lg font-bold bg-violet-600 text-white">{initials}</AvatarFallback>
             </Avatar>
+            <div>
+              <p className="font-bold text-slate-900" data-testid="text-user-name">{displayName}</p>
+              <p className="text-sm text-slate-400" data-testid="text-user-email">{user?.email}</p>
+              <Badge variant="secondary" className="mt-1.5 capitalize text-xs">{user?.plan || "Free"} plan</Badge>
+            </div>
             {!isEditing && (
-              <div>
-                <p className="font-medium text-lg" data-testid="text-user-name">{getUserDisplayName()}</p>
-                <p className="text-muted-foreground" data-testid="text-user-email">{user?.email}</p>
-              </div>
+              <Button variant="outline" size="sm" className="ml-auto gap-2"
+                onClick={() => setIsEditing(true)} data-testid="button-edit-profile">
+                <Edit2 className="h-4 w-4" /> Edit
+              </Button>
             )}
           </div>
-          <Separator />
-          <div className="grid gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="firstName">First Name</Label>
-              {isEditing ? (
-                <Input
-                  id="firstName"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  placeholder="Enter first name"
-                  data-testid="input-first-name"
-                />
-              ) : (
-                <p className="text-sm text-muted-foreground">{user?.firstName || "Not set"}</p>
-              )}
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="lastName">Last Name</Label>
-              {isEditing ? (
-                <Input
-                  id="lastName"
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                  placeholder="Enter last name"
-                  data-testid="input-last-name"
-                />
-              ) : (
-                <p className="text-sm text-muted-foreground">{user?.lastName || "Not set"}</p>
-              )}
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
-              {isEditing ? (
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter email"
-                  data-testid="input-email"
-                />
-              ) : (
-                <p className="text-sm text-muted-foreground">{user?.email || "Not set"}</p>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
-      {/* Appearance Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Palette className="h-5 w-5" />
-            Appearance
-          </CardTitle>
-          <CardDescription>Customize how TaskFlow Pro looks</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Theme</Label>
-              <p className="text-sm text-muted-foreground">
-                Switch between light and dark mode
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground capitalize">{theme}</span>
-              <ThemeToggle />
+          {/* Form */}
+          <div className="grid sm:grid-cols-2 gap-4">
+            <Field id="firstName" label="First name" value={firstName}
+              onChange={setFirstName} disabled={!isEditing} placeholder="John"
+              data-testid="input-first-name" />
+            <Field id="lastName" label="Last name" value={lastName}
+              onChange={setLastName} disabled={!isEditing} placeholder="Doe"
+              data-testid="input-last-name" />
+            <div className="sm:col-span-2">
+              <Field id="email" label="Email address" type="email" value={email}
+                onChange={setEmail} disabled={!isEditing} placeholder="john@company.com"
+                data-testid="input-email" />
             </div>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Notifications Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Bell className="h-5 w-5" />
-            Notifications
-          </CardTitle>
-          <CardDescription>Manage your notification preferences</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Task Assignments</Label>
-              <p className="text-sm text-muted-foreground">
-                Get notified when you're assigned a task
-              </p>
+          {isEditing && (
+            <div className="flex items-center gap-2 pt-2">
+              <Button size="sm" onClick={handleSaveProfile}
+                disabled={updateProfile.isPending}
+                className="bg-violet-600 hover:bg-violet-700 text-white gap-2"
+                data-testid="button-save-profile">
+                <Save className="h-4 w-4" />
+                {updateProfile.isPending ? "Saving…" : "Save changes"}
+              </Button>
+              <Button variant="outline" size="sm" gap-2
+                onClick={() => { setFirstName(user?.firstName || ""); setLastName(user?.lastName || ""); setEmail(user?.email || ""); setIsEditing(false); }}>
+                <X className="h-4 w-4 mr-1" /> Cancel
+              </Button>
             </div>
-            <Switch defaultChecked data-testid="switch-notify-assignments" />
-          </div>
-          <Separator />
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Status Changes</Label>
-              <p className="text-sm text-muted-foreground">
-                Get notified when task status changes
-              </p>
-            </div>
-            <Switch defaultChecked data-testid="switch-notify-status" />
-          </div>
-          <Separator />
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Comments & Mentions</Label>
-              <p className="text-sm text-muted-foreground">
-                Get notified when someone mentions you
-              </p>
-            </div>
-            <Switch defaultChecked data-testid="switch-notify-mentions" />
-          </div>
-          <Separator />
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Due Date Reminders</Label>
-              <p className="text-sm text-muted-foreground">
-                Get reminded before tasks are due
-              </p>
-            </div>
-            <Switch defaultChecked data-testid="switch-notify-due" />
-          </div>
-        </CardContent>
-      </Card>
+          )}
+        </div>
+      );
 
-      {/* Security Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Shield className="h-5 w-5" />
-            Security
-          </CardTitle>
-          <CardDescription>Manage your account security</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Password</Label>
-              <p className="text-sm text-muted-foreground">
-                Change your password
-              </p>
+      /* ── Security ── */
+      case "security": return (
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900">Security</h2>
+            <p className="text-sm text-slate-400 mt-0.5">Keep your account safe</p>
+          </div>
+
+          {/* Change password row */}
+          <div className="bg-white rounded-xl border border-slate-100 p-5 flex items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-bold text-slate-800">Password</p>
+              <p className="text-xs text-slate-400 mt-0.5">Last updated over 30 days ago</p>
             </div>
             <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline" data-testid="button-change-password">
-                  <Key className="h-4 w-4 mr-2" />
-                  Change Password
+                <Button variant="outline" size="sm" className="gap-2" data-testid="button-change-password">
+                  <Key className="h-4 w-4" /> Change password
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                   <DialogTitle>Change Password</DialogTitle>
-                  <DialogDescription>
-                    Enter your current password and choose a new one
-                  </DialogDescription>
+                  <DialogDescription>Enter your current password and choose a new one.</DialogDescription>
                 </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="current-password">Current Password</Label>
-                    <Input
-                      id="current-password"
-                      type="password"
-                      value={passwordData.currentPassword}
-                      onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
-                      data-testid="input-current-password"
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="new-password">New Password</Label>
-                    <Input
-                      id="new-password"
-                      type="password"
-                      value={passwordData.newPassword}
-                      onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-                      data-testid="input-new-password"
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="confirm-password">Confirm New Password</Label>
-                    <Input
-                      id="confirm-password"
-                      type="password"
-                      value={passwordData.confirmPassword}
-                      onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-                      data-testid="input-confirm-password"
-                    />
-                  </div>
+                <div className="space-y-4 py-2">
+                  <Field id="cur-pw" label="Current password" type="password"
+                    value={passwordData.currentPassword}
+                    onChange={(v) => setPasswordData(p => ({ ...p, currentPassword: v }))}
+                    data-testid="input-current-password" />
+                  <Field id="new-pw" label="New password" type="password"
+                    value={passwordData.newPassword}
+                    onChange={(v) => setPasswordData(p => ({ ...p, newPassword: v }))}
+                    hint="Min. 6 characters"
+                    data-testid="input-new-password" />
+                  <Field id="conf-pw" label="Confirm new password" type="password"
+                    value={passwordData.confirmPassword}
+                    onChange={(v) => setPasswordData(p => ({ ...p, confirmPassword: v }))}
+                    data-testid="input-confirm-password" />
                 </div>
-                <div className="flex justify-end gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setPasswordDialogOpen(false);
-                      setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={handleChangePassword}
-                    disabled={changePasswordMutation.isPending}
-                    data-testid="button-save-password"
-                  >
-                    {changePasswordMutation.isPending ? "Changing..." : "Change Password"}
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button variant="outline" size="sm" onClick={() => setPasswordDialogOpen(false)}>Cancel</Button>
+                  <Button size="sm" onClick={handleChangePassword}
+                    disabled={changePassword.isPending}
+                    className="bg-violet-600 hover:bg-violet-700 text-white"
+                    data-testid="button-save-password">
+                    {changePassword.isPending ? "Saving…" : "Change password"}
                   </Button>
                 </div>
               </DialogContent>
             </Dialog>
           </div>
-          <Separator />
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Sign Out</Label>
-              <p className="text-sm text-muted-foreground">
-                Sign out of your account on this device
-              </p>
+
+          {/* Sign out */}
+          <div className="bg-white rounded-xl border border-slate-100 p-5 flex items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-bold text-slate-800">Sign out</p>
+              <p className="text-xs text-slate-400 mt-0.5">Sign out of TaskFlow on this device</p>
             </div>
-            <Button
-              variant="outline"
-              onClick={() => logout()}
-              className="text-destructive hover:text-destructive"
-              data-testid="button-logout"
-            >
-              <LogOut className="h-4 w-4 mr-2" />
-              Sign Out
+            <Button variant="outline" size="sm" onClick={() => logout()}
+              className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 gap-2"
+              data-testid="button-logout">
+              <LogOut className="h-4 w-4" /> Sign out
             </Button>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Subscription Section - Only for Admins */}
-      {isOrgAdmin && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <CreditCard className="h-5 w-5" />
-              Subscription
-            </CardTitle>
-            <CardDescription>Manage your plan and billing</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+          {/* Danger zone */}
+          <div className="rounded-xl border-2 border-red-100 bg-red-50 p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <AlertTriangle className="h-4 w-4 text-red-500" />
+              <p className="text-sm font-bold text-red-700">Danger Zone</p>
+            </div>
+            <p className="text-xs text-red-600 mb-4">
+              Permanently delete your account and all associated data. This action cannot be undone.
+            </p>
+            <Button variant="outline" size="sm"
+              className="text-red-700 border-red-300 hover:bg-red-100 hover:text-red-800">
+              Delete my account
+            </Button>
+          </div>
+        </div>
+      );
+
+      /* ── Notifications ── */
+      case "notifications": return (
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900">Notifications</h2>
+            <p className="text-sm text-slate-400 mt-0.5">Choose what you get notified about</p>
+          </div>
+          <div className="bg-white rounded-xl border border-slate-100 px-5 divide-y divide-slate-100">
+            <NotifyRow id="assignments" label="Task assignments"
+              desc="When you're assigned to a task" />
+            <NotifyRow id="status" label="Status changes"
+              desc="When a task's status is updated" />
+            <NotifyRow id="mentions" label="Comments & @mentions"
+              desc="When someone mentions you in a comment" />
+            <NotifyRow id="due" label="Due date reminders"
+              desc="24 hours before a task is due" />
+            <NotifyRow id="projects" label="Project invitations"
+              desc="When you're added to a project" />
+          </div>
+        </div>
+      );
+
+      /* ── Appearance ── */
+      case "appearance": return (
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900">Appearance</h2>
+            <p className="text-sm text-slate-400 mt-0.5">Customize how TaskFlow looks</p>
+          </div>
+          <div className="bg-white rounded-xl border border-slate-100 p-5">
             <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <Label>Current Plan</Label>
-                <div className="flex items-center gap-2">
-                  <Badge variant="secondary" className="capitalize text-sm h-7 px-3">
-                    {user?.plan || "Free"} Plan
-                  </Badge>
-                </div>
+              <div>
+                <p className="text-sm font-semibold text-slate-800">Theme</p>
+                <p className="text-xs text-slate-400 mt-0.5">Switch between light and dark mode</p>
               </div>
-              <Button
-                variant="outline"
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-slate-500 capitalize">{theme}</span>
+                <ThemeToggle />
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+
+      /* ── Billing ── */
+      case "billing": return (
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900">Billing & Subscription</h2>
+            <p className="text-sm text-slate-400 mt-0.5">Manage your plan and payment details</p>
+          </div>
+          {!isOrgAdmin && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+              <p className="text-sm text-amber-800">Only organization admins can manage billing. Contact your admin for changes.</p>
+            </div>
+          )}
+          <div className="bg-white rounded-xl border border-slate-100 p-5 flex items-center gap-4">
+            <div className="h-12 w-12 rounded-xl bg-violet-50 flex items-center justify-center">
+              <CreditCard className="h-6 w-6 text-violet-600" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-bold text-slate-900">Current Plan</p>
+              <div className="flex items-center gap-2 mt-1">
+                <Badge className="capitalize bg-violet-100 text-violet-700 border-violet-200 hover:bg-violet-100">
+                  {user?.plan || "Free"}
+                </Badge>
+                <span className="text-xs text-slate-400">·</span>
+                <span className="text-xs text-slate-400">Renews monthly</span>
+              </div>
+            </div>
+            {isOrgAdmin && (
+              <Button variant="outline" size="sm" className="gap-2 shrink-0"
                 onClick={async () => {
                   try {
                     const res = await apiRequest("POST", "/api/stripe/create-portal-session");
-                    const data = await res.json();
-                    if (data.url) {
-                      window.location.href = data.url;
-                    }
-                  } catch (error: any) {
-                    toast({
-                      title: "Error",
-                      description: error.message || "Failed to open billing portal",
-                      variant: "destructive"
-                    });
+                    const d = await res.json();
+                    if (d.url) window.location.href = d.url;
+                  } catch (e: any) {
+                    toast({ title: "Failed to open billing portal", variant: "destructive" });
                   }
-                }}
-              >
-                <ExternalLink className="h-4 w-4 mr-2" />
-                Manage Plan
+                }}>
+                <ExternalLink className="h-4 w-4" /> Manage plan
               </Button>
+            )}
+          </div>
+          <p className="text-xs text-slate-400 px-1">
+            Billing is handled securely through Stripe. Invoices and payment history are available in the billing portal.
+          </p>
+        </div>
+      );
+
+      default: return null;
+    }
+  };
+
+  /* ── render ── */
+  return (
+    <div className="min-h-full bg-slate-50 p-6">
+      <div className="max-w-4xl mx-auto">
+        {/* Page title */}
+        <div className="mb-6">
+          <h1 className="text-xl font-bold text-slate-900 tracking-tight">Settings</h1>
+          <p className="text-sm text-slate-400 mt-0.5">Manage your account and preferences</p>
+        </div>
+
+        {/* Two-column layout */}
+        <div className="flex gap-6">
+          {/* Left nav */}
+          <nav className="w-52 shrink-0">
+            <div className="bg-white rounded-xl border border-slate-100 overflow-hidden shadow-sm p-1.5">
+              {TABS.map(({ id, label, icon: Icon }) => (
+                <button
+                  key={id}
+                  onClick={() => setTab(id)}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left ${tab === id
+                      ? "bg-violet-50 text-violet-700"
+                      : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
+                    }`}
+                >
+                  <Icon className={`h-4 w-4 shrink-0 ${tab === id ? "text-violet-600" : "text-slate-400"}`} />
+                  {label}
+                  {tab === id && <Check className="h-3.5 w-3.5 text-violet-600 ml-auto" />}
+                </button>
+              ))}
             </div>
-            <p className="text-xs text-muted-foreground pt-2 border-t">
-              Manage your billing information, invoices, and subscription plan through our secure payment partner, Stripe.
-            </p>
-          </CardContent>
-        </Card>
-      )}
+          </nav>
+
+          {/* Right panel */}
+          <div className="flex-1 bg-white rounded-xl border border-slate-100 p-6 shadow-sm">
+            {renderPanel()}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

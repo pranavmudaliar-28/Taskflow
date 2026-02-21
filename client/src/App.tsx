@@ -48,7 +48,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   const [showCreateProject, setShowCreateProject] = useState(false);
   const { user, logout } = useAuth();
 
-  const { data: projects, isLoading: projectsLoading } = useQuery<Project[]>({
+  const { data: projects } = useQuery<Project[]>({
     queryKey: ["/api/projects"],
   });
 
@@ -57,11 +57,6 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   });
 
   const unreadCount = notifications?.filter((n) => !n.read).length || 0;
-
-  const sidebarStyle = {
-    "--sidebar-width": "16rem",
-    "--sidebar-width-icon": "3rem",
-  } as React.CSSProperties;
 
   const getPageTitle = () => {
     if (location.startsWith("/projects/")) return null;
@@ -77,106 +72,97 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   const pageTitle = getPageTitle();
 
   const getUserInitials = () => {
-    if (user?.firstName && user?.lastName) {
-      return `${user.firstName[0]}${user.lastName[0]}`.toUpperCase();
-    }
-    if (user?.email) {
-      return user.email[0].toUpperCase();
-    }
+    if (user?.firstName && user?.lastName) return `${user.firstName[0]}${user.lastName[0]}`.toUpperCase();
+    if (user?.email) return user.email[0].toUpperCase();
     return "U";
   };
 
   const getUserDisplayName = () => {
-    if (user?.firstName && user?.lastName) {
-      return `${user.firstName} ${user.lastName}`;
-    }
+    if (user?.firstName && user?.lastName) return `${user.firstName} ${user.lastName}`;
     return user?.email || "User";
   };
 
   return (
-    <SidebarProvider style={sidebarStyle}>
-      <div className="flex h-screen w-full">
-        <AppSidebar
-          projects={projects || []}
-          onCreateProject={() => setShowCreateProject(true)}
-        />
-        <SidebarInset className="flex flex-col flex-1 overflow-hidden">
-          <header className="flex items-center justify-between gap-4 px-5 h-14 border-b shrink-0 backdrop-blur-md bg-background/90 supports-[backdrop-filter]:bg-background/70 sticky top-0 z-30">
-            <div className="flex items-center gap-3">
-              <SidebarTrigger data-testid="button-sidebar-toggle" className="text-muted-foreground hover:text-foreground transition-colors" />
-              {pageTitle && (
-                <div className="hidden sm:flex items-center gap-2">
-                  <div className="h-4 w-px bg-border" />
-                  <h1 className="text-sm font-semibold">{pageTitle}</h1>
-                </div>
-              )}
-            </div>
-            <div className="flex items-center gap-1.5">
-              <Link href="/notifications">
-                <Button variant="ghost" size="icon" className="relative h-8 w-8" data-testid="button-notifications">
-                  <Bell className="h-4 w-4" />
-                  {unreadCount > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 h-4 w-4 flex items-center justify-center rounded-full bg-violet-600 text-white text-[9px] font-bold leading-none">
-                      {unreadCount > 9 ? "9+" : unreadCount}
-                    </span>
-                  )}
-                </Button>
-              </Link>
-              <ThemeToggle />
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8" data-testid="button-user-profile">
-                    <Avatar className="h-7 w-7">
-                      <AvatarImage src={user?.profileImageUrl || undefined} alt={getUserDisplayName()} />
-                      <AvatarFallback className="text-[10px] font-bold bg-gradient-to-br from-violet-500 to-purple-600 text-white">
-                        {getUserInitials()}
-                      </AvatarFallback>
-                    </Avatar>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <div className="px-2 py-1.5">
-                    <p className="text-sm font-semibold">{getUserDisplayName()}</p>
-                    <p className="text-xs text-muted-foreground">{user?.email}</p>
-                  </div>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link href="/settings" data-testid="menu-my-account">
-                      <User className="h-4 w-4 mr-2" />
-                      My Account
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/settings" data-testid="menu-settings-header">
-                      <Settings className="h-4 w-4 mr-2" />
-                      Settings
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/organization-settings" data-testid="menu-organization-settings">
-                      <Settings className="h-4 w-4 mr-2" />
-                      Organization
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={() => logout()}
-                    className="text-destructive focus:text-destructive"
-                    data-testid="menu-logout-header"
-                  >
-                    <LogOut className="h-4 w-4 mr-2" />
-                    Log out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </header>
+    <SidebarProvider>
+      <AppSidebar
+        projects={projects || []}
+        onCreateProject={() => setShowCreateProject(true)}
+      />
+      <SidebarInset className="flex flex-col h-screen overflow-hidden">
+        <header className="flex items-center justify-between gap-4 px-5 h-14 border-b border-slate-100 shrink-0 bg-white sticky top-0 z-30">
+          <div className="flex items-center gap-3">
+            {/* Sidebar toggle visible ONLY on mobile */}
+            <SidebarTrigger className="md:hidden text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors" />
 
-          <main className="flex-1 overflow-auto">
-            {children}
-          </main>
-        </SidebarInset>
-      </div>
+            {pageTitle && (
+              <div className="hidden sm:flex items-center gap-2">
+                <div className="h-4 w-px bg-slate-200" />
+                <span className="text-sm font-semibold text-slate-800">{pageTitle}</span>
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center gap-1">
+            <Link href="/notifications">
+              <Button variant="ghost" size="icon" className="relative h-8 w-8 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg">
+                <Bell className="h-4 w-4" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 h-4 w-4 flex items-center justify-center rounded-full bg-violet-600 text-white text-[9px] font-bold">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                )}
+              </Button>
+            </Link>
+            <ThemeToggle />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-slate-100">
+                  <Avatar className="h-7 w-7">
+                    <AvatarImage src={user?.profileImageUrl || undefined} />
+                    <AvatarFallback className="text-[10px] font-bold bg-violet-600 text-white">
+                      {getUserInitials()}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <div className="px-2 py-1.5">
+                  <p className="text-sm font-semibold">{getUserDisplayName()}</p>
+                  <p className="text-xs text-muted-foreground">{user?.email}</p>
+                </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/settings">
+                    <User className="h-4 w-4 mr-2" />
+                    My Account
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/settings">
+                    <Settings className="h-4 w-4 mr-2" />
+                    Settings
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/organization-settings">
+                    <Settings className="h-4 w-4 mr-2" />
+                    Organization
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => logout()} className="text-destructive focus:text-destructive">
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Log out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </header>
+
+        <main className="flex-1 overflow-auto bg-slate-50">
+          {children}
+        </main>
+      </SidebarInset>
 
       <CreateProjectDialog
         open={showCreateProject}
@@ -238,6 +224,8 @@ function AppRouter() {
         <Route path="/dashboard" component={Dashboard} />
         <Route path="/tasks" component={TasksPage} />
         <Route path="/tasks/:id" component={TaskView} />
+        <Route path="/projects/:projectId/:taskId" component={TaskView} />
+        <Route path="/projects/:projectId/:parentTaskId/:taskId" component={TaskView} />
         <Route path="/projects/:id" component={ProjectPage} />
         <Route path="/time-tracking" component={TimeTracking} />
         <Route path="/analytics" component={Analytics} />

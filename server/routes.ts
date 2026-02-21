@@ -1282,6 +1282,24 @@ export async function registerRoutes(
 
       const validated = insertTaskSchema.parse(req.body);
       const task = await storage.createTask(validated);
+
+      // Notify assignee if someone other than the creator is assigned
+      if (task.assigneeId && task.assigneeId !== userId) {
+        try {
+          const project = await storage.getProject(task.projectId);
+          await storage.createNotification({
+            userId: task.assigneeId,
+            type: "task_assigned",
+            title: "New task assigned to you",
+            message: `You have been assigned to "${task.title}"${project ? ` in ${project.name}` : ``}`,
+            relatedTaskId: task.id,
+            relatedProjectId: task.projectId,
+          });
+        } catch (notifErr) {
+          console.error("[Notifications] Failed to send task_assigned notification:", notifErr);
+        }
+      }
+
       res.status(201).json(task);
     } catch (error) {
       console.error("Error creating task:", error);
@@ -1297,13 +1315,30 @@ export async function registerRoutes(
   app.patch("/api/tasks/:id", isAuthenticated, async (req, res) => {
     try {
       const userId = getUserId(req);
-      const taskId = req.params.id as string;
+      const idOrSlug = req.params.id as string;
+      // Resolve actual task ID if a slug was provided
+      let taskToUpdate = await storage.getTask(idOrSlug);
+
+      if (!taskToUpdate) {
+        taskToUpdate = await storage.getTaskBySlug(idOrSlug);
+      }
+
+      if (!taskToUpdate) {
+        console.warn(`[Tasks] Task not found for ID/Slug: ${idOrSlug}`);
+        return res.status(404).json({ message: "Task not found" });
+      }
+
+      const taskId = taskToUpdate.id;
 
       // Authorization check
       const hasAccess = await storage.canUserAccessTask(userId, taskId);
       if (!hasAccess) {
+        console.warn(`[Tasks] Access denied for user ${userId} to task ${taskId}`);
         return res.status(403).json({ message: "Access denied" });
       }
+
+      // Capture old state for notification diff
+      const oldTask = taskToUpdate;
 
       // Convert date strings to Date objects for timestamp fields
       const updates = { ...req.body };
@@ -1316,8 +1351,50 @@ export async function registerRoutes(
 
       const task = await storage.updateTask(taskId, updates);
       if (!task) {
+        console.error(`[Tasks] Failed to update task ${taskId} in storage`);
         return res.status(404).json({ message: "Task not found" });
       }
+
+      console.log(`[Tasks] Task ${taskId} updated successfully`);
+
+      // ── Fire notifications asynchronously (don't block response) ──
+      (async () => {
+        try {
+          const project = await storage.getProject(task.projectId);
+          const projectName = project?.name || "";
+
+          // 1. Status changed — notify the assignee
+          if (oldTask && updates.status && updates.status !== oldTask.status && task.assigneeId && task.assigneeId !== userId) {
+            const statusLabels: Record<string, string> = {
+              todo: "To Do", in_progress: "In Progress", in_review: "In Review",
+              testing: "Testing", done: "Done",
+            };
+            await storage.createNotification({
+              userId: task.assigneeId,
+              type: "status_changed",
+              title: "Task status updated",
+              message: `"${task.title}" was moved to ${statusLabels[updates.status] || updates.status}${projectName ? ` in ${projectName}` : ``}`,
+              relatedTaskId: task.id,
+              relatedProjectId: task.projectId,
+            });
+          }
+
+          // 2. Assignee changed — notify the new assignee
+          if (oldTask && updates.assigneeId && updates.assigneeId !== oldTask.assigneeId && updates.assigneeId !== userId) {
+            await storage.createNotification({
+              userId: updates.assigneeId,
+              type: "task_assigned",
+              title: "Task assigned to you",
+              message: `You have been assigned to "${task.title}"${projectName ? ` in ${projectName}` : ``}`,
+              relatedTaskId: task.id,
+              relatedProjectId: task.projectId,
+            });
+          }
+        } catch (notifErr) {
+          console.error("[Notifications] Failed to fire task update notifications:", notifErr);
+        }
+      })();
+
       res.json(task);
     } catch (error) {
       console.error("Error updating task:", error);
@@ -1502,8 +1579,53 @@ export async function registerRoutes(
         taskId: taskId,
         authorId: userId,
         content: req.body.content,
+        mentions: req.body.mentions || [],
       });
       const comment = await storage.createComment(validated);
+
+      // ── Fire comment notifications asynchronously ──
+      (async () => {
+        try {
+          const task = await storage.getTask(taskId);
+          if (!task) return;
+          const project = await storage.getProject(task.projectId);
+          const commenter = await storage.getUser(userId);
+          const commenterName = commenter ? `${commenter.firstName} ${commenter.lastName}`.trim() : "Someone";
+          const projectName = project?.name || "";
+          const notified = new Set<string>();
+
+          // Notify the task assignee (if not the commenter)
+          if (task.assigneeId && task.assigneeId !== userId) {
+            notified.add(task.assigneeId);
+            await storage.createNotification({
+              userId: task.assigneeId,
+              type: "mentioned",
+              title: "New comment on your task",
+              message: `${commenterName} commented on "${task.title}"${projectName ? ` in ${projectName}` : ``}`,
+              relatedTaskId: task.id,
+              relatedProjectId: task.projectId,
+            });
+          }
+
+          // Notify explicitly @mentioned users
+          const mentions: string[] = req.body.mentions || [];
+          for (const mentionedUserId of mentions) {
+            if (mentionedUserId === userId || notified.has(mentionedUserId)) continue;
+            notified.add(mentionedUserId);
+            await storage.createNotification({
+              userId: mentionedUserId,
+              type: "mentioned",
+              title: "You were mentioned in a comment",
+              message: `${commenterName} mentioned you in a comment on "${task.title}"${projectName ? ` in ${projectName}` : ``}`,
+              relatedTaskId: task.id,
+              relatedProjectId: task.projectId,
+            });
+          }
+        } catch (notifErr) {
+          console.error("[Notifications] Failed to fire comment notifications:", notifErr);
+        }
+      })();
+
       res.status(201).json(comment);
     } catch (error) {
       console.error("Error creating comment:", error);
