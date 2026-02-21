@@ -13,6 +13,7 @@ import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { registerStripeRoutes } from "./stripe";
 import { generateSlug } from "./slug-utils";
+import { UserMongo, ProjectMongo, ProjectMemberMongo } from "../shared/mongodb-schema";
 import fs from "fs";
 import path from "path";
 import express from "express";
@@ -664,12 +665,14 @@ export async function registerRoutes(
 
       // ── Plan limit enforcement ───────────────────────────────────────────────
       // Free plan: max 3 projects. Pro/Team: unlimited.
-      const user = await storage.getUser(userId);
-      const plan = user?.plan || "free";
+      const mongoUser = await UserMongo.findById(userId);
+      const plan = mongoUser?.plan || "free";
 
       if (plan === "free") {
-        const existingProjects = await storage.getProjectsByUser(userId);
-        if (existingProjects.length >= 3) {
+        // Count projects where this user is a member
+        const memberDocs = await ProjectMemberMongo.find({ userId });
+        const projectCount = memberDocs.length;
+        if (projectCount >= 3) {
           return res.status(403).json({
             message: "Free plan limit reached. You can only have 3 projects on the Free plan. Upgrade to Pro or Team for unlimited projects.",
             code: "PLAN_LIMIT_REACHED",

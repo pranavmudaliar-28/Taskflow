@@ -261,7 +261,7 @@ export function registerStripeRoutes(app: Express) {
                 const userId = user.id || user.claims?.sub;
                 await UserMongo.findByIdAndUpdate(userId, {
                     plan: "pro",
-                    onboardingStep: "organization"
+                    onboardingStep: "completed"  // ← was "organization"; that caused redirect back to /onboarding
                 });
                 return res.json({ status: "success" });
             }

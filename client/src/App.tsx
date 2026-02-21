@@ -40,6 +40,8 @@ import AcceptInvitation from "@/pages/accept-invitation";
 import Onboarding from "@/pages/onboarding";
 import NotFound from "@/pages/not-found";
 import MockBillingPortal from "@/pages/billing-portal-mock";
+import BillingPage from "@/pages/billing";
+
 
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
@@ -99,34 +101,34 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
           onCreateProject={() => setShowCreateProject(true)}
         />
         <SidebarInset className="flex flex-col flex-1 overflow-hidden">
-          <header className="flex items-center justify-between gap-4 px-4 h-14 border-b shrink-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-            <div className="flex items-center gap-4">
-              <SidebarTrigger data-testid="button-sidebar-toggle" />
+          <header className="flex items-center justify-between gap-4 px-5 h-14 border-b shrink-0 backdrop-blur-md bg-background/90 supports-[backdrop-filter]:bg-background/70 sticky top-0 z-30">
+            <div className="flex items-center gap-3">
+              <SidebarTrigger data-testid="button-sidebar-toggle" className="text-muted-foreground hover:text-foreground transition-colors" />
               {pageTitle && (
-                <h1 className="text-lg font-semibold hidden sm:block">{pageTitle}</h1>
+                <div className="hidden sm:flex items-center gap-2">
+                  <div className="h-4 w-px bg-border" />
+                  <h1 className="text-sm font-semibold">{pageTitle}</h1>
+                </div>
               )}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <Link href="/notifications">
-                <Button variant="ghost" size="icon" className="relative" data-testid="button-notifications">
-                  <Bell className="h-5 w-5" />
+                <Button variant="ghost" size="icon" className="relative h-8 w-8" data-testid="button-notifications">
+                  <Bell className="h-4 w-4" />
                   {unreadCount > 0 && (
-                    <Badge
-                      variant="destructive"
-                      className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
-                    >
+                    <span className="absolute -top-0.5 -right-0.5 h-4 w-4 flex items-center justify-center rounded-full bg-violet-600 text-white text-[9px] font-bold leading-none">
                       {unreadCount > 9 ? "9+" : unreadCount}
-                    </Badge>
+                    </span>
                   )}
                 </Button>
               </Link>
               <ThemeToggle />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" data-testid="button-user-profile">
-                    <Avatar className="h-8 w-8">
+                  <Button variant="ghost" size="icon" className="h-8 w-8" data-testid="button-user-profile">
+                    <Avatar className="h-7 w-7">
                       <AvatarImage src={user?.profileImageUrl || undefined} alt={getUserDisplayName()} />
-                      <AvatarFallback className="text-xs bg-primary text-primary-foreground">
+                      <AvatarFallback className="text-[10px] font-bold bg-gradient-to-br from-violet-500 to-purple-600 text-white">
                         {getUserInitials()}
                       </AvatarFallback>
                     </Avatar>
@@ -134,7 +136,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
                   <div className="px-2 py-1.5">
-                    <p className="text-sm font-medium">{getUserDisplayName()}</p>
+                    <p className="text-sm font-semibold">{getUserDisplayName()}</p>
                     <p className="text-xs text-muted-foreground">{user?.email}</p>
                   </div>
                   <DropdownMenuSeparator />
@@ -212,11 +214,15 @@ function AppRouter() {
   }
 
   // If user is logged in but hasn't completed onboarding
+  // NOTE: /billing is intentionally allowed here so users returning from Stripe
+  // aren't immediately bounced to /onboarding before session-status updates the DB.
   if (user.onboardingStep !== "completed") {
     return (
       <Switch>
         <Route path="/onboarding" component={Onboarding} />
         <Route path="/accept-invitation" component={AcceptInvitation} />
+        <Route path="/billing" component={BillingPage} />
+        <Route path="/billing-portal-mock" component={MockBillingPortal} />
         <Route>
           <Redirect to="/onboarding" />
         </Route>
@@ -241,7 +247,12 @@ function AppRouter() {
         <Route path="/onboarding">
           <Redirect to="/dashboard" />
         </Route>
+        <Route path="/billing" component={BillingPage} />
         <Route path="/billing-portal-mock" component={MockBillingPortal} />
+        {/* Redirect auth pages → dashboard for logged-in users */}
+        <Route path="/login"><Redirect to="/dashboard" /></Route>
+        <Route path="/signup"><Redirect to="/dashboard" /></Route>
+        <Route path="/"><Redirect to="/dashboard" /></Route>
         <Route component={NotFound} />
       </Switch>
     </AuthenticatedLayout>
