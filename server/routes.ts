@@ -11,29 +11,26 @@ import crypto from "crypto";
 import { seedDatabase } from "./seed";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
-import Stripe from "stripe";
+import { registerStripeRoutes } from "./stripe";
 import { generateSlug } from "./slug-utils";
 import fs from "fs";
 import path from "path";
+import express from "express";
 
-console.log("[Stripe Init] STRIPE_SECRET_KEY:", process.env.STRIPE_SECRET_KEY ? "EXISTS" : "NOT SET");
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "sk_test_mock", {
-  apiVersion: "2024-06-20" as any, // Cast to any to bypass type check mismatch if using older version string with newer types
-});
-
-const PLANS = {
-  free: { name: "Free", price: 0, priceId: null },
-  pro: { name: "Pro", price: 2900, priceId: "price_pro_mock" }, // in cents
-  team: { name: "Team", price: 9900, priceId: "price_team_mock" }, // in cents
-};
 
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+  // ── Raw body parser for Stripe webhooks (MUST be before express.json) ──────
+  app.use("/api/stripe/webhook", express.raw({ type: "application/json" }));
+
   // Setup authentication
   await setupAuth(app);
   registerAuthRoutes(app);
+
+  // ── Register real Stripe routes (AFTER auth setup so req.user works) ────────
+  registerStripeRoutes(app);
 
   // Helper to get user ID from request
   const getUserId = (req: any): string => {
@@ -259,188 +256,6 @@ export async function registerRoutes(
   });
 
   // === Stripe & Onboarding ===
-  // Middleware-like function to check if user is admin of any organization
-  async function ensureOrgAdmin(userId: string): Promise<boolean> {
-    const orgs = await storage.getOrganizationsByUser(userId);
-    if (orgs.length === 0) return false;
-    const orgIds = orgs.map(o => o.id);
-    const members = await storage.getOrganizationMembersForUser(userId, orgIds);
-    return members.some(m => m.role === "admin");
-  }
-
-  app.post("/api/stripe/create-checkout-session", isAuthenticated, async (req, res) => {
-    try {
-      const userId = getUserId(req);
-      const { plan } = req.body;
-
-      const isAdmin = await ensureOrgAdmin(userId);
-      if (!isAdmin) {
-        return res.status(403).json({ message: "Only organization admins can manage subscriptions" });
-      }
-
-      if (!plan || !PLANS[plan as keyof typeof PLANS]) {
-        return res.status(400).json({ message: "Invalid plan selected" });
-      }
-
-      const selectedPlan = PLANS[plan as keyof typeof PLANS];
-      const isRealStripe = process.env.STRIPE_SECRET_KEY && !process.env.STRIPE_SECRET_KEY.startsWith("sk_test_mock");
-      console.log(`[Checkout] User: ${userId}, Plan: ${plan}, isRealStripe: ${isRealStripe}, Key: ${process.env.STRIPE_SECRET_KEY}`);
-
-      // If free plan, just update and redirect
-      if (plan === "free") {
-        await storage.updateUser(userId, {
-          plan: "free",
-          onboardingStep: "organization"
-        });
-        return res.json({ url: "/onboarding?step=organization" });
-      }
-
-      // Create Stripe checkout session
-      if (isRealStripe) {
-        try {
-          console.log(`[Checkout] Attempting real Stripe session...`);
-          const session = await stripe.checkout.sessions.create({
-            payment_method_types: ["card"],
-            line_items: [
-              {
-                price_data: {
-                  currency: "usd",
-                  product_data: {
-                    name: selectedPlan.name + " Plan",
-                  },
-                  unit_amount: selectedPlan.price,
-                },
-                quantity: 1,
-              },
-            ],
-            mode: "payment",
-            success_url: `${req.protocol}://${req.get("host")}/onboarding?session_id={CHECK_OUT_SESSION_ID}&step=verify`,
-            cancel_url: `${req.protocol}://${req.get("host")}/onboarding?step=plan`,
-            metadata: {
-              userId,
-              plan,
-            },
-          });
-          console.log(`[Checkout] Real session created: ${session.id}`);
-          return res.json({ url: session.url });
-        } catch (error) {
-          console.error("[Checkout] Stripe Session Error:", error);
-          // Fallback to mock if it fails (likely due to invalid key)
-        }
-      }
-
-      // Mock checkout for dev/testing when no key is present or it fails
-      console.log(`[Checkout] Creating mock session for plan: ${plan}, user: ${userId}`);
-      const mockSessionId = `mock_session_${Date.now()}`;
-      res.json({ url: `/onboarding?session_id=${mockSessionId}&step=verify&mock=true` });
-    } catch (error: any) {
-      console.error("[Checkout] Outer Error:", error);
-      res.status(500).json({ message: "Failed to create checkout session", error: error.message });
-    }
-  });
-
-  app.get("/api/stripe/create-portal-session", isAuthenticated, async (req, res) => {
-    try {
-      const userId = getUserId(req);
-
-      const isAdmin = await ensureOrgAdmin(userId);
-      if (!isAdmin) {
-        return res.status(403).json({ message: "Only organization admins can manage subscriptions" });
-      }
-
-      const user = await storage.getUser(userId);
-      if (!user) return res.status(404).json({ message: "User not found" });
-
-      const isRealStripe = process.env.STRIPE_SECRET_KEY && !process.env.STRIPE_SECRET_KEY.startsWith("sk_test_mock");
-
-      if (isRealStripe && user.stripeCustomerId) {
-        try {
-          const session = await stripe.billingPortal.sessions.create({
-            customer: user.stripeCustomerId,
-            return_url: `${req.protocol}://${req.get("host")}/settings`,
-          });
-          return res.json({ url: session.url });
-        } catch (error) {
-          console.error("Stripe Portal Error:", error);
-        }
-      }
-
-      // Mock portal for dev
-      toast_warning(res, "Billing portal is in demo mode.");
-      res.json({ url: "/billing-portal-mock" });
-    } catch (error) {
-      console.error("Portal error:", error);
-      res.status(500).json({ message: "Failed to create portal session" });
-    }
-  });
-
-  app.post("/api/stripe/mock-swap-plan", isAuthenticated, async (req, res) => {
-    try {
-      const userId = getUserId(req);
-      const { plan } = req.body;
-
-      const isAdmin = await ensureOrgAdmin(userId);
-      if (!isAdmin) {
-        return res.status(403).json({ message: "Only organization admins can manage subscriptions" });
-      }
-
-      if (!plan || !["free", "pro", "team"].includes(plan)) {
-        return res.status(400).json({ message: "Invalid plan" });
-      }
-
-      await storage.updateUser(userId, { plan });
-      res.json({ success: true, plan });
-    } catch (error) {
-      console.error("Mock plan swap error:", error);
-      res.status(500).json({ message: "Failed to update plan" });
-    }
-  });
-
-  // Helper for mock toasts if needed (or just return msg)
-  function toast_warning(res: any, message: string) {
-    console.warn(message);
-  }
-
-  app.get("/api/stripe/session-status", isAuthenticated, async (req, res) => {
-    try {
-      const { session_id, mock } = req.query;
-      if (!session_id) {
-        return res.status(400).json({ message: "Missing session ID" });
-      }
-
-      if (mock === "true" || (session_id as string).startsWith("mock_")) {
-        const userId = getUserId(req);
-        // Extract plan from somewhere or just default to pro for mock
-        await storage.updateUser(userId, {
-          plan: "pro", // Default mock plan
-          onboardingStep: "organization",
-        });
-        return res.json({ status: "success" });
-      }
-
-      const session = await stripe.checkout.sessions.retrieve(session_id as string);
-
-      if (session.payment_status === "paid") {
-        const userId = session.metadata?.userId;
-        const plan = session.metadata?.plan;
-
-        if (userId) {
-          await storage.updateUser(userId, {
-            plan: plan || "free",
-            onboardingStep: "organization",
-            stripeCustomerId: session.customer as string
-          });
-          return res.json({ status: "success" });
-        }
-      }
-
-      res.json({ status: "pending" });
-    } catch (error) {
-      console.error("Stripe status error:", error);
-      res.status(500).json({ message: "Failed to verify session" });
-    }
-  });
-
   app.post("/api/onboarding/setup-organization", isAuthenticated, async (req, res) => {
     try {
       const userId = getUserId(req);
@@ -847,6 +662,22 @@ export async function registerRoutes(
     try {
       const userId = getUserId(req);
 
+      // ── Plan limit enforcement ───────────────────────────────────────────────
+      // Free plan: max 3 projects. Pro/Team: unlimited.
+      const user = await storage.getUser(userId);
+      const plan = user?.plan || "free";
+
+      if (plan === "free") {
+        const existingProjects = await storage.getProjectsByUser(userId);
+        if (existingProjects.length >= 3) {
+          return res.status(403).json({
+            message: "Free plan limit reached. You can only have 3 projects on the Free plan. Upgrade to Pro or Team for unlimited projects.",
+            code: "PLAN_LIMIT_REACHED",
+          });
+        }
+      }
+      // ────────────────────────────────────────────────────────────────────────
+
       // Get user's organization
       const orgs = await storage.getOrganizationsByUser(userId);
       if (orgs.length === 0) {
@@ -865,19 +696,7 @@ export async function registerRoutes(
         organizationId: userOrg.id,
       });
 
-      // Generate slug
-      let slug = generateSlug(validated.name);
-
-      // Ensure uniqueness (simple check, could be better)
-      const existing = await storage.getProjectBySlug(slug);
-      if (existing) {
-        slug = `${slug}-${Date.now()}`; // fast fallback for uniqueness
-      }
-
-      // Add slug to project creation
-      const projectData = { ...validated, slug };
-
-      const project = await storage.createProject(projectData);
+      const project = await storage.createProject(validated);
       await storage.addProjectMember({
         projectId: project.id,
         userId,
