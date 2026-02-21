@@ -23,23 +23,31 @@ export function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
   let sessionStore;
 
-  if (process.env.MONGODB_URI) {
-    sessionStore = MongoStore.create({
-      mongoUrl: process.env.MONGODB_URI,
-      ttl: sessionTtl / 1000, // connect-mongo uses seconds
-      collectionName: "sessions",
-    });
-  } else if (process.env.DATABASE_URL) {
-    const pgStore = connectPg(session);
-    sessionStore = new pgStore({
-      conString: process.env.DATABASE_URL,
-      createTableIfMissing: true,
-      ttl: sessionTtl / 1000, // connect-pg-simple uses seconds internally for some calculations but here we pass ms/1000 usually
-      tableName: "sessions",
-    });
-  } else {
-    // Fallback to memory store for local dev without DB (not recommended for production)
-    console.warn("No MONGODB_URI or DATABASE_URL found. Falling back to memory store for sessions.");
+  try {
+    if (process.env.MONGODB_URI) {
+      console.log("[Session] Initializing MongoDB session store...");
+      sessionStore = MongoStore.create({
+        mongoUrl: process.env.MONGODB_URI,
+        ttl: sessionTtl / 1000,
+        collectionName: "sessions",
+      });
+      console.log("[Session] MongoDB session store initialized.");
+    } else if (process.env.DATABASE_URL) {
+      console.log("[Session] Initializing PostgreSQL session store...");
+      const pgStore = connectPg(session);
+      sessionStore = new pgStore({
+        conString: process.env.DATABASE_URL,
+        createTableIfMissing: true,
+        ttl: sessionTtl / 1000,
+        tableName: "sessions",
+      });
+      console.log("[Session] PostgreSQL session store initialized.");
+    } else {
+      console.warn("[Session] No MONGODB_URI or DATABASE_URL found. Falling back to memory store.");
+    }
+  } catch (err) {
+    console.error("[Session] Critical error initializing session store:", err);
+    // Continue with memory store fallback instead of crashing
   }
 
   return session({

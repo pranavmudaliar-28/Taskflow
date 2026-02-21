@@ -23,15 +23,21 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+  console.log("[Routes] Starting route registration...");
+
   // ── Raw body parser for Stripe webhooks (MUST be before express.json) ──────
   app.use("/api/stripe/webhook", express.raw({ type: "application/json" }));
 
   // Setup authentication
+  console.log("[Routes] Setting up auth...");
   await setupAuth(app);
   registerAuthRoutes(app);
+  console.log("[Routes] Auth setup complete.");
 
   // ── Register real Stripe routes (AFTER auth setup so req.user works) ────────
+  console.log("[Routes] Registering Stripe routes...");
   registerStripeRoutes(app);
+  console.log("[Routes] Stripe routes registered.");
 
   // Helper to get user ID from request
   const getUserId = (req: any): string => {

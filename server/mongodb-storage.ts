@@ -477,6 +477,34 @@ export class MongoStorage implements IStorage {
         return this.transformArray<Milestone>(milestones);
     }
 
+    async getOrganizationInvitations(orgId: string): Promise<OrganizationInvitation[]> {
+        const invitations = await InvitationMongo.find({ organizationId: orgId, status: "pending" });
+        return this.transformArray<OrganizationInvitation>(invitations);
+    }
+
+    async getProjectInvitations(projectId: string): Promise<ProjectInvitation[]> {
+        const invitations = await InvitationMongo.find({ projectId: projectId, status: "pending" });
+        return this.transformArray<ProjectInvitation>(invitations);
+    }
+
+    async getPendingOrganizationInvitationsByEmail(email: string): Promise<OrganizationInvitation[]> {
+        const invitations = await InvitationMongo.find({
+            email: email.toLowerCase(),
+            organizationId: { $exists: true },
+            status: "pending"
+        });
+        return this.transformArray<OrganizationInvitation>(invitations);
+    }
+
+    async getPendingInvitationsByEmail(email: string): Promise<ProjectInvitation[]> {
+        const invitations = await InvitationMongo.find({
+            email: email.toLowerCase(),
+            projectId: { $exists: true },
+            status: "pending"
+        });
+        return this.transformArray<ProjectInvitation>(invitations);
+    }
+
     // Invitations
     async createProjectInvitation(invitation: InsertProjectInvitation): Promise<ProjectInvitation> {
         const created = await InvitationMongo.create(invitation);

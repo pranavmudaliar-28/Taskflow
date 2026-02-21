@@ -126,12 +126,16 @@ export interface IStorage {
   // Project Invitations
   createProjectInvitation(invitation: InsertProjectInvitation): Promise<ProjectInvitation>;
   getProjectInvitation(token: string): Promise<ProjectInvitation | undefined>;
+  getProjectInvitations(projectId: string): Promise<ProjectInvitation[]>;
+  getPendingInvitationsByEmail(email: string): Promise<ProjectInvitation[]>;
   updateProjectInvitationStatus(id: string, status: string): Promise<void>;
   deleteProjectInvitation(id: string): Promise<void>;
 
   // Organization Invitations
   createOrganizationInvitation(invitation: InsertOrganizationInvitation): Promise<OrganizationInvitation>;
   getOrganizationInvitation(token: string): Promise<OrganizationInvitation | undefined>;
+  getOrganizationInvitations(orgId: string): Promise<OrganizationInvitation[]>;
+  getPendingOrganizationInvitationsByEmail(email: string): Promise<OrganizationInvitation[]>;
   updateOrganizationInvitationStatus(id: string, status: string): Promise<void>;
   deleteOrganizationInvitation(id: string): Promise<void>;
   acceptOrganizationInvitation(token: string, userId: string): Promise<void>;
@@ -792,6 +796,17 @@ export class DatabaseStorage implements IStorage {
 
   async deleteProjectInvitation(id: string): Promise<void> {
     await db.delete(projectInvitations).where(eq(projectInvitations.id, id));
+  }
+
+  async getOrganizationInvitations(orgId: string): Promise<OrganizationInvitation[]> {
+    return db.select().from(organizationInvitations)
+      .where(and(eq(organizationInvitations.organizationId, orgId), eq(organizationInvitations.status, "pending")))
+      .orderBy(desc(organizationInvitations.createdAt));
+  }
+
+  async getPendingOrganizationInvitationsByEmail(email: string): Promise<OrganizationInvitation[]> {
+    return db.select().from(organizationInvitations)
+      .where(and(eq(organizationInvitations.email, email.toLowerCase()), eq(organizationInvitations.status, "pending")));
   }
 
   async getProjectInvitation(token: string): Promise<ProjectInvitation | undefined> {
