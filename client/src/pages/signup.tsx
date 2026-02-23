@@ -44,21 +44,21 @@ export default function Signup() {
   ];
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex text-foreground">
       {/* ── Left: form panel ── */}
-      <div className="flex-1 flex flex-col bg-white">
+      <div className="flex-1 flex flex-col bg-background">
         <div className="flex-1 flex flex-col justify-center px-8 sm:px-12 xl:px-16 py-12 max-w-md w-full mx-auto">
           {/* Mobile logo */}
           <div className="flex items-center gap-2 mb-8 lg:hidden">
             <div className="h-8 w-8 rounded-lg bg-violet-600 flex items-center justify-center">
               <Kanban className="h-4 w-4 text-white" />
             </div>
-            <span className="font-bold text-slate-900">TaskFlow</span>
+            <span className="font-bold text-foreground">TaskFlow</span>
           </div>
 
           <div className="mb-7">
-            <h2 className="text-2xl font-bold text-slate-900 mb-1">Create your account</h2>
-            <p className="text-slate-500 text-sm">Start managing projects like a pro</p>
+            <h2 className="text-2xl font-bold text-foreground mb-1">Create your account</h2>
+            <p className="text-muted-foreground text-sm">Start managing projects like a pro</p>
           </div>
 
           <form
@@ -67,55 +67,55 @@ export default function Signup() {
           >
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-sm font-medium text-slate-700">First name</Label>
+                <Label className="text-sm font-medium text-foreground/80">First name</Label>
                 <Input
                   placeholder="John"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
-                  className="h-11 border-slate-200 focus:border-violet-600 focus:ring-violet-600/20 rounded-lg"
+                  className="h-11 border-border bg-background focus:border-violet-600 focus:ring-violet-600/20 rounded-lg"
                   required
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-sm font-medium text-slate-700">Last name</Label>
+                <Label className="text-sm font-medium text-foreground/80">Last name</Label>
                 <Input
                   placeholder="Doe"
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
-                  className="h-11 border-slate-200 focus:border-violet-600 focus:ring-violet-600/20 rounded-lg"
+                  className="h-11 border-border bg-background focus:border-violet-600 focus:ring-violet-600/20 rounded-lg"
                   required
                 />
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-sm font-medium text-slate-700">Email address</Label>
+              <Label className="text-sm font-medium text-foreground/80">Email address</Label>
               <Input
                 type="email"
                 placeholder="name@company.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="h-11 border-slate-200 focus:border-violet-600 focus:ring-violet-600/20 rounded-lg"
+                className="h-11 border-border bg-background focus:border-violet-600 focus:ring-violet-600/20 rounded-lg"
                 required
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-sm font-medium text-slate-700">Password</Label>
+              <Label className="text-sm font-medium text-foreground/80">Password</Label>
               <div className="relative">
                 <Input
                   type={showPassword ? "text" : "password"}
                   placeholder="Min. 6 characters"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="h-11 border-slate-200 focus:border-violet-600 focus:ring-violet-600/20 rounded-lg pr-10"
+                  className="h-11 border-border bg-background focus:border-violet-600 focus:ring-violet-600/20 rounded-lg pr-10"
                   required
                   minLength={6}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -136,17 +136,17 @@ export default function Signup() {
             </Button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-slate-500">
+          <p className="mt-6 text-center text-sm text-muted-foreground">
             Already have an account?{" "}
             <Link href="/login" className="font-semibold text-violet-600 hover:text-violet-700">
               Sign in
             </Link>
           </p>
 
-          <p className="mt-4 text-center text-xs text-slate-400">
+          <p className="mt-4 text-center text-xs text-muted-foreground">
             By creating an account, you agree to our{" "}
-            <button className="underline">Terms</button> and{" "}
-            <button className="underline">Privacy Policy</button>
+            <button className="underline hover:text-foreground">Terms</button> and{" "}
+            <button className="underline hover:text-foreground">Privacy Policy</button>
           </p>
         </div>
       </div>

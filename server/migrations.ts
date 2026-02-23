@@ -10,7 +10,7 @@ async function runMigrations() {
     console.log("Starting slug backfill migration...");
 
     // Get all projects
-    const allProjects = await db.select().from(projects);
+    const allProjects = await db!.select().from(projects);
 
     for (const project of allProjects) {
         if (!project.slug) {
@@ -20,7 +20,7 @@ async function runMigrations() {
             let uniqueSlug = slug;
             let counter = 1;
             while (true) {
-                const existing = await db.select().from(projects).where(eq(projects.slug, uniqueSlug));
+                const existing = await db!.select().from(projects).where(eq(projects.slug, uniqueSlug));
                 if (existing.length === 0) break;
                 uniqueSlug = `${slug}-${counter}`;
                 counter++;

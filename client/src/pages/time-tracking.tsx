@@ -75,37 +75,37 @@ export default function TimeTracking() {
     .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()) || [];
 
   return (
-    <div className="flex flex-col min-h-full bg-slate-50">
+    <div className="flex flex-col min-h-full bg-background text-foreground">
       {/* Header */}
-      <div className="bg-white border-b border-slate-100 px-6 py-5">
-        <h1 className="text-xl font-bold text-slate-900">Time Tracking</h1>
-        <p className="text-sm text-slate-500 mt-0.5">Track time spent on your tasks</p>
+      <div className="bg-card border-b border-border px-6 py-5">
+        <h1 className="text-xl font-bold text-foreground">Time Tracking</h1>
+        <p className="text-sm text-muted-foreground mt-0.5">Track time spent on your tasks</p>
       </div>
 
       <div className="p-6 space-y-5">
         {/* Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
           {[
-            { label: "Today", value: fmtShort(totalToday + totalActive), icon: Calendar, iconBg: "bg-blue-50", iconColor: "text-blue-500", testId: "text-time-today" },
-            { label: "This Week", value: fmtShort(totalWeek + totalActive), icon: BarChart3, iconBg: "bg-violet-50", iconColor: "text-violet-500", testId: "text-time-week" },
-            { label: "Active Timers", value: activeLogs.length, icon: Timer, iconBg: "bg-emerald-50", iconColor: "text-emerald-500" },
+            { label: "Today", value: fmtShort(totalToday + totalActive), icon: Calendar, iconBg: "bg-blue-500/10", iconColor: "text-blue-500", testId: "text-time-today" },
+            { label: "This Week", value: fmtShort(totalWeek + totalActive), icon: BarChart3, iconBg: "bg-violet-500/10", iconColor: "text-violet-500", testId: "text-time-week" },
+            { label: "Active Timers", value: activeLogs.length, icon: Timer, iconBg: "bg-emerald-500/10", iconColor: "text-emerald-500" },
           ].map(({ label, value, icon: Icon, iconBg, iconColor, testId }) => (
-            <div key={label} className="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
+            <div key={label} className="bg-card rounded-xl border border-border shadow-sm p-5">
               <div className={cn("h-9 w-9 rounded-lg flex items-center justify-center mb-3", iconBg)}>
                 <Icon className={cn("h-4.5 w-4.5", iconColor)} />
               </div>
-              <p className="text-2xl font-bold text-slate-900" data-testid={testId}>{value}</p>
-              <p className="text-xs text-slate-500 mt-0.5">{label}</p>
+              <p className="text-2xl font-bold text-foreground" data-testid={testId}>{value}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
             </div>
           ))}
         </div>
 
         {/* Active timers */}
-        <div className={cn("bg-white rounded-xl border shadow-sm", activeLogs.length > 0 ? "border-blue-200 ring-1 ring-blue-200" : "border-slate-100")}>
-          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-50">
-            <h2 className="text-sm font-semibold text-slate-900">Active Timers</h2>
+        <div className={cn("bg-card rounded-xl border shadow-sm", activeLogs.length > 0 ? "border-primary/50 ring-1 ring-primary/20" : "border-border")}>
+          <div className="flex items-center justify-between px-5 py-4 border-b border-border/50">
+            <h2 className="text-sm font-semibold text-foreground">Active Timers</h2>
             {activeLogs.length > 0 && (
-              <span className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-700 text-xs font-semibold px-2.5 py-1 rounded-full">
+              <span className="inline-flex items-center gap-1.5 bg-emerald-500/10 text-emerald-600 text-xs font-semibold px-2.5 py-1 rounded-full">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
                 {activeLogs.length} Recording
               </span>
@@ -115,17 +115,17 @@ export default function TimeTracking() {
             {activeLogs.length > 0 ? (
               <div className="space-y-3">
                 {activeLogs.map((log) => (
-                  <div key={log.id} className="flex items-center justify-between gap-4 bg-blue-50 rounded-lg px-4 py-3">
+                  <div key={log.id} className="flex items-center justify-between gap-4 bg-primary/5 rounded-lg px-4 py-3">
                     <div>
-                      <p className="text-sm font-semibold text-slate-800">{getTaskName(log.taskId)}</p>
-                      <p className="text-2xl font-mono font-bold text-blue-600 mt-1">{fmtHMS(elapsedTimes[log.taskId] || 0)}</p>
+                      <p className="text-sm font-semibold text-foreground">{getTaskName(log.taskId)}</p>
+                      <p className="text-2xl font-mono font-bold text-primary mt-1">{fmtHMS(elapsedTimes[log.taskId] || 0)}</p>
                     </div>
                     <Button
                       size="sm"
                       variant="destructive"
                       onClick={() => stopTimerMutation.mutate(log.taskId)}
                       disabled={stopTimerMutation.isPending}
-                      className="bg-red-500 hover:bg-red-600 text-white gap-2"
+                      className="gap-2"
                     >
                       <Square className="h-3.5 w-3.5" /> Stop
                     </Button>
@@ -135,24 +135,24 @@ export default function TimeTracking() {
             ) : (
               <div className="space-y-4">
                 <div className="text-center py-4">
-                  <div className="h-12 w-12 rounded-xl bg-slate-100 flex items-center justify-center mx-auto mb-2">
-                    <Clock className="h-6 w-6 text-slate-400" />
+                  <div className="h-12 w-12 rounded-xl bg-muted flex items-center justify-center mx-auto mb-2">
+                    <Clock className="h-6 w-6 text-muted-foreground" />
                   </div>
-                  <p className="text-sm text-slate-500">No active timer</p>
+                  <p className="text-sm text-muted-foreground">No active timer</p>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700">Start timer for task:</label>
+                  <label className="text-sm font-medium text-foreground">Start timer for task:</label>
                   <Select onValueChange={(id) => startTimerMutation.mutate(id)} disabled={startTimerMutation.isPending}>
-                    <SelectTrigger data-testid="select-task-for-timer" className="h-10 border-slate-200 rounded-lg">
+                    <SelectTrigger data-testid="select-task-for-timer" className="h-10 border-border rounded-lg">
                       <SelectValue placeholder="Select a task..." />
                     </SelectTrigger>
                     <SelectContent>
                       {availTasks.length === 0 ? (
-                        <div className="p-2 text-sm text-slate-400 text-center">No active tasks</div>
+                        <div className="p-2 text-sm text-muted-foreground text-center">No active tasks</div>
                       ) : availTasks.map((t) => (
                         <SelectItem key={t.id} value={t.id}>
                           <div className="flex items-center gap-2">
-                            <Play className="h-3 w-3 text-slate-400" />
+                            <Play className="h-3 w-3 text-muted-foreground" />
                             {t.title}
                           </div>
                         </SelectItem>
@@ -166,11 +166,11 @@ export default function TimeTracking() {
         </div>
 
         {/* Logs table */}
-        <div className="bg-white rounded-xl border border-slate-100 shadow-sm">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-50">
-            <h2 className="text-sm font-semibold text-slate-900">Time Log History</h2>
+        <div className="bg-card rounded-xl border border-border shadow-sm">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-border/50">
+            <h2 className="text-sm font-semibold text-foreground">Time Log History</h2>
             <Select value={selectedProject} onValueChange={setSelectedProject}>
-              <SelectTrigger className="w-44 h-8 border-slate-200 rounded-lg text-xs">
+              <SelectTrigger className="w-44 h-8 border-border rounded-lg text-xs">
                 <SelectValue placeholder="Filter by project" />
               </SelectTrigger>
               <SelectContent>
@@ -184,22 +184,22 @@ export default function TimeTracking() {
             <div className="p-5 space-y-3">{[...Array(5)].map((_, i) => <Skeleton key={i} className="h-14 rounded-lg" />)}</div>
           ) : filteredLogs.length > 0 ? (
             <ScrollArea className="h-[420px]">
-              <div className="divide-y divide-slate-50">
+              <div className="divide-y divide-border/50">
                 {filteredLogs.map((log) => (
-                  <div key={log.id} className="flex items-center gap-4 px-5 py-3.5 hover:bg-slate-50 transition-colors" data-testid={`timelog-item-${log.id}`}>
-                    <div className="h-9 w-9 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
-                      <Clock className="h-4 w-4 text-blue-500" />
+                  <div key={log.id} className="flex items-center gap-4 px-5 py-3.5 hover:bg-muted/50 transition-colors" data-testid={`timelog-item-${log.id}`}>
+                    <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                      <Clock className="h-4 w-4 text-primary" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-800 truncate">{getTaskName(log.taskId)}</p>
-                      <p className="text-xs text-slate-400 mt-0.5">
+                      <p className="text-sm font-medium text-foreground truncate">{getTaskName(log.taskId)}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
                         {getProjectName(log.taskId)} {getProjectName(log.taskId) && "·"} {format(new Date(log.startTime), "MMM d, yyyy")}
                       </p>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className="text-sm font-semibold text-slate-800">{log.duration ? fmtShort(log.duration) : "Running…"}</p>
+                      <p className="text-sm font-semibold text-foreground">{log.duration ? fmtShort(log.duration) : "Running…"}</p>
                       {log.approved && (
-                        <span className="text-[10px] bg-emerald-50 text-emerald-700 font-semibold px-1.5 py-0.5 rounded-full">Approved</span>
+                        <span className="text-[10px] bg-emerald-500/10 text-emerald-600 font-semibold px-1.5 py-0.5 rounded-full">Approved</span>
                       )}
                     </div>
                   </div>
@@ -208,11 +208,11 @@ export default function TimeTracking() {
             </ScrollArea>
           ) : (
             <div className="flex flex-col items-center justify-center py-12">
-              <div className="h-12 w-12 rounded-xl bg-slate-100 flex items-center justify-center mb-3">
-                <Clock className="h-6 w-6 text-slate-300" />
+              <div className="h-12 w-12 rounded-xl bg-muted flex items-center justify-center mb-3">
+                <Clock className="h-6 w-6 text-muted-foreground/50" />
               </div>
-              <p className="text-sm text-slate-500">No time logs yet</p>
-              <p className="text-xs text-slate-400 mt-1">Start a timer to begin tracking</p>
+              <p className="text-sm text-muted-foreground">No time logs yet</p>
+              <p className="text-xs text-muted-foreground/70 mt-1">Start a timer to begin tracking</p>
             </div>
           )}
         </div>

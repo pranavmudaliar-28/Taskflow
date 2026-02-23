@@ -20,7 +20,7 @@ export async function seedDatabase(userId: string) {
     // Users start with empty workspace
 
     // Mark user as seeded so we don't re-seed after they delete everything
-    await db.update(users).set({ seeded: true }).where(eq(users.id, userId));
+    await db!.update(users).set({ seeded: true }).where(eq(users.id, userId));
 
     console.log(`User workspace initialized for user ${userId}!`);
   } catch (error) {

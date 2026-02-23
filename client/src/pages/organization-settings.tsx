@@ -22,9 +22,9 @@ type OrganizationMemberWithUser = OrganizationMember & { user: Omit<User, "passw
 
 /* ── helpers ──────────────────────────────────────────────── */
 const ROLE_CONFIG: Record<string, { label: string; icon: any; badge: string }> = {
-    admin: { label: "Admin", icon: Shield, badge: "bg-violet-100 text-violet-700 border-violet-200" },
-    team_lead: { label: "Team Lead", icon: Clock, badge: "bg-blue-100 text-blue-700 border-blue-200" },
-    member: { label: "Member", icon: UserIcon, badge: "bg-slate-100 text-slate-600 border-slate-200" },
+    admin: { label: "Admin", icon: Shield, badge: "bg-primary/10 text-primary border-primary/20" },
+    team_lead: { label: "Team Lead", icon: Clock, badge: "bg-primary/10 text-primary border-primary/20" },
+    member: { label: "Member", icon: UserIcon, badge: "bg-muted text-muted-foreground border-border" },
 };
 
 function RoleBadge({ role }: { role: string }) {
@@ -40,7 +40,7 @@ function RoleBadge({ role }: { role: string }) {
 
 function MemberSkeleton() {
     return (
-        <div className="flex items-center gap-4 px-5 py-3.5 border-b border-slate-50">
+        <div className="flex items-center gap-4 px-5 py-3.5 border-b border-border/50">
             <Skeleton className="h-9 w-9 rounded-full" />
             <div className="flex-1 space-y-1">
                 <Skeleton className="h-3.5 w-32 rounded" />
@@ -122,7 +122,7 @@ export default function OrganizationSettings() {
     if (isLoadingOrgs) {
         return (
             <div className="flex items-center justify-center min-h-[400px]">
-                <Loader2 className="h-7 w-7 animate-spin text-slate-400" />
+                <Loader2 className="h-7 w-7 animate-spin text-muted-foreground" />
             </div>
         );
     }
@@ -130,11 +130,11 @@ export default function OrganizationSettings() {
     if (!activeOrg) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[400px] text-center px-6">
-                <div className="h-14 w-14 bg-slate-100 rounded-2xl flex items-center justify-center mb-4">
-                    <Building2 className="h-7 w-7 text-slate-400" />
+                <div className="h-14 w-14 bg-muted rounded-2xl flex items-center justify-center mb-4">
+                    <Building2 className="h-7 w-7 text-muted-foreground" />
                 </div>
-                <h2 className="text-base font-bold text-slate-900 mb-1">No Organization Found</h2>
-                <p className="text-sm text-slate-400">You're not part of any organization yet.</p>
+                <h2 className="text-base font-bold text-foreground mb-1">No Organization Found</h2>
+                <p className="text-sm text-muted-foreground">You're not part of any organization yet.</p>
             </div>
         );
     }
@@ -150,25 +150,25 @@ export default function OrganizationSettings() {
     const pendingCount = invitations?.length || 0;
 
     return (
-        <div className="min-h-full bg-slate-50 p-6">
+        <div className="min-h-full bg-background/50 p-6">
             <div className="max-w-4xl mx-auto">
 
                 {/* ── Page header ── */}
                 <div className="flex items-center justify-between mb-6">
                     <div>
                         <div className="flex items-center gap-2 mb-1">
-                            <div className="h-8 w-8 rounded-lg bg-violet-600 flex items-center justify-center">
-                                <Building2 className="h-4 w-4 text-white" />
+                            <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
+                                <Building2 className="h-4 w-4 text-primary-foreground" />
                             </div>
-                            <h1 className="text-xl font-bold text-slate-900 tracking-tight">{activeOrg.name}</h1>
+                            <h1 className="text-xl font-bold text-foreground tracking-tight">{activeOrg.name}</h1>
                         </div>
-                        <p className="text-sm text-slate-400">Manage your organization members and invitations</p>
+                        <p className="text-sm text-muted-foreground">Manage your organization members and invitations</p>
                     </div>
 
                     {canInvite && (
                         <Dialog open={isInviteOpen} onOpenChange={setIsInviteOpen}>
                             <DialogTrigger asChild>
-                                <Button className="bg-violet-600 hover:bg-violet-700 text-white gap-2 font-semibold">
+                                <Button className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2 font-semibold">
                                     <UserPlus className="h-4 w-4" /> Invite member
                                 </Button>
                             </DialogTrigger>
@@ -181,19 +181,19 @@ export default function OrganizationSettings() {
                                 </DialogHeader>
                                 <form onSubmit={handleInvite} className="space-y-4 py-2">
                                     <div className="space-y-1.5">
-                                        <Label htmlFor="inv-email" className="text-sm font-semibold text-slate-700">Email address</Label>
+                                        <Label htmlFor="inv-email" className="text-sm font-semibold text-foreground/90">Email address</Label>
                                         <div className="relative">
-                                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                             <Input id="inv-email" type="email" placeholder="name@example.com"
                                                 value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)}
-                                                className="pl-9 h-10 border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-100"
+                                                className="pl-9 h-10 border-border focus:border-primary focus:ring-2 focus:ring-primary/20"
                                                 required />
                                         </div>
                                     </div>
                                     <div className="space-y-1.5">
-                                        <Label htmlFor="inv-role" className="text-sm font-semibold text-slate-700">Role</Label>
+                                        <Label htmlFor="inv-role" className="text-sm font-semibold text-foreground/90">Role</Label>
                                         <Select value={inviteRole} onValueChange={(v: any) => setInviteRole(v)}>
-                                            <SelectTrigger className="h-10 border-slate-200 focus:border-violet-500">
+                                            <SelectTrigger className="h-10 border-border focus:border-primary">
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
@@ -205,7 +205,7 @@ export default function OrganizationSettings() {
                                     </div>
                                     <DialogFooter className="pt-2">
                                         <Button variant="outline" type="button" onClick={() => setIsInviteOpen(false)}>Cancel</Button>
-                                        <Button type="submit" className="bg-violet-600 hover:bg-violet-700 text-white"
+                                        <Button type="submit" className="bg-primary hover:bg-primary/90 text-primary-foreground"
                                             disabled={inviteMutation.isPending || !inviteEmail}>
                                             {inviteMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                                             Send invite
@@ -218,15 +218,15 @@ export default function OrganizationSettings() {
                 </div>
 
                 {/* ── Tab nav ── */}
-                <div className="flex items-center gap-1 bg-white rounded-xl border border-slate-100 p-1.5 shadow-sm w-fit mb-5">
+                <div className="flex items-center gap-1 bg-card rounded-xl border border-border p-1.5 shadow-sm w-fit mb-5">
                     {TABS.map(({ id, label, icon: Icon }) => (
                         <button key={id} onClick={() => setTab(id)}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === id ? "bg-violet-50 text-violet-700" : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === id ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-muted"
                                 }`}>
-                            <Icon className={`h-4 w-4 ${tab === id ? "text-violet-600" : "text-slate-400"}`} />
+                            <Icon className={`h-4 w-4 ${tab === id ? "text-primary" : "text-muted-foreground"}`} />
                             {label}
                             {id === "invitations" && pendingCount > 0 && (
-                                <span className="ml-1 h-5 min-w-[20px] px-1.5 bg-violet-600 text-white rounded-full text-xs font-bold flex items-center justify-center">
+                                <span className="ml-1 h-5 min-w-[20px] px-1.5 bg-primary text-primary-foreground rounded-full text-xs font-bold flex items-center justify-center">
                                     {pendingCount}
                                 </span>
                             )}
@@ -236,11 +236,11 @@ export default function OrganizationSettings() {
 
                 {/* ── Members tab ── */}
                 {tab === "members" && (
-                    <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
-                        <div className="px-5 py-4 border-b border-slate-50 flex items-center justify-between">
+                    <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
+                        <div className="px-5 py-4 border-b border-border flex items-center justify-between">
                             <div>
-                                <h2 className="text-sm font-bold text-slate-900">Organization Members</h2>
-                                <p className="text-xs text-slate-400 mt-0.5">
+                                <h2 className="text-sm font-bold text-foreground">Organization Members</h2>
+                                <p className="text-xs text-muted-foreground mt-0.5">
                                     {members?.length ?? 0} member{members?.length !== 1 ? "s" : ""} with access
                                 </p>
                             </div>
@@ -250,11 +250,11 @@ export default function OrganizationSettings() {
                             Array.from({ length: 4 }).map((_, i) => <MemberSkeleton key={i} />)
                         ) : members?.length === 0 ? (
                             <div className="py-16 text-center">
-                                <Users className="h-10 w-10 text-slate-200 mx-auto mb-3" />
-                                <p className="text-sm text-slate-400">No members yet</p>
+                                <Users className="h-10 w-10 text-muted/20 mx-auto mb-3" />
+                                <p className="text-sm text-muted-foreground">No members yet</p>
                             </div>
                         ) : (
-                            <div className="divide-y divide-slate-50">
+                            <div className="divide-y divide-border/50">
                                 {members?.map((member) => {
                                     const name = member.user.firstName && member.user.lastName
                                         ? `${member.user.firstName} ${member.user.lastName}`
@@ -264,22 +264,22 @@ export default function OrganizationSettings() {
                                         : (member.user.email?.[0]?.toUpperCase() || "?");
 
                                     return (
-                                        <div key={member.id} className="flex items-center gap-4 px-5 py-3.5 hover:bg-slate-50 transition-colors">
+                                        <div key={member.id} className="flex items-center gap-4 px-5 py-3.5 hover:bg-muted/50 transition-colors">
                                             <Avatar className="h-9 w-9 shrink-0">
                                                 <AvatarImage src={member.user.profileImageUrl || undefined} />
-                                                <AvatarFallback className="text-sm font-bold bg-violet-100 text-violet-700">
+                                                <AvatarFallback className="text-sm font-bold bg-primary/10 text-primary">
                                                     {initials}
                                                 </AvatarFallback>
                                             </Avatar>
                                             <div className="flex-1 min-w-0">
-                                                <p className="text-sm font-semibold text-slate-900 truncate">{name}</p>
-                                                <p className="text-xs text-slate-400 truncate">{member.user.email}</p>
+                                                <p className="text-sm font-semibold text-foreground truncate">{name}</p>
+                                                <p className="text-xs text-muted-foreground truncate">{member.user.email}</p>
                                             </div>
                                             <div className="flex items-center gap-3 shrink-0">
                                                 <RoleBadge role={member.role} />
                                                 {canInvite && (
                                                     <Button variant="ghost" size="sm"
-                                                        className="h-8 text-xs text-slate-500 hover:text-slate-800 gap-1.5"
+                                                        className="h-8 text-xs text-muted-foreground hover:text-foreground gap-1.5"
                                                         onClick={() => {
                                                             setSelectedMemberId(member.userId);
                                                             setSelectedProjectIds([]);
@@ -300,39 +300,39 @@ export default function OrganizationSettings() {
 
                 {/* ── Invitations tab ── */}
                 {tab === "invitations" && (
-                    <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
-                        <div className="px-5 py-4 border-b border-slate-50">
-                            <h2 className="text-sm font-bold text-slate-900">Pending Invitations</h2>
-                            <p className="text-xs text-slate-400 mt-0.5">Links expire after 7 days</p>
+                    <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
+                        <div className="px-5 py-4 border-b border-border">
+                            <h2 className="text-sm font-bold text-foreground">Pending Invitations</h2>
+                            <p className="text-xs text-muted-foreground mt-0.5">Links expire after 7 days</p>
                         </div>
 
                         {isLoadingInvites ? (
                             Array.from({ length: 3 }).map((_, i) => <MemberSkeleton key={i} />)
                         ) : !invitations || invitations.length === 0 ? (
                             <div className="py-16 text-center">
-                                <Mail className="h-10 w-10 text-slate-200 mx-auto mb-3" />
-                                <p className="text-sm font-semibold text-slate-500 mb-1">No pending invitations</p>
-                                <p className="text-xs text-slate-400">Invite a teammate to get started</p>
+                                <Mail className="h-10 w-10 text-muted/20 mx-auto mb-3" />
+                                <p className="text-sm font-semibold text-muted-foreground mb-1">No pending invitations</p>
+                                <p className="text-xs text-muted-foreground">Invite a teammate to get started</p>
                             </div>
                         ) : (
-                            <div className="divide-y divide-slate-50">
+                            <div className="divide-y divide-border/50">
                                 {invitations.map((invite) => (
-                                    <div key={invite.id} className="flex items-center gap-4 px-5 py-3.5 hover:bg-slate-50">
-                                        <div className="h-9 w-9 bg-amber-100 rounded-full flex items-center justify-center shrink-0">
-                                            <Mail className="h-4 w-4 text-amber-600" />
+                                    <div key={invite.id} className="flex items-center gap-4 px-5 py-3.5 hover:bg-muted/50">
+                                        <div className="h-9 w-9 bg-warning/10 rounded-full flex items-center justify-center shrink-0">
+                                            <Mail className="h-4 w-4 text-warning" />
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-semibold text-slate-900 truncate">{invite.email}</p>
-                                            <p className="text-xs text-slate-400">
+                                            <p className="text-sm font-semibold text-foreground truncate">{invite.email}</p>
+                                            <p className="text-xs text-muted-foreground">
                                                 Invited as <span className="capitalize">{invite.role.replace("_", " ")}</span>
                                                 {" · "}{new Date(invite.createdAt!).toLocaleDateString()}
                                             </p>
                                         </div>
                                         <div className="flex items-center gap-2 shrink-0">
-                                            <span className="text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full">
+                                            <span className="text-xs font-medium text-warning bg-warning/10 border border-warning/20 px-2.5 py-1 rounded-full">
                                                 Pending
                                             </span>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-red-600 hover:bg-red-50"
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                                                 onClick={() => cancelInviteMutation.mutate(invite.id)}
                                                 disabled={cancelInviteMutation.isPending}
                                                 aria-label="Cancel invitation">
@@ -358,7 +358,7 @@ export default function OrganizationSettings() {
                         {projects && projects.length > 0 ? (
                             projects.map((project) => (
                                 <label key={project.id}
-                                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors">
+                                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors">
                                     <Checkbox
                                         id={`proj-${project.id}`}
                                         checked={selectedProjectIds.includes(project.id)}
@@ -368,16 +368,16 @@ export default function OrganizationSettings() {
                                             );
                                         }}
                                     />
-                                    <span className="text-sm text-slate-700 font-medium">{project.name}</span>
+                                    <span className="text-sm text-foreground/90 font-medium">{project.name}</span>
                                 </label>
                             ))
                         ) : (
-                            <p className="text-center text-sm text-slate-400 py-6">No projects available</p>
+                            <p className="text-center text-sm text-muted-foreground py-6">No projects available</p>
                         )}
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setIsAssignOpen(false)}>Cancel</Button>
-                        <Button className="bg-violet-600 hover:bg-violet-700 text-white"
+                        <Button className="bg-primary hover:bg-primary/90 text-primary-foreground"
                             onClick={() => {
                                 if (selectedMemberId) {
                                     assignProjectsMutation.mutate({ userId: selectedMemberId, projectIds: selectedProjectIds });

@@ -898,7 +898,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateOrganizationInvitationStatus(id: string, status: string): Promise<void> {
-    await db
+    await db!
       .update(organizationInvitations)
       .set({ status })
       .where(eq(organizationInvitations.id, id));
@@ -906,7 +906,7 @@ export class DatabaseStorage implements IStorage {
 
   // Milestones
   async createMilestone(milestone: InsertMilestone): Promise<Milestone> {
-    const [newMilestone] = await db
+    const [newMilestone] = await db!
       .insert(milestones)
       .values(milestone)
       .returning();
@@ -914,7 +914,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getMilestones(projectId: string): Promise<Milestone[]> {
-    return await db
+    return await db!
       .select()
       .from(milestones)
       .where(eq(milestones.projectId, projectId))
@@ -922,7 +922,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateMilestone(id: string, updates: Partial<Milestone>): Promise<Milestone | undefined> {
-    const [updatedMilestone] = await db
+    const [updatedMilestone] = await db!
       .update(milestones)
       .set({ ...updates, updatedAt: new Date() })
       .where(eq(milestones.id, id))
@@ -931,7 +931,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getMilestone(id: string): Promise<Milestone | undefined> {
-    const [milestone] = await db
+    const [milestone] = await db!
       .select()
       .from(milestones)
       .where(eq(milestones.id, id));

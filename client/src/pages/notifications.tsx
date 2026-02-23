@@ -13,11 +13,11 @@ import type { Notification } from "@shared/schema";
 import { cn } from "@/lib/utils";
 
 const typeConfig: Record<string, { icon: any; iconBg: string; iconColor: string; label: string }> = {
-  task_assigned: { icon: User, iconBg: "bg-blue-50", iconColor: "text-blue-500", label: "Assignment" },
-  status_changed: { icon: AlertCircle, iconBg: "bg-violet-50", iconColor: "text-violet-500", label: "Status" },
-  mentioned: { icon: MessageSquare, iconBg: "bg-emerald-50", iconColor: "text-emerald-500", label: "Mention" },
-  due_reminder: { icon: Calendar, iconBg: "bg-amber-50", iconColor: "text-amber-500", label: "Reminder" },
-  added_to_project: { icon: FolderKanban, iconBg: "bg-pink-50", iconColor: "text-pink-500", label: "Project" },
+  task_assigned: { icon: User, iconBg: "bg-primary/10", iconColor: "text-primary", label: "Assignment" },
+  status_changed: { icon: AlertCircle, iconBg: "bg-primary/10", iconColor: "text-primary/80", label: "Status" },
+  mentioned: { icon: MessageSquare, iconBg: "bg-success/10", iconColor: "text-success", label: "Mention" },
+  due_reminder: { icon: Calendar, iconBg: "bg-warning/10", iconColor: "text-warning", label: "Reminder" },
+  added_to_project: { icon: FolderKanban, iconBg: "bg-primary/10", iconColor: "text-primary/70", label: "Project" },
 };
 
 export default function Notifications() {
@@ -45,13 +45,13 @@ export default function Notifications() {
   const sorted = notifications?.slice().sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime());
 
   return (
-    <div className="flex flex-col min-h-full bg-slate-50">
-      {/* Page header */}
-      <div className="bg-white border-b border-slate-100 px-6 py-5">
+    <div className="flex flex-col min-h-full bg-background/50">
+      {/* ── Page header ── */}
+      <div className="bg-card/50 backdrop-blur-sm border-b border-border px-6 py-5 sticky top-0 z-20">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-slate-900">Notifications</h1>
-            <p className="text-sm text-slate-500 mt-0.5">
+            <h1 className="text-xl font-bold text-foreground">Notifications</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">
               {unreadCount > 0 ? `${unreadCount} unread notification${unreadCount !== 1 ? "s" : ""}` : "You're all caught up"}
             </p>
           </div>
@@ -61,7 +61,7 @@ export default function Notifications() {
               size="sm"
               onClick={() => markAllReadMutation.mutate()}
               disabled={markAllReadMutation.isPending}
-              className="border-slate-200 text-slate-600 hover:bg-slate-50 gap-2"
+              className="border-border text-foreground/80 hover:bg-muted gap-2"
               data-testid="button-mark-all-read"
             >
               <CheckCheck className="h-4 w-4" />
@@ -72,9 +72,9 @@ export default function Notifications() {
       </div>
 
       <div className="p-6">
-        <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
+        <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
           {isLoading ? (
-            <div className="divide-y divide-slate-50">
+            <div className="divide-y divide-border/50">
               {[...Array(5)].map((_, i) => (
                 <div key={i} className="flex items-start gap-4 px-5 py-4">
                   <Skeleton className="h-10 w-10 rounded-lg shrink-0" />
@@ -87,10 +87,10 @@ export default function Notifications() {
             </div>
           ) : sorted && sorted.length > 0 ? (
             <ScrollArea className="h-[calc(100vh-220px)]">
-              <div className="divide-y divide-slate-50">
+              <div className="divide-y divide-border/50">
                 {sorted.map((n) => {
                   const cfg = typeConfig[n.type] ?? {
-                    icon: Bell, iconBg: "bg-slate-100", iconColor: "text-slate-500", label: "Notification"
+                    icon: Bell, iconBg: "bg-muted", iconColor: "text-muted-foreground", label: "Notification"
                   };
                   const IconComp = cfg.icon;
                   return (
@@ -98,7 +98,7 @@ export default function Notifications() {
                       key={n.id}
                       className={cn(
                         "flex items-start gap-4 px-5 py-4 transition-colors",
-                        n.read ? "bg-white" : "bg-blue-50/40"
+                        n.read ? "bg-card" : "bg-primary/5"
                       )}
                       data-testid={`notification-${n.id}`}
                     >
@@ -108,21 +108,21 @@ export default function Notifications() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
                           <div>
-                            <p className={cn("text-sm font-semibold", n.read ? "text-slate-600" : "text-slate-900")}>
+                            <p className={cn("text-sm font-semibold", n.read ? "text-foreground/70" : "text-foreground")}>
                               {n.title}
                             </p>
-                            <p className="text-sm text-slate-500 mt-0.5 leading-relaxed">{n.message}</p>
-                            <p className="text-xs text-slate-400 mt-1.5">
+                            <p className="text-sm text-muted-foreground mt-0.5 leading-relaxed">{n.message}</p>
+                            <p className="text-xs text-muted-foreground/60 mt-1.5">
                               {formatDistanceToNow(new Date(n.createdAt!), { addSuffix: true })}
                             </p>
                           </div>
                           {!n.read && (
                             <div className="flex items-center gap-2 shrink-0">
-                              <div className="h-2 w-2 rounded-full bg-blue-500" />
+                              <div className="h-2 w-2 rounded-full bg-primary" />
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-7 w-7 text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+                                className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted"
                                 onClick={() => markAsReadMutation.mutate(n.id)}
                                 disabled={markAsReadMutation.isPending}
                                 data-testid={`button-mark-read-${n.id}`}
@@ -140,11 +140,11 @@ export default function Notifications() {
             </ScrollArea>
           ) : (
             <div className="flex flex-col items-center justify-center py-20">
-              <div className="h-16 w-16 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
-                <Inbox className="h-8 w-8 text-slate-400" />
+              <div className="h-16 w-16 rounded-2xl bg-muted flex items-center justify-center mb-4">
+                <Inbox className="h-8 w-8 text-muted-foreground" />
               </div>
-              <p className="text-base font-semibold text-slate-700">All clear!</p>
-              <p className="text-sm text-slate-400 mt-1 text-center max-w-64">
+              <p className="text-base font-semibold text-foreground">All clear!</p>
+              <p className="text-sm text-muted-foreground mt-1 text-center max-w-64">
                 You'll be notified here when there's activity on your tasks or projects.
               </p>
             </div>

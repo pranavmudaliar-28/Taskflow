@@ -11,9 +11,10 @@
     /* #0F172A */
     --sidebar-bg-secondary: 217 33% 17%;
     /* #1E293B */
-    --sidebar-hover: 217 33% 22%;
-    --sidebar-active: 213 94% 68%;
-    /* blue-400 */
+    --sidebar-hover: 217 33% 18%;
+    --sidebar-active: 217 91% 60%;
+    --sidebar-accent: 217 91% 60%;
+    --sidebar-accent-foreground: 0 0% 100%;
     --sidebar-text: 215 20% 65%;
     /* slate-400 */
     --sidebar-text-active: 0 0% 100%;
@@ -132,10 +133,10 @@
 }
 
 [data-sidebar="group-label"] {
-  color: hsl(215, 20%, 50%) !important;
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  color: hsl(215, 20%, 45%) !important;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 
@@ -217,15 +218,15 @@
 
 /* ── Page header ───────────────────────────────────────────────────────────── */
 .page-header {
-  @apply flex items-center justify-between px-6 py-5 border-b border-slate-100 bg-white;
+  @apply flex items-center justify-between px-6 py-5 border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-20;
 }
 
 .page-title {
-  @apply text-xl font-bold text-slate-900;
+  @apply text-xl font-bold text-foreground;
 }
 
 .page-subtitle {
-  @apply text-sm text-slate-500 mt-0.5;
+  @apply text-sm text-muted-foreground mt-0.5;
 }
 
 /* ── Primary button override ───────────────────────────────────────────────── */

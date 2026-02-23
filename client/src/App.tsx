@@ -88,11 +88,11 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
         projects={projects || []}
         onCreateProject={() => setShowCreateProject(true)}
       />
-      <SidebarInset className="flex flex-col h-screen overflow-hidden">
-        <header className="flex items-center justify-between gap-4 px-5 h-14 border-b border-slate-100 shrink-0 bg-white sticky top-0 z-30">
+      <SidebarInset className="flex flex-col h-screen overflow-hidden bg-background">
+        <header className="flex items-center justify-between gap-4 px-5 h-14 border-b border-border shrink-0 bg-background/80 backdrop-blur-sm sticky top-0 z-30">
           <div className="flex items-center gap-3">
             {/* Sidebar toggle visible ONLY on mobile */}
-            <SidebarTrigger className="md:hidden text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors" />
+            <SidebarTrigger className="md:hidden text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg transition-colors" />
 
             {pageTitle && (
               <div className="hidden sm:flex items-center gap-2">
@@ -104,7 +104,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
 
           <div className="flex items-center gap-1">
             <Link href="/notifications">
-              <Button variant="ghost" size="icon" className="relative h-8 w-8 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg">
+              <Button variant="ghost" size="icon" className="relative h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg">
                 <Bell className="h-4 w-4" />
                 {unreadCount > 0 && (
                   <span className="absolute -top-0.5 -right-0.5 h-4 w-4 flex items-center justify-center rounded-full bg-violet-600 text-white text-[9px] font-bold">
@@ -116,7 +116,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
             <ThemeToggle />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-slate-100">
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-accent">
                   <Avatar className="h-7 w-7">
                     <AvatarImage src={user?.profileImageUrl || undefined} />
                     <AvatarFallback className="text-[10px] font-bold bg-violet-600 text-white">
@@ -159,7 +159,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main className="flex-1 overflow-auto bg-slate-50">
+        <main className="flex-1 overflow-auto bg-background/50">
           {children}
         </main>
       </SidebarInset>

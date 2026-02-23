@@ -85,7 +85,7 @@ export function ProjectMembersDialog({ open, onClose, projectId, memberData }: P
       ? ["/api/organizations/members/search", debouncedSearch]
       : ["/api/organizations/members"],
     queryFn: async ({ queryKey }) => {
-      const [endpoint, q] = queryKey;
+      const [endpoint, q] = queryKey as [string, string?];
       if (endpoint.includes("search")) {
         const res = await apiRequest("GET", `${endpoint}?q=${q}`);
         return res.json();
@@ -188,7 +188,7 @@ export function ProjectMembersDialog({ open, onClose, projectId, memberData }: P
     if (user.firstName && user.lastName) {
       return `${user.firstName[0]}${user.lastName[0]}`.toUpperCase();
     }
-    return user.email?.[0].toUpperCase() || "?";
+    return user.email?.[0]?.toUpperCase() || "?";
   };
 
   const getMemberName = (user: Omit<User, 'password'>) => {

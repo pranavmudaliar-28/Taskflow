@@ -119,7 +119,7 @@ function SortableRow({ row, onTaskClick }: SortableRowProps) {
             style={style}
             data-state={row.getIsSelected() && "selected"}
             onClick={() => onTaskClick(row.original)}
-            className={cn("cursor-pointer border-b border-slate-50/50 hover:bg-slate-50 transition-colors duration-200", isDragging && "bg-slate-50 opacity-50")}
+            className={cn("cursor-pointer border-b border-border/50 hover:bg-muted/50 transition-colors duration-200", isDragging && "bg-accent opacity-50")}
         >
             {row.getVisibleCells().map((cell: any) => {
                 if (cell.column.id === "drag") {
@@ -332,7 +332,7 @@ export function TaskTable({ tasks, users, milestones, onTaskClick, getTaskUrl, o
                                     variant="ghost"
                                     className="h-8 p-0 px-2 -ml-2 hover:bg-muted/50 w-full justify-start font-normal"
                                 >
-                                    <Badge variant="outline" className={cn("capitalize font-bold text-[10px] h-5 px-2 py-0 border-slate-200 transition-all", status?.color.replace("bg-", "text-"), "bg-slate-50/30 hover:bg-slate-50")}>
+                                    <Badge variant="outline" className={cn("capitalize font-bold text-[10px] h-5 px-2 py-0 border-border/50 transition-all", status?.color.replace("bg-", "text-"), "bg-muted/30 hover:bg-muted")}>
                                         <div className={cn("w-1 h-1 rounded-full mr-1.5", status?.color)} />
                                         {status?.label || statusId}
                                     </Badge>
@@ -471,7 +471,7 @@ export function TaskTable({ tasks, users, milestones, onTaskClick, getTaskUrl, o
                                     variant="ghost"
                                     className="h-8 p-0 px-2 -ml-2 hover:bg-muted/50 w-full justify-start font-normal"
                                 >
-                                    <Badge variant="secondary" className="capitalize text-[10px] font-bold h-5 px-2 bg-slate-50 text-slate-400 border border-slate-100 group-hover:bg-slate-100 group-hover:text-slate-600 transition-all">
+                                    <Badge variant="secondary" className="capitalize text-[10px] font-bold h-5 px-2 bg-muted/50 text-muted-foreground border border-border group-hover:bg-muted group-hover:text-foreground transition-all">
                                         {priority?.label || priorityId}
                                     </Badge>
                                 </Button>
@@ -616,8 +616,8 @@ export function TaskTable({ tasks, users, milestones, onTaskClick, getTaskUrl, o
                                     <Badge
                                         variant="outline"
                                         className={cn(
-                                            "text-[10px] h-5 font-bold border-slate-200 py-0 px-2 transition-all",
-                                            role ? "bg-violet-50 text-violet-600 border-violet-100" : "text-slate-400 border-dashed bg-transparent"
+                                            "text-[10px] h-5 font-bold border-border py-0 px-2 transition-all",
+                                            role ? "bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20" : "text-muted-foreground border-dashed bg-transparent"
                                         )}
                                     >
                                         {role || "+ Role"}
@@ -674,8 +674,8 @@ export function TaskTable({ tasks, users, milestones, onTaskClick, getTaskUrl, o
                                         className={cn(
                                             "text-[10px] h-5 font-bold py-0 px-2 transition-all",
                                             milestoneName
-                                                ? "bg-blue-50 text-blue-600 border-blue-100"
-                                                : "text-slate-400 border-dashed border-slate-200 bg-transparent"
+                                                ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20"
+                                                : "text-muted-foreground border-dashed border-border bg-transparent"
                                         )}
                                     >
                                         {milestoneName || "+ Milestone"}

@@ -6,7 +6,7 @@ import { eq } from "drizzle-orm";
 async function main() {
     try {
         console.log("Fetching projects directly from DB...");
-        const allProjects = await db.select().from(projects);
+        const allProjects = await db!.select().from(projects);
         console.log("Projects found:", allProjects.length);
         allProjects.forEach(p => console.log(`Project: ${p.name} (ID: ${p.id})`));
 
@@ -14,7 +14,7 @@ async function main() {
 
         if (loopProject) {
             console.log(`\nFound 'loop' project with ID: ${loopProject.id}`);
-            const projectTasks = await db.select().from(tasks).where(eq(tasks.projectId, loopProject.id));
+            const projectTasks = await db!.select().from(tasks).where(eq(tasks.projectId, loopProject.id));
             console.log(`Tasks for 'loop' project: ${projectTasks.length}`);
             projectTasks.forEach(t => console.log(`- ${t.title} (ID: ${t.id}, ProjectID: ${t.projectId})`));
 

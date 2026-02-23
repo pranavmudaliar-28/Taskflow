@@ -33,16 +33,16 @@ function StepIndicator({ currentStep }: { currentStep: string }) {
                 <div key={s.id} className="flex items-center">
                     <div className="flex flex-col items-center gap-1.5">
                         <div className={`h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-colors ${i < idx ? "bg-violet-600 border-violet-600 text-white" :
-                                i === idx ? "bg-white border-violet-600 text-violet-600" :
-                                    "bg-white border-slate-200 text-slate-300"
+                            i === idx ? "bg-background border-violet-600 text-violet-600" :
+                                "bg-background border-border text-muted-foreground"
                             }`}>
                             {i < idx ? <CheckCircle2 className="h-4 w-4" /> : i + 1}
                         </div>
-                        <span className={`text-xs font-medium whitespace-nowrap ${i <= idx ? "text-violet-700" : "text-slate-400"
+                        <span className={`text-xs font-medium whitespace-nowrap ${i <= idx ? "text-violet-600" : "text-muted-foreground"
                             }`}>{s.label}</span>
                     </div>
                     {i < STEPS.length - 1 && (
-                        <div className={`h-0.5 w-16 sm:w-24 mx-2 mb-5 transition-colors ${i < idx ? "bg-violet-600" : "bg-slate-200"
+                        <div className={`h-0.5 w-16 sm:w-24 mx-2 mb-5 transition-colors ${i < idx ? "bg-violet-600" : "bg-border"
                             }`} />
                     )}
                 </div>
@@ -56,7 +56,7 @@ const PLANS = [
     {
         id: "free", name: "Free", price: "$0", per: "/forever",
         description: "For individuals",
-        icon: Shield, iconBg: "bg-slate-100", iconColor: "text-slate-600",
+        icon: Shield, iconBg: "bg-muted", iconColor: "text-muted-foreground",
         features: ["Up to 3 projects", "Basic task management", "Time tracking", "Email support"],
         cta: "Get Started Free", popular: false,
     },
@@ -80,12 +80,12 @@ const PLANS = [
 function Field({ id, label, type = "text", icon: Icon, value, onChange, placeholder, required }: any) {
     return (
         <div className="space-y-1.5">
-            <Label htmlFor={id} className="text-sm font-semibold text-slate-700">{label}{required && <span className="text-red-500 ml-0.5">*</span>}</Label>
+            <Label htmlFor={id} className="text-sm font-semibold text-foreground/80">{label}{required && <span className="text-red-500 ml-0.5">*</span>}</Label>
             <div className="relative">
-                {Icon && <Icon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />}
+                {Icon && <Icon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />}
                 <Input id={id} type={type} value={value} onChange={(e: any) => onChange(e.target.value)}
                     placeholder={placeholder}
-                    className={`h-10 border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-100 ${Icon ? "pl-9" : ""}`} />
+                    className={`h-10 border-border bg-background focus:border-violet-500 focus:ring-2 focus:ring-violet-100 ${Icon ? "pl-9" : ""}`} />
             </div>
         </div>
     );
@@ -113,13 +113,13 @@ export default function Onboarding() {
     /* Redirect if already onboarded */
     if (user?.onboardingStep === "completed") {
         return (
-            <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-8 w-full max-w-sm text-center">
-                    <div className="h-14 w-14 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                        <CheckCircle2 className="h-7 w-7 text-emerald-600" />
+            <div className="min-h-screen bg-background flex items-center justify-center p-4">
+                <div className="bg-card rounded-2xl border border-border shadow-sm p-8 w-full max-w-sm text-center">
+                    <div className="h-14 w-14 bg-emerald-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <CheckCircle2 className="h-7 w-7 text-emerald-600 dark:text-emerald-500" />
                     </div>
-                    <h2 className="text-lg font-bold text-slate-900 mb-1">All set!</h2>
-                    <p className="text-sm text-slate-400 mb-5">Your account is ready to go.</p>
+                    <h2 className="text-lg font-bold text-foreground mb-1">All set!</h2>
+                    <p className="text-sm text-muted-foreground mb-5">Your account is ready to go.</p>
                     <Button className="w-full bg-violet-600 hover:bg-violet-700 text-white" onClick={() => window.location.href = "/dashboard"}>
                         Go to Dashboard <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
@@ -215,14 +215,14 @@ export default function Onboarding() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-violet-50 flex flex-col items-center justify-center p-4">
+        <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 text-foreground">
 
             {/* Brand logo */}
             <div className="flex items-center gap-2.5 mb-10">
                 <div className="h-9 w-9 rounded-xl bg-violet-600 flex items-center justify-center shadow-md">
                     <Kanban className="h-5 w-5 text-white" />
                 </div>
-                <span className="text-xl font-extrabold text-slate-900 tracking-tight">TaskFlow</span>
+                <span className="text-xl font-extrabold text-foreground tracking-tight">TaskFlow</span>
             </div>
 
             {/* Step indicator */}
@@ -232,12 +232,12 @@ export default function Onboarding() {
             {step === "plan" && (
                 <div className="w-full max-w-3xl">
                     <div className="text-center mb-8">
-                        <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight mb-2">Choose your plan</h1>
-                        <p className="text-slate-400">Select the plan that fits your team. You can change it anytime.</p>
+                        <h1 className="text-3xl font-extrabold text-foreground tracking-tight mb-2">Choose your plan</h1>
+                        <p className="text-muted-foreground">Select the plan that fits your team. You can change it anytime.</p>
                     </div>
                     <div className="grid md:grid-cols-3 gap-5">
                         {PLANS.map((plan) => (
-                            <div key={plan.id} className={`relative bg-white rounded-2xl border p-6 flex flex-col shadow-sm transition-all hover:shadow-md ${plan.popular ? "border-violet-300 ring-2 ring-violet-200" : "border-slate-100"
+                            <div key={plan.id} className={`relative bg-card rounded-2xl border p-6 flex flex-col shadow-sm transition-all hover:shadow-md ${plan.popular ? "border-violet-300 ring-2 ring-violet-200 dark:ring-violet-900/30" : "border-border"
                                 }`}>
                                 {plan.popular && (
                                     <div className="absolute -top-3 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-violet-600 text-white text-xs font-semibold px-3 py-1 rounded-full shadow">
@@ -247,15 +247,15 @@ export default function Onboarding() {
                                 <div className={`h-10 w-10 rounded-xl ${plan.iconBg} flex items-center justify-center mb-4`}>
                                     <plan.icon className={`h-5 w-5 ${plan.iconColor}`} />
                                 </div>
-                                <h3 className="font-bold text-slate-900 text-lg mb-0.5">{plan.name}</h3>
+                                <h3 className="font-bold text-foreground text-lg mb-0.5">{plan.name}</h3>
                                 <div className="flex items-baseline gap-0.5 mb-1">
-                                    <span className="text-3xl font-extrabold text-slate-900">{plan.price}</span>
-                                    <span className="text-sm text-slate-400">{plan.per}</span>
+                                    <span className="text-3xl font-extrabold text-foreground">{plan.price}</span>
+                                    <span className="text-sm text-muted-foreground">{plan.per}</span>
                                 </div>
-                                <p className="text-xs text-slate-400 mb-5">{plan.description}</p>
+                                <p className="text-xs text-muted-foreground mb-5">{plan.description}</p>
                                 <ul className="space-y-2 flex-1 mb-6">
                                     {plan.features.map((f, i) => (
-                                        <li key={i} className="flex items-center gap-2 text-sm text-slate-600">
+                                        <li key={i} className="flex items-center gap-2 text-sm text-foreground/80">
                                             <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
                                             {f}
                                         </li>
@@ -295,19 +295,19 @@ export default function Onboarding() {
             {step === "organization" && (
                 <div className="w-full max-w-md">
                     <div className="text-center mb-7">
-                        <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight mb-1">Set up your organization</h1>
-                        <p className="text-sm text-slate-400">This is how your team will be identified in TaskFlow.</p>
+                        <h1 className="text-2xl font-extrabold text-foreground tracking-tight mb-1">Set up your organization</h1>
+                        <p className="text-sm text-muted-foreground">This is how your team will be identified in TaskFlow.</p>
                     </div>
-                    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+                    <div className="bg-card rounded-2xl border border-border shadow-sm p-6">
                         {organizations && organizations.length > 0 && !showOrgForm ? (
                             <div className="text-center space-y-5">
-                                <div className="h-14 w-14 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto">
-                                    <CheckCircle2 className="h-7 w-7 text-emerald-600" />
+                                <div className="h-14 w-14 bg-emerald-500/10 rounded-2xl flex items-center justify-center mx-auto">
+                                    <CheckCircle2 className="h-7 w-7 text-emerald-600 dark:text-emerald-500" />
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-slate-900 text-base mb-1">You're already in an organization</h3>
-                                    <p className="text-sm text-slate-400">
-                                        You're a member of <strong className="text-slate-700">{organizations[0].name}</strong>.
+                                    <h3 className="font-bold text-foreground text-base mb-1">You're already in an organization</h3>
+                                    <p className="text-sm text-muted-foreground">
+                                        You're a member of <strong className="text-foreground">{organizations[0].name}</strong>.
                                     </p>
                                 </div>
                                 <Button className="w-full bg-violet-600 hover:bg-violet-700 text-white font-semibold" onClick={handleSkipToDashboard}>
@@ -351,10 +351,10 @@ export default function Onboarding() {
             {step === "invite" && (
                 <div className="w-full max-w-md">
                     <div className="text-center mb-7">
-                        <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight mb-1">Invite your team</h1>
-                        <p className="text-sm text-slate-400">Add teammates to get started collaborating right away.</p>
+                        <h1 className="text-2xl font-extrabold text-foreground tracking-tight mb-1">Invite your team</h1>
+                        <p className="text-sm text-muted-foreground">Add teammates to get started collaborating right away.</p>
                     </div>
-                    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+                    <div className="bg-card rounded-2xl border border-border shadow-sm p-6">
                         <div className="space-y-3 mb-4">
                             {invitations.map((email, index) => (
                                 <div key={index} className="relative">

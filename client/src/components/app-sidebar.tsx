@@ -93,8 +93,8 @@ export function AppSidebar({ projects, onCreateProject }: AppSidebarProps) {
 
   return (
     <Sidebar
-      collapsible={isMobile ? "offcanvas" : "icon"}
-      className="border-r border-slate-100 bg-white"
+      collapsible="icon"
+      className="border-r border-sidebar-border bg-sidebar"
     >
       <SidebarHeader className="px-4 py-4">
         <SidebarMenu>
@@ -105,9 +105,9 @@ export function AppSidebar({ projects, onCreateProject }: AppSidebarProps) {
                   <div className="h-2.5 w-2.5 rounded-full bg-violet-600" />
                 </div>
                 {!isCollapsed && (
-                  <div className="flex flex-col text-left">
-                    <span className="font-extrabold text-lg text-slate-900 leading-none tracking-tighter">
-                      taskflow
+                  <div className="grid flex-1 text-left text-sm leading-tight">
+                    <span className="truncate font-extrabold text-[#F8FAFC]">
+                      TaskFlow
                     </span>
                     <span className="text-[10px] text-slate-400 mt-0.5">
                       Project Management
@@ -143,7 +143,7 @@ export function AppSidebar({ projects, onCreateProject }: AppSidebarProps) {
                     >
                       <Link href={item.url}>
                         <div className="relative shrink-0">
-                          <item.icon className={cn("h-4 w-4", isActive ? "text-violet-600" : "text-slate-500")} />
+                          <item.icon className={cn("h-4 w-4", isActive ? "text-sidebar-accent" : "text-sidebar-foreground/60")} />
                           {showBadge && isCollapsed && (
                             <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-red-500 border-2 border-white" />
                           )}
@@ -171,8 +171,7 @@ export function AppSidebar({ projects, onCreateProject }: AppSidebarProps) {
           <SidebarGroupLabel className="flex items-center justify-between group-data-[collapsible=icon]:hidden">
             <span>Spaces</span>
             <button
-              onClick={onCreateProject}
-              className="h-5 w-5 rounded flex items-center justify-center hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+              className="h-5 w-5 rounded flex items-center justify-center hover:bg-sidebar-hover text-sidebar-foreground/40 hover:text-sidebar-foreground transition-colors"
             >
               <Plus className="h-3 w-3" />
             </button>
@@ -202,7 +201,7 @@ export function AppSidebar({ projects, onCreateProject }: AppSidebarProps) {
                 <SidebarMenuItem>
                   <button
                     onClick={onCreateProject}
-                    className="flex items-center gap-3 px-3 py-2 rounded-lg w-full text-slate-400 hover:text-slate-900 hover:bg-slate-50 transition-colors text-sm font-medium"
+                    className="flex items-center gap-3 px-3 py-2 rounded-lg w-full text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-hover transition-colors text-sm font-medium"
                   >
                     <Plus className="h-3.5 w-3.5" />
                     <span>New Space</span>
@@ -227,7 +226,7 @@ export function AppSidebar({ projects, onCreateProject }: AppSidebarProps) {
                     <SidebarMenuItem key={item.title}>
                       <SidebarMenuButton asChild isActive={isActive} tooltip={item.title}>
                         <Link href={item.url}>
-                          <item.icon className={cn("h-4 w-4 shrink-0", isActive ? "text-violet-600" : "text-slate-500")} />
+                          <item.icon className={cn("h-4 w-4 shrink-0", isActive ? "text-sidebar-accent" : "text-sidebar-foreground/60")} />
                           <span className="text-sm font-medium">{item.title}</span>
                         </Link>
                       </SidebarMenuButton>
@@ -243,7 +242,7 @@ export function AppSidebar({ projects, onCreateProject }: AppSidebarProps) {
       <SidebarFooter className="p-4">
         <div
           className={cn(
-            "flex items-center gap-3 rounded-xl p-2 bg-slate-50 border border-slate-100",
+            "flex items-center gap-3 rounded-xl p-2 bg-sidebar-bg-secondary/50 border border-sidebar-border/50",
             isCollapsed && "justify-center p-1"
           )}
         >
@@ -260,12 +259,12 @@ export function AppSidebar({ projects, onCreateProject }: AppSidebarProps) {
           {!isCollapsed && (
             <>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-slate-900 truncate">{getUserDisplayName()}</p>
-                <p className="text-[10px] text-slate-400 truncate">{user?.email}</p>
+                <p className="text-sm font-bold text-sidebar-foreground truncate">{getUserDisplayName()}</p>
+                <p className="text-[10px] text-sidebar-foreground/60 truncate">{user?.email}</p>
               </div>
               <button
                 onClick={() => logout()}
-                className="text-slate-400 hover:text-red-500 transition-colors"
+                className="text-sidebar-foreground/40 hover:text-red-500 transition-colors"
                 title="Logout"
               >
                 <LogOut className="h-3.5 w-3.5" />

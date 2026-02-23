@@ -333,42 +333,42 @@ export default function ProjectPage() {
   const isBulkSelected = Object.keys(rowSelection).length > 0;
 
   return (
-    <div className="flex flex-col h-full bg-slate-50 overflow-hidden">
+    <div className="flex flex-col h-full bg-background/50 overflow-hidden">
       {/* ── Sticky Header ────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-100 px-6 py-3 shrink-0">
+      <header className="sticky top-0 z-30 bg-card/80 backdrop-blur-md border-b border-border px-6 py-3 shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="h-10 w-10 rounded-xl bg-[#020617] flex items-center justify-center shadow-premium">
-              <Plus className="h-5 w-5 text-white" />
+            <div className="h-10 w-10 rounded-xl bg-primary flex items-center justify-center shadow-premium">
+              <Plus className="h-5 w-5 text-primary-foreground" />
             </div>
             <div>
-              <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">
-                <span className="hover:text-slate-600 cursor-pointer">Projects</span>
+              <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-0.5">
+                <span className="hover:text-foreground cursor-pointer">Projects</span>
                 <ChevronRight className="h-2.5 w-2.5 opacity-50" />
-                <span className="text-slate-600 truncate max-w-[100px]">{project.name}</span>
+                <span className="text-foreground truncate max-w-[100px]">{project.name}</span>
               </div>
-              <h1 className="text-xl font-extrabold text-[#020617] tracking-tight leading-none">{project.name}</h1>
+              <h1 className="text-xl font-extrabold text-foreground tracking-tight leading-none">{project.name}</h1>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 rounded-lg border border-slate-100">
-              <div className="w-16 h-1 bg-slate-200 rounded-full overflow-hidden">
-                <div className="h-full bg-violet-500 transition-all duration-700" style={{ width: `${projectProgress}%` }} />
+            <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-muted/50 rounded-lg border border-border">
+              <div className="w-16 h-1 bg-secondary rounded-full overflow-hidden">
+                <div className="h-full bg-primary transition-all duration-700" style={{ width: `${projectProgress}%` }} />
               </div>
-              <span className="text-[10px] font-bold text-slate-500">{projectProgress}%</span>
+              <span className="text-[10px] font-bold text-muted-foreground">{projectProgress}%</span>
             </div>
 
             <div className="flex items-center gap-1">
-              <Button variant="ghost" size="icon" className="h-9 w-9 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg" onClick={() => setShowMembers(true)} title="Members">
+              <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg" onClick={() => setShowMembers(true)} title="Members">
                 <Users className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-9 w-9 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg" onClick={() => setShowSettings(true)} title="Settings">
+              <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg" onClick={() => setShowSettings(true)} title="Settings">
                 <Settings className="h-4 w-4" />
               </Button>
             </div>
 
-            <Button className="h-9 rounded-lg bg-[#020617] hover:bg-slate-800 text-white font-bold px-4 shadow-premium transition-all hover:scale-[1.02] active:scale-[0.98]" onClick={() => { setCreateTaskStatus("todo"); setShowCreateTask(true); }}>
+            <Button className="h-9 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-bold px-4 shadow-premium transition-all hover:scale-[1.02] active:scale-[0.98]" onClick={() => { setCreateTaskStatus("todo"); setShowCreateTask(true); }}>
               <Plus className="h-4 w-4 mr-1.5" /> New Task
             </Button>
           </div>
@@ -376,10 +376,10 @@ export default function ProjectPage() {
       </header>
 
       {/* ── Toolbar ──────────────────────────────────────────────────────── */}
-      <div className="bg-white border-b border-slate-100 px-6 py-2 shrink-0 flex items-center justify-between">
-        <div className="flex items-center gap-1 bg-slate-50 border border-slate-100/50 rounded-xl p-1 relative">
+      <div className="bg-card border-b border-border px-6 py-2 shrink-0 flex items-center justify-between">
+        <div className="flex items-center gap-1 bg-accent/50 border border-border/50 rounded-xl p-1 relative">
           <div
-            className="absolute h-[calc(100%-8px)] bg-white rounded-lg shadow-sm animate-tab-indicator"
+            className="absolute h-[calc(100%-8px)] bg-background rounded-lg shadow-sm animate-tab-indicator"
             style={{
               width: "calc(33.33% - 4px)",
               left: activeTab === "list" ? "4px" : activeTab === "board" ? "33.33%" : "66.66%",
@@ -390,7 +390,7 @@ export default function ProjectPage() {
             onClick={() => setActiveTab("list")}
             className={cn(
               "relative z-10 px-5 py-1.5 rounded-lg text-sm font-bold transition-all duration-200 w-28",
-              activeTab === "list" ? "text-slate-900" : "text-slate-400 hover:text-slate-600"
+              activeTab === "list" ? "text-foreground" : "text-muted-foreground hover:text-foreground"
             )}
           >
             List
@@ -399,7 +399,7 @@ export default function ProjectPage() {
             onClick={() => setActiveTab("board")}
             className={cn(
               "relative z-10 px-5 py-1.5 rounded-lg text-sm font-bold transition-all duration-200 w-28",
-              activeTab === "board" ? "text-slate-900" : "text-slate-400 hover:text-slate-600"
+              activeTab === "board" ? "text-foreground" : "text-muted-foreground hover:text-foreground"
             )}
           >
             Board
@@ -408,7 +408,7 @@ export default function ProjectPage() {
             onClick={() => setActiveTab("milestones")}
             className={cn(
               "relative z-10 px-5 py-1.5 rounded-lg text-sm font-bold transition-all duration-200 w-28",
-              activeTab === "milestones" ? "text-slate-900" : "text-slate-400 hover:text-slate-600"
+              activeTab === "milestones" ? "text-foreground" : "text-muted-foreground hover:text-foreground"
             )}
           >
             Milestones
@@ -417,64 +417,64 @@ export default function ProjectPage() {
 
         <div className="flex items-center gap-2">
           <div className="relative group">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 group-focus-within:text-violet-500 transition-colors" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground group-focus-within:text-primary transition-colors" />
             <Input
               placeholder="Search tasks..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 h-9 w-48 focus:w-64 border-slate-100 bg-slate-50 focus:bg-white focus:border-violet-100 focus:ring-4 focus:ring-violet-50 rounded-xl text-sm transition-all"
+              className="pl-9 h-9 w-48 focus:w-64 border-border bg-muted/50 focus:bg-background focus:border-primary/50 focus:ring-4 focus:ring-primary/10 rounded-xl text-sm transition-all"
             />
           </div>
 
           <Select value={status} onValueChange={setStatus}>
-            <SelectTrigger className="h-9 w-[120px] rounded-xl border-slate-100 bg-slate-50 text-slate-600 font-bold text-xs ring-offset-0 focus:ring-4 focus:ring-violet-50">
+            <SelectTrigger className="h-9 w-[120px] rounded-xl border-border bg-muted/50 text-muted-foreground font-bold text-xs ring-offset-0 focus:ring-4 focus:ring-primary/10">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
-            <SelectContent className="rounded-xl border-slate-100 shadow-elevation">
-              <SelectItem value="all" className="font-bold text-slate-400">Any Status</SelectItem>
-              {TASK_STATUSES.map(s => <SelectItem key={s.id} value={s.id} className="font-bold text-slate-600">{s.label}</SelectItem>)}
+            <SelectContent className="rounded-xl border-border shadow-elevation">
+              <SelectItem value="all" className="font-bold text-muted-foreground">Any Status</SelectItem>
+              {TASK_STATUSES.map(s => <SelectItem key={s.id} value={s.id} className="font-bold text-foreground">{s.label}</SelectItem>)}
             </SelectContent>
           </Select>
 
           <Select value={priority} onValueChange={setPriority}>
-            <SelectTrigger className="h-9 w-[120px] rounded-xl border-slate-100 bg-slate-50 text-slate-600 font-bold text-xs ring-offset-0 focus:ring-4 focus:ring-violet-50">
+            <SelectTrigger className="h-9 w-[120px] rounded-xl border-border bg-muted/50 text-muted-foreground font-bold text-xs ring-offset-0 focus:ring-4 focus:ring-primary/10">
               <SelectValue placeholder="Priority" />
             </SelectTrigger>
-            <SelectContent className="rounded-xl border-slate-100 shadow-elevation">
-              <SelectItem value="all" className="font-bold text-slate-400">Any Priority</SelectItem>
-              {TASK_PRIORITIES.map(p => <SelectItem key={p.id} value={p.id} className="font-bold text-slate-600">{p.label}</SelectItem>)}
+            <SelectContent className="rounded-xl border-border shadow-elevation">
+              <SelectItem value="all" className="font-bold text-muted-foreground">Any Priority</SelectItem>
+              {TASK_PRIORITIES.map(p => <SelectItem key={p.id} value={p.id} className="font-bold text-foreground">{p.label}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
       </div>
 
       {/* ── Main View Area ───────────────────────────────────────────────── */}
-      <main className="flex-1 overflow-y-auto min-h-0 bg-slate-50 p-6 relative">
+      <main className="flex-1 overflow-y-auto min-h-0 bg-background/50 p-6 relative">
         {/* Bulk Action Pill */}
         {isBulkSelected && (
-          <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white rounded-2xl shadow-2xl px-5 py-3 flex items-center gap-5 border border-white/10 animate-fade-up">
+          <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50 bg-foreground text-background rounded-2xl shadow-2xl px-5 py-3 flex items-center gap-5 border border-border/10 animate-fade-up">
             <span className="text-sm font-bold">{Object.keys(rowSelection).length} tasks selected</span>
-            <div className="w-px h-4 bg-white/20" />
+            <div className="w-px h-4 bg-muted-foreground/20" />
             <div className="flex items-center gap-2">
-              <Button size="sm" className="h-8 bg-violet-600 hover:bg-violet-700 font-bold" onClick={() => setIsBulkEditDialogOpen(true)}>Bulk Edit</Button>
-              <Button size="sm" variant="ghost" className="h-8 text-red-400 hover:text-red-300 hover:bg-red-900/50 font-bold" onClick={handleBulkDelete}>Delete</Button>
-              <Button size="sm" variant="ghost" className="h-8 text-white/60 hover:text-white" onClick={() => setRowSelection({})}>Cancel</Button>
+              <Button size="sm" className="h-8 bg-primary hover:bg-primary/90 text-primary-foreground font-bold" onClick={() => setIsBulkEditDialogOpen(true)}>Bulk Edit</Button>
+              <Button size="sm" variant="ghost" className="h-8 text-destructive hover:text-destructive/80 hover:bg-destructive/10 font-bold" onClick={handleBulkDelete}>Delete</Button>
+              <Button size="sm" variant="ghost" className="h-8 opacity-60 hover:opacity-100" onClick={() => setRowSelection({})}>Cancel</Button>
             </div>
           </div>
         )}
 
         {tasksLoading ? (
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 space-y-4">
+          <div className="bg-card rounded-2xl border border-border shadow-sm p-4 space-y-4">
             {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-12 w-full rounded-lg" />)}
           </div>
         ) : tasks.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-12 text-center">
-            <div className="h-16 w-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
-              <ListTodo className="h-8 w-8 text-slate-300" />
+          <div className="bg-card rounded-2xl border border-dashed border-border p-12 text-center">
+            <div className="h-16 w-16 bg-muted/50 rounded-full flex items-center justify-center mx-auto mb-4">
+              <ListTodo className="h-8 w-8 text-muted-foreground/30" />
             </div>
-            <h3 className="text-lg font-bold text-slate-900 mb-1">No tasks found</h3>
-            <p className="text-slate-400 text-sm mb-6 max-w-sm mx-auto">Create your first task to start tracking progress on this project.</p>
-            <Button className="bg-violet-600 hover:bg-violet-700 text-white font-bold" onClick={() => setShowCreateTask(true)}>
+            <h3 className="text-lg font-bold text-foreground mb-1">No tasks found</h3>
+            <p className="text-muted-foreground text-sm mb-6 max-w-sm mx-auto">Create your first task to start tracking progress on this project.</p>
+            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold" onClick={() => setShowCreateTask(true)}>
               <Plus className="h-4 w-4 mr-2" /> Add first task
             </Button>
           </div>
@@ -486,11 +486,11 @@ export default function ProjectPage() {
                   <div key={title} className="animate-fade-up" style={{ animationDelay: `${idx * 100}ms` }}>
                     {groupBy !== "none" && (
                       <div className="flex items-center gap-2 mb-3 px-2">
-                        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">{title}</h3>
-                        <span className="text-[10px] font-bold bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded-full">{group.length}</span>
+                        <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{title}</h3>
+                        <span className="text-[10px] font-bold bg-accent text-accent-foreground px-1.5 py-0.5 rounded-full">{group.length}</span>
                       </div>
                     )}
-                    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden overflow-x-auto">
+                    <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden overflow-x-auto">
                       <TaskTable
                         tasks={group}
                         users={usersMap}
@@ -519,16 +519,16 @@ export default function ProjectPage() {
                       <div className="flex items-center justify-between mb-4 px-1">
                         <div className="flex items-center gap-2">
                           <div className={cn("h-2.5 w-2.5 rounded-full", s.color)} />
-                          <h3 className="text-sm font-bold text-slate-800">{s.label}</h3>
-                          <span className="text-xs font-bold text-slate-400">{tasks.filter(t => t.status === s.id).length}</span>
+                          <h3 className="text-sm font-bold text-foreground">{s.label}</h3>
+                          <span className="text-xs font-bold text-muted-foreground">{tasks.filter(t => t.status === s.id).length}</span>
                         </div>
-                        <button onClick={() => { setCreateTaskStatus(s.id); setShowCreateTask(true); }} className="text-slate-400 hover:text-slate-600 transition-colors">
+                        <button onClick={() => { setCreateTaskStatus(s.id); setShowCreateTask(true); }} className="text-muted-foreground hover:text-foreground transition-colors">
                           <Plus className="h-4 w-4" />
                         </button>
                       </div>
                       <Droppable droppableId={s.id}>
                         {(provided) => (
-                          <div {...provided.droppableProps} ref={provided.innerRef} className="flex-1 bg-slate-100/50 rounded-2xl p-2 min-h-[500px] border border-slate-200/50">
+                          <div {...provided.droppableProps} ref={provided.innerRef} className="flex-1 bg-muted/30 rounded-2xl p-2 min-h-[500px] border border-border/50">
                             {tasks.filter(t => t.status === s.id).map((t, i) => (
                               <Draggable key={t.id} draggableId={t.id} index={i}>
                                 {(p) => (
@@ -593,9 +593,9 @@ export default function ProjectPage() {
 
 function KanbanTaskCard({ task, user, onClick, onToggleTimer, isActive, duration }: any) {
   return (
-    <div onClick={onClick} className="bg-white rounded-xl border border-slate-100 p-4 shadow-sm hover:shadow-md transition-all cursor-pointer group relative overflow-hidden">
+    <div onClick={onClick} className="bg-card rounded-xl border border-border p-4 shadow-sm hover:shadow-md transition-all cursor-pointer group relative overflow-hidden">
       <div className={cn("absolute top-0 right-0 w-1 h-full", TASK_PRIORITIES.find(p => p.id === task.priority)?.color)} />
-      <h4 className="text-sm font-bold text-slate-800 mb-2 line-clamp-2 leading-snug group-hover:text-violet-600 transition-colors tracking-tight">{task.title}</h4>
+      <h4 className="text-sm font-bold text-foreground mb-2 line-clamp-2 leading-snug group-hover:text-primary transition-colors tracking-tight">{task.title}</h4>
       <div className="flex items-center justify-between mt-3">
         <div className="flex -space-x-1.5 overflow-hidden">
           {user ? (
@@ -604,14 +604,14 @@ function KanbanTaskCard({ task, user, onClick, onToggleTimer, isActive, duration
               <AvatarFallback className="text-[10px] bg-violet-100 text-violet-600 font-bold">{user.firstName?.[0]}{user.lastName?.[0]}</AvatarFallback>
             </Avatar>
           ) : (
-            <div className="h-6 w-6 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center">
-              <UserIcon className="h-3 w-3 text-slate-400" />
+            <div className="h-6 w-6 rounded-full bg-muted border-2 border-background flex items-center justify-center">
+              <UserIcon className="h-3 w-3 text-muted-foreground" />
             </div>
           )}
         </div>
         <div className="flex items-center gap-2">
-          {duration > 0 && <span className="text-[10px] font-bold text-slate-400">{Math.floor(duration / 60)}m</span>}
-          <button onClick={(e) => { e.stopPropagation(); onToggleTimer(); }} className={cn("h-6 w-6 rounded-full flex items-center justify-center transition-all", isActive ? "bg-amber-100 text-amber-600" : "bg-slate-50 text-slate-400 hover:bg-violet-50 hover:text-violet-600")}>
+          {duration > 0 && <span className="text-[10px] font-bold text-muted-foreground">{Math.floor(duration / 60)}m</span>}
+          <button onClick={(e) => { e.stopPropagation(); onToggleTimer(); }} className={cn("h-6 w-6 rounded-full flex items-center justify-center transition-all", isActive ? "bg-amber-100/20 text-amber-600" : "bg-muted/50 text-muted-foreground hover:bg-primary/10 hover:text-primary")}>
             <Clock className={cn("h-3.5 w-3.5", isActive && "animate-pulse")} />
           </button>
         </div>

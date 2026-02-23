@@ -38,7 +38,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 function TasksSkeletonRow() {
     return (
-        <div className="flex items-center gap-4 px-6 py-4 border-b border-slate-50/50">
+        <div className="flex items-center gap-4 px-6 py-4 border-b border-border/50">
             <Skeleton className="h-4 w-4 rounded-md opacity-20" />
             <Skeleton className="h-4 w-4 rounded-full opacity-20" />
             <Skeleton className="h-4 flex-1 max-w-[240px] rounded opacity-20" />
@@ -54,13 +54,13 @@ function TasksSkeletonRow() {
 function EmptyState({ hasFilters, onClear, onCreate }: { hasFilters: boolean; onClear: () => void; onCreate: () => void }) {
     return (
         <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
-            <div className="h-16 w-16 rounded-2xl bg-violet-50 flex items-center justify-center mb-5">
-                <ListTodo className="h-8 w-8 text-violet-500" />
+            <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-5">
+                <ListTodo className="h-8 w-8 text-primary" />
             </div>
-            <h3 className="text-base font-bold text-slate-900 mb-2">
+            <h3 className="text-base font-bold text-foreground mb-2">
                 {hasFilters ? "No tasks match your filters" : "No tasks yet"}
             </h3>
-            <p className="text-sm text-slate-400 max-w-xs mb-6">
+            <p className="text-sm text-muted-foreground max-w-xs mb-6">
                 {hasFilters
                     ? "Try clearing your filters to see all tasks."
                     : "Create your first task to get started. Tasks help you track and organize all your work."}
@@ -71,7 +71,7 @@ function EmptyState({ hasFilters, onClear, onCreate }: { hasFilters: boolean; on
                 </Button>
             ) : (
                 <Button size="sm" onClick={onCreate}
-                    className="bg-violet-600 hover:bg-violet-700 text-white gap-2">
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2">
                     <Plus className="h-4 w-4" /> Create task
                 </Button>
             )}
@@ -265,14 +265,14 @@ export default function TasksPage() {
 
     /* render --------------------------------------------------- */
     return (
-        <div className="flex flex-col h-full bg-slate-50">
+        <div className="flex flex-col h-full bg-background/50">
 
             {/* ── Page header ── */}
-            <div className="sticky top-0 z-20 bg-white border-b border-slate-100 px-6 py-4">
+            <div className="sticky top-0 z-20 bg-card/80 backdrop-blur-md border-b border-border px-6 py-4">
                 <div className="flex items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-3xl font-bold text-[#020617] tracking-tight">All Tasks</h1>
-                        <p className="text-xs text-slate-500 mt-1 font-medium">
+                        <h1 className="text-3xl font-bold text-foreground tracking-tight">All Tasks</h1>
+                        <p className="text-xs text-muted-foreground mt-1 font-medium">
                             {isLoading ? "Loading…" : `${searchResult?.total ?? 0} tasks`}
                             {hasActiveFilters && " · filtered"}
                         </p>
@@ -281,14 +281,14 @@ export default function TasksPage() {
                     <div className="flex items-center gap-2">
                         {/* Bulk action bar */}
                         {selectedCount > 0 && (
-                            <div className="flex items-center gap-2 bg-violet-50 border border-violet-200 rounded-lg px-3 py-1.5 animate-in fade-in slide-in-from-top-1">
-                                <span className="text-xs font-semibold text-violet-700">{selectedCount} selected</span>
-                                <div className="w-[1px] h-3 bg-violet-200" />
-                                <Button variant="ghost" size="sm" className="h-6 text-xs text-violet-700 hover:text-violet-900 hover:bg-violet-100 px-2"
+                            <div className="flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-lg px-3 py-1.5 animate-in fade-in slide-in-from-top-1">
+                                <span className="text-xs font-semibold text-primary">{selectedCount} selected</span>
+                                <div className="w-[1px] h-3 bg-primary/20" />
+                                <Button variant="ghost" size="sm" className="h-6 text-xs text-primary hover:text-primary hover:bg-primary/10 px-2"
                                     onClick={() => setIsBulkEditDialogOpen(true)}>
                                     <CheckCircle2 className="h-3 w-3 mr-1" /> Edit
                                 </Button>
-                                <Button variant="ghost" size="sm" className="h-6 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 px-2"
+                                <Button variant="ghost" size="sm" className="h-6 text-xs text-destructive hover:text-destructive hover:bg-destructive/10 px-2"
                                     onClick={handleBulkDelete}>
                                     <Trash2 className="h-3 w-3 mr-1" /> Delete
                                 </Button>
@@ -298,7 +298,7 @@ export default function TasksPage() {
                         <Button
                             size="sm"
                             onClick={() => setIsCreateOpen(true)}
-                            className="bg-[#020617] hover:bg-slate-800 text-white font-semibold px-5 h-10 rounded-xl transition-all"
+                            className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-5 h-10 rounded-xl transition-all"
                         >
                             <Plus className="h-4 w-4" /> New Task
                         </Button>
@@ -309,58 +309,58 @@ export default function TasksPage() {
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mt-4">
                     {/* Search */}
                     <div className="relative flex-1 max-w-sm">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
                             placeholder="Search tasks…"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            className="pl-9 h-10 bg-white border-slate-200 focus:border-slate-300 focus:ring-4 focus:ring-slate-100/50 text-sm rounded-xl transition-all"
+                            className="pl-9 h-10 bg-card border-border focus:border-primary/50 focus:ring-4 focus:ring-primary/10 text-sm rounded-xl transition-all"
                         />
                         {search && (
                             <button onClick={() => setSearch("")}
-                                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700">
+                                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                                 <X className="h-3.5 w-3.5" />
                             </button>
                         )}
                     </div>
 
                     <div className="flex items-center gap-2 flex-wrap">
-                        <div className="h-8 w-px bg-slate-100 mx-1 hidden sm:block" />
+                        <div className="h-8 w-px bg-border mx-1 hidden sm:block" />
 
                         <Select value={status} onValueChange={setStatus}>
-                            <SelectTrigger className="h-10 w-40 text-xs bg-slate-50/50 border-slate-100 hover:bg-slate-100 hover:border-slate-200 rounded-xl font-bold text-slate-500 transition-all focus:ring-4 focus:ring-slate-50">
+                            <SelectTrigger className="h-10 w-40 text-xs bg-muted/50 border-border hover:bg-muted hover:border-border rounded-xl font-bold text-muted-foreground transition-all focus:ring-4 focus:ring-primary/10">
                                 <div className="flex items-center gap-2">
                                     <Filter className="h-3 w-3 opacity-50" />
                                     <SelectValue placeholder="Status" />
                                 </div>
                             </SelectTrigger>
-                            <SelectContent className="rounded-xl border-slate-100 shadow-elevation">
+                            <SelectContent className="rounded-xl border-border shadow-elevation">
                                 <SelectItem value="all" className="text-xs font-bold">All Statuses</SelectItem>
                                 {TASK_STATUSES.map(s => <SelectItem key={s.id} value={s.id} className="text-xs font-bold">{s.label}</SelectItem>)}
                             </SelectContent>
                         </Select>
 
                         <Select value={priority} onValueChange={setPriority}>
-                            <SelectTrigger className="h-10 w-40 text-xs bg-slate-50/50 border-slate-100 hover:bg-slate-100 hover:border-slate-200 rounded-xl font-bold text-slate-500 transition-all focus:ring-4 focus:ring-slate-50">
+                            <SelectTrigger className="h-10 w-40 text-xs bg-muted/50 border-border hover:bg-muted hover:border-border rounded-xl font-bold text-muted-foreground transition-all focus:ring-4 focus:ring-primary/10">
                                 <div className="flex items-center gap-2">
                                     <Flag className="h-3 w-3 opacity-50" />
                                     <SelectValue placeholder="Priority" />
                                 </div>
                             </SelectTrigger>
-                            <SelectContent className="rounded-xl border-slate-100 shadow-elevation">
+                            <SelectContent className="rounded-xl border-border shadow-elevation">
                                 <SelectItem value="all" className="text-xs font-bold">All Priorities</SelectItem>
                                 {TASK_PRIORITIES.map(p => <SelectItem key={p.id} value={p.id} className="text-xs font-bold">{p.label}</SelectItem>)}
                             </SelectContent>
                         </Select>
 
                         <Select value={groupBy} onValueChange={setGroupBy}>
-                            <SelectTrigger className="h-10 w-40 text-xs bg-slate-50/50 border-slate-100 hover:bg-slate-100 hover:border-slate-200 rounded-xl font-bold text-slate-500 transition-all focus:ring-4 focus:ring-slate-50">
+                            <SelectTrigger className="h-10 w-40 text-xs bg-accent/50 border-border hover:bg-accent hover:border-border/80 rounded-xl font-bold text-muted-foreground transition-all focus:ring-4 focus:ring-accent/20">
                                 <div className="flex items-center gap-2">
                                     <LayoutGrid className="h-3 w-3 opacity-50" />
                                     <SelectValue placeholder="Group by" />
                                 </div>
                             </SelectTrigger>
-                            <SelectContent className="rounded-xl border-slate-100 shadow-elevation">
+                            <SelectContent className="rounded-xl border-border shadow-elevation">
                                 <SelectItem value="none" className="text-xs font-bold">No grouping</SelectItem>
                                 <SelectItem value="status" className="text-xs font-bold">By Status</SelectItem>
                                 <SelectItem value="priority" className="text-xs font-bold">By Priority</SelectItem>
@@ -370,11 +370,11 @@ export default function TasksPage() {
                             </SelectContent>
                         </Select>
 
-                        <div className="h-8 w-px bg-slate-100 mx-1 hidden sm:block" />
+                        <div className="h-8 w-px bg-border mx-1 hidden sm:block" />
 
                         {hasActiveFilters && (
                             <Button variant="ghost" size="sm" onClick={resetFilters}
-                                className="h-10 text-xs font-bold text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all gap-1.5">
+                                className="h-10 text-xs font-bold text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl transition-all gap-1.5">
                                 <X className="h-3.5 w-3.5" /> Reset
                             </Button>
                         )}
@@ -385,7 +385,7 @@ export default function TasksPage() {
             {/* ── Task list ── */}
             <div className="flex-1 overflow-auto">
                 {isLoading ? (
-                    <div className="bg-white rounded-xl border border-slate-100 mx-4 mt-4 overflow-hidden shadow-sm">
+                    <div className="bg-card rounded-xl border border-border mx-4 mt-4 overflow-hidden shadow-sm">
                         {Array.from({ length: 8 }).map((_, i) => <TasksSkeletonRow key={i} />)}
                     </div>
                 ) : tasks.length === 0 ? (
@@ -400,13 +400,13 @@ export default function TasksPage() {
                             <div key={groupTitle}>
                                 {groupBy !== "none" && (
                                     <div className="flex items-center gap-2 mb-2 px-1">
-                                        <h3 className="text-sm font-bold text-slate-700">{groupTitle}</h3>
-                                        <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full font-medium">
+                                        <h3 className="text-sm font-bold text-foreground/80">{groupTitle}</h3>
+                                        <span className="text-xs text-muted-foreground bg-accent px-2 py-0.5 rounded-full font-medium">
                                             {groupTasks.length}
                                         </span>
                                     </div>
                                 )}
-                                <div className="bg-white rounded-xl border border-slate-100 overflow-hidden shadow-sm">
+                                <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
                                     <TaskTable
                                         tasks={groupTasks}
                                         users={usersMap}

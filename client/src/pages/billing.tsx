@@ -32,8 +32,8 @@ const PLANS = [
         per: "/forever",
         description: "For individuals and small projects",
         icon: Shield,
-        color: "text-slate-600 dark:text-slate-400",
-        iconBg: "bg-slate-100 dark:bg-slate-800",
+        color: "text-muted-foreground",
+        iconBg: "bg-muted",
         features: [
             "Up to 3 projects",
             "Basic task management",
@@ -50,8 +50,8 @@ const PLANS = [
         per: "/month",
         description: "For growing teams",
         icon: Zap,
-        color: "text-violet-600 dark:text-violet-400",
-        iconBg: "bg-violet-100 dark:bg-violet-950",
+        color: "text-primary",
+        iconBg: "bg-primary/10",
         features: [
             "Unlimited projects",
             "Advanced analytics",
@@ -69,8 +69,8 @@ const PLANS = [
         per: "/month",
         description: "For large organizations",
         icon: Users,
-        color: "text-blue-600 dark:text-blue-400",
-        iconBg: "bg-blue-100 dark:bg-blue-950",
+        color: "text-primary/90",
+        iconBg: "bg-primary/10",
         features: [
             "Everything in Pro",
             "Advanced reporting",
@@ -235,7 +235,7 @@ export default function BillingPage() {
             </div>
 
             {/* ── Current Plan Banner ─────────────────────────────────────────────── */}
-            <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="rounded-xl border border-border bg-muted/50 px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                     <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shrink-0">
                         <Crown className="h-4 w-4 text-white" />
@@ -243,7 +243,7 @@ export default function BillingPage() {
                     <div>
                         <p className="text-xs text-muted-foreground mb-0.5">Current Plan</p>
                         {subLoading ? (
-                            <div className="h-5 w-20 bg-slate-200 dark:bg-slate-700 animate-pulse rounded" />
+                            <div className="h-5 w-20 bg-muted animate-pulse rounded" />
                         ) : (
                             <div className="flex items-center gap-2">
                                 <span className="font-bold text-sm capitalize">{currentPlan}</span>
@@ -251,9 +251,9 @@ export default function BillingPage() {
                                     variant="secondary"
                                     className={
                                         currentPlan === "pro"
-                                            ? "bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300 text-[10px]"
+                                            ? "bg-primary/10 text-primary hover:bg-primary/20 text-[10px]"
                                             : currentPlan === "team"
-                                                ? "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300 text-[10px]"
+                                                ? "bg-primary/20 text-primary hover:bg-primary/30 text-[10px]"
                                                 : "text-[10px]"
                                     }
                                 >
@@ -293,13 +293,13 @@ export default function BillingPage() {
                         <div
                             key={plan.id}
                             className={`relative rounded-2xl border p-5 flex flex-col transition-shadow card-hover-lift ${plan.popular
-                                ? "border-violet-300 dark:border-violet-600 shadow-md"
-                                : "border-slate-200 dark:border-slate-800"
-                                } ${isCurrent ? "ring-2 ring-violet-400 dark:ring-violet-600" : ""}`}
+                                ? "border-primary/50 shadow-md"
+                                : "border-border"
+                                } ${isCurrent ? "ring-2 ring-primary/50" : ""}`}
                             data-testid={`plan-card-${plan.id}`}
                         >
                             {plan.popular && (
-                                <div className="absolute -top-3 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-gradient-to-r from-violet-500 to-purple-600 text-white text-[10px] font-semibold px-3 py-1 rounded-full">
+                                <div className="absolute -top-3 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-primary text-primary-foreground text-[10px] font-semibold px-3 py-1 rounded-full">
                                     <Star className="h-2.5 w-2.5 fill-current" /> Most Popular
                                 </div>
                             )}
@@ -313,9 +313,9 @@ export default function BillingPage() {
                                 <plan.icon className={`h-4 w-4 ${plan.color}`} />
                             </div>
 
-                            <h3 className="font-bold text-slate-900 dark:text-white mb-0.5">{plan.name}</h3>
+                            <h3 className="font-bold text-foreground mb-0.5">{plan.name}</h3>
                             <div className="flex items-baseline gap-0.5 mb-1">
-                                <span className="text-2xl font-extrabold">{plan.price}</span>
+                                <span className="text-2xl font-extrabold text-foreground">{plan.price}</span>
                                 <span className="text-xs text-muted-foreground">{plan.per}</span>
                             </div>
                             <p className="text-xs text-muted-foreground mb-4">{plan.description}</p>
@@ -324,7 +324,7 @@ export default function BillingPage() {
                                 {plan.features.map((f, i) => (
                                     <li key={i} className="flex items-center gap-2 text-sm">
                                         <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
-                                        <span className="text-slate-600 dark:text-slate-300 text-xs">{f}</span>
+                                        <span className="text-foreground/80 text-xs">{f}</span>
                                     </li>
                                 ))}
                             </ul>
@@ -341,7 +341,7 @@ export default function BillingPage() {
                             ) : isPaid ? (
                                 <Button
                                     className={`w-full h-8 text-xs font-medium ${plan.popular
-                                        ? "bg-gradient-to-r from-violet-500 to-purple-600 text-white hover:opacity-90"
+                                        ? "bg-primary text-primary-foreground hover:bg-primary/90"
                                         : ""
                                         }`}
                                     variant={plan.popular ? "default" : "outline"}
@@ -375,7 +375,7 @@ export default function BillingPage() {
                         href="https://stripe.com"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-violet-600 dark:text-violet-400 hover:underline font-medium"
+                        className="text-primary hover:underline font-medium"
                     >
                         Stripe
                     </a>
