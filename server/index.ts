@@ -5,6 +5,9 @@ import path from "path";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
+import { corsConfig } from "./middleware/corsConfig";
+import { errorHandler } from "./middleware/errorHandler";
+import { logger } from "./utils/logger";
 
 const app = express();
 const httpServer = createServer(app);
@@ -33,6 +36,8 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false, // Allow embedding for development
 }));
 
+app.use(corsConfig);
+
 app.use(
   express.json({
     limit: '10mb',
@@ -58,25 +63,15 @@ export function log(message: string, source = "express") {
 
 app.use((req, res, next) => {
   const start = Date.now();
-  const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
-
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
 
   res.on("finish", () => {
     const duration = Date.now() - start;
-    const currentPath = req.path;
-    if (currentPath.startsWith("/api")) {
-      let logLine = `${req.method} ${currentPath} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
-
-      log(logLine);
+    if (req.path.startsWith("/api")) {
+      logger.info(`${req.method} ${req.path}`, {
+        statusCode: res.statusCode,
+        duration: `${duration}ms`,
+        ip: req.ip,
+      });
     }
   });
 
@@ -96,20 +91,11 @@ import { connectMongo } from "./db";
     // Initialize MongoDB connection
     await connectMongo();
 
+    // Standardize auth result for all routes
     await registerRoutes(httpServer, app);
 
-    app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
-      const status = err.status || err.statusCode || 500;
-      const message = err.message || "Internal Server Error";
-
-      console.error("Internal Server Error:", err);
-
-      if (res.headersSent) {
-        return next(err);
-      }
-
-      return res.status(status).json({ message });
-    });
+    // Centralized Error Handling
+    app.use(errorHandler);
 
     if (process.env.NODE_ENV === "production") {
       serveStatic(app);

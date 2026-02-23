@@ -17,6 +17,12 @@ import { UserMongo, ProjectMongo, ProjectMemberMongo } from "../shared/mongodb-s
 import fs from "fs";
 import path from "path";
 import express from "express";
+import { authMiddleware } from "./middleware/authMiddleware";
+import { authorize } from "./middleware/roleMiddleware";
+import { validateRequest } from "./middleware/validateRequest";
+import { TokenService } from "./services/tokenService";
+import { Serializer } from "./utils/serializers";
+import { logger } from "./utils/logger";
 
 
 export async function registerRoutes(
@@ -119,13 +125,18 @@ export async function registerRoutes(
         console.error("Error processing pending invitations:", inviteError);
       }
 
-      // Create session manually
-      (req as any).login({ id: user.id, claims: { sub: user.id } }, (err: any) => {
-        if (err) {
-          return res.status(500).json({ message: "Failed to create session" });
-        }
-        const { password: _, ...safeUser } = user;
-        res.json(safeUser);
+      // Generate JWT
+      const token = TokenService.generateToken({
+        sub: user.id,
+        email: user.email,
+        role: "member", // Default role
+      });
+
+      logger.info('User registered', { userId: user.id, email: user.email });
+
+      res.json({
+        user: Serializer.user(user),
+        token
       });
     } catch (error: any) {
       if (error?.issues) {
@@ -150,13 +161,18 @@ export async function registerRoutes(
         return res.status(401).json({ message: "Invalid email or password" });
       }
 
-      // Create session manually
-      (req as any).login({ id: user.id, claims: { sub: user.id } }, (err: any) => {
-        if (err) {
-          return res.status(500).json({ message: "Failed to create session" });
-        }
-        const { password: _, ...safeUser } = user;
-        res.json(safeUser);
+      // Generate JWT
+      const token = TokenService.generateToken({
+        sub: user.id,
+        email: user.email,
+        role: user.role || "member",
+      });
+
+      logger.info('User logged in', { userId: user.id });
+
+      res.json({
+        user: Serializer.user(user),
+        token
       });
     } catch (error: any) {
       if (error?.issues) {
@@ -167,11 +183,11 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/auth/logout", (req, res) => {
-    req.logout(() => {
-      req.session.destroy(() => {
-        res.json({ message: "Logged out" });
-      });
+  app.post("/api/auth/logout", authMiddleware, (req, res) => {
+    logger.info('User logged out', { userId: (req as any).user.id });
+    res.json({
+      message: "Logged out successfully",
+      instructions: "Clear local storage, session storage, and cookies on the frontend."
     });
   });
 
@@ -182,7 +198,7 @@ export async function registerRoutes(
     email: z.string().email().optional(),
   });
 
-  app.patch("/api/user/profile", isAuthenticated, apiLimiter, sanitizeInput, async (req, res) => {
+  app.patch("/api/user/profile", authMiddleware, apiLimiter, sanitizeInput, async (req, res) => {
     try {
       const userId = getUserId(req);
       const data = updateProfileSchema.parse(req.body);
@@ -216,7 +232,7 @@ export async function registerRoutes(
     newPassword: z.string().min(6),
   });
 
-  app.post("/api/user/change-password", isAuthenticated, async (req, res) => {
+  app.post("/api/user/change-password", authMiddleware, async (req, res) => {
     try {
       const userId = getUserId(req);
       const data = changePasswordSchema.parse(req.body);
@@ -247,7 +263,7 @@ export async function registerRoutes(
   });
 
   // === Dashboard ===
-  app.get("/api/dashboard/stats", isAuthenticated, async (req, res) => {
+  app.get("/api/dashboard/stats", authMiddleware, async (req, res) => {
     try {
       const userId = getUserId(req);
 
@@ -263,7 +279,7 @@ export async function registerRoutes(
   });
 
   // === Stripe & Onboarding ===
-  app.post("/api/onboarding/setup-organization", isAuthenticated, async (req, res) => {
+  app.post("/api/onboarding/setup-organization", authMiddleware, async (req, res) => {
     try {
       const userId = getUserId(req);
       const { name, email, address, invitations } = req.body;
@@ -335,7 +351,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/onboarding/complete", isAuthenticated, async (req, res) => {
+  app.post("/api/onboarding/complete", authMiddleware, async (req, res) => {
     try {
       const userId = getUserId(req);
       await storage.updateUser(userId, { onboardingStep: "completed" });
@@ -347,7 +363,7 @@ export async function registerRoutes(
   });
 
   // === Organizations ===
-  app.get("/api/organizations", isAuthenticated, async (req, res) => {
+  app.get("/api/organizations", authMiddleware, async (req, res) => {
     try {
       const userId = getUserId(req);
       let organizations = await storage.getOrganizationsByUser(userId);
@@ -377,7 +393,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/organizations/:id/projects", isAuthenticated, async (req, res) => {
+  app.get("/api/organizations/:id/projects", authMiddleware, async (req, res) => {
     try {
       const userId = getUserId(req);
       const orgId = req.params.id as string;
@@ -396,7 +412,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/organizations/:id/members", isAuthenticated, async (req, res) => {
+  app.get("/api/organizations/:id/members", authMiddleware, async (req, res) => {
     try {
       const orgId = req.params.id as string;
       const members = await storage.getOrganizationMembers(orgId);
@@ -415,7 +431,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/organizations/:id/milestones", isAuthenticated, async (req, res) => {
+  app.get("/api/organizations/:id/milestones", authMiddleware, async (req, res) => {
     try {
       const userId = getUserId(req);
       const orgId = req.params.id as string;
@@ -434,7 +450,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/organizations/:id/invite", isAuthenticated, async (req, res) => {
+  app.post("/api/organizations/:id/invite", authMiddleware, async (req, res) => {
     try {
       const inviterId = getUserId(req);
       const orgId = req.params.id as string;
@@ -486,6 +502,13 @@ export async function registerRoutes(
         expiresAt,
       });
 
+      logger.info('Organization invitation sent', {
+        orgId,
+        email,
+        role,
+        invitedBy: inviterId
+      });
+
       const organization = await storage.getOrganization(orgId);
       const inviter = await storage.getUser(inviterId);
 
@@ -513,7 +536,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/organizations/:id/invitations", isAuthenticated, async (req, res) => {
+  app.get("/api/organizations/:id/invitations", authMiddleware, async (req, res) => {
     try {
       const userId = getUserId(req);
       const orgId = req.params.id as string;
@@ -535,7 +558,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/organizations/:id/invitations/:inviteId", isAuthenticated, async (req, res) => {
+  app.delete("/api/organizations/:id/invitations/:inviteId", authMiddleware, authorize(['admin', 'team_lead']), async (req, res) => {
     try {
       const userId = getUserId(req);
       const orgId = req.params.id as string;
@@ -548,6 +571,11 @@ export async function registerRoutes(
       }
 
       await storage.deleteOrganizationInvitation(inviteId);
+      logger.info('Organization invitation cancelled', {
+        orgId,
+        inviteId,
+        cancelledBy: userId
+      });
       res.json({ message: "Invitation cancelled" });
     } catch (error) {
       console.error("Error cancelling invitation:", error);
@@ -555,7 +583,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/invitations/accept/:token", isAuthenticated, async (req, res) => {
+  app.post("/api/invitations/accept/:token", authMiddleware, async (req, res) => {
     try {
       const userId = getUserId(req);
       const token = req.params.token as string;
@@ -581,7 +609,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/organizations/:id/members/:userId/assign-projects", isAuthenticated, async (req, res) => {
+  app.post("/api/organizations/:id/members/:userId/assign-projects", authMiddleware, authorize(['admin', 'team_lead']), async (req, res) => {
     try {
       const adminId = getUserId(req);
       const orgId = req.params.id as string;
@@ -621,7 +649,7 @@ export async function registerRoutes(
   });
 
   // === Projects ===
-  app.get("/api/projects", isAuthenticated, async (req, res) => {
+  app.get("/api/projects", authMiddleware, async (req, res) => {
     try {
       const userId = getUserId(req);
       const projects = await storage.getProjectsByUser(userId);
@@ -632,7 +660,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/projects/:id", isAuthenticated, async (req, res) => {
+  app.get("/api/projects/:id", authMiddleware, async (req, res) => {
     try {
       const userId = getUserId(req);
       const projectIdOrSlug = req.params.id as string;
@@ -665,7 +693,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/projects", isAuthenticated, async (req, res) => {
+  app.post("/api/projects", authMiddleware, async (req, res) => {
     try {
       const userId = getUserId(req);
 
@@ -720,7 +748,7 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/projects/:id", isAuthenticated, async (req, res) => {
+  app.patch("/api/projects/:id", authMiddleware, async (req, res) => {
     try {
       const userId = getUserId(req);
       const projectId = req.params.id as string;
@@ -742,7 +770,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/projects/:id", isAuthenticated, async (req, res) => {
+  app.delete("/api/projects/:id", authMiddleware, async (req, res) => {
     try {
       const userId = getUserId(req);
       const projectId = req.params.id as string;
@@ -754,6 +782,10 @@ export async function registerRoutes(
       }
 
       await storage.deleteProject(projectId);
+      logger.info('Project deleted', {
+        projectId,
+        deletedBy: userId
+      });
       res.status(204).send();
     } catch (error) {
       console.error("Error deleting project:", error);
@@ -761,7 +793,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/projects/:id/tasks", isAuthenticated, async (req, res) => {
+  app.get("/api/projects/:id/tasks", authMiddleware, async (req, res) => {
     try {
       const userId = getUserId(req);
       const projectId = req.params.id as string;
@@ -781,7 +813,7 @@ export async function registerRoutes(
   });
 
   // Get organization members with user details
-  app.get("/api/organizations/members", isAuthenticated, async (req, res) => {
+  app.get("/api/organizations/members", authMiddleware, async (req, res) => {
     try {
       const userId = getUserId(req);
 
