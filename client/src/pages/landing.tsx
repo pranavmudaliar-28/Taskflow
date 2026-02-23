@@ -378,10 +378,19 @@ export default function Landing() {
     const sec: React.CSSProperties = { fontSize: "clamp(30px,4vw,48px)", fontWeight: 900, letterSpacing: "-0.035em", lineHeight: 1.06, color: TXT };
 
     return (
-        <div style={{ fontFamily: "'Inter',system-ui,-apple-system,sans-serif", background: BG, color: TXT, overflowX: "hidden" }}>
+        <div style={{ fontFamily: "'Inter',system-ui,-apple-system,sans-serif", background: BG, color: TXT }}>
 
             {/* ── NAV ─────────────────────────────────────── */}
-            <nav style={{ position: "sticky", top: 0, zIndex: 100, background: navBg ? "rgba(11,15,25,0.88)" : "transparent", backdropFilter: navBg ? "blur(20px)" : "none", borderBottom: navBg ? `1px solid ${BOR}` : "1px solid transparent", transition: "all 0.35s ease" }}>
+            <nav style={{
+                position: "sticky",
+                top: 0,
+                zIndex: 1000,
+                background: navBg ? "rgba(11,15,25,0.96)" : "rgba(11,15,25,0.7)",
+                backdropFilter: "blur(20px)",
+                WebkitBackdropFilter: "blur(20px)",
+                borderBottom: `1px solid ${navBg ? BOR : "transparent"}`,
+                transition: "all 0.3s ease"
+            }}>
                 <div style={{ ...W, height: 64, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 20 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 9, flexShrink: 0 }}>
                         <span style={{ height: 30, width: 30, borderRadius: 9, background: "linear-gradient(135deg,#6366F1,#8B5CF6)", display: "inline-flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px rgba(99,102,241,0.5)" }}><Zap style={{ height: 14, width: 14, color: "#fff" }} /></span>
@@ -398,7 +407,7 @@ export default function Landing() {
             </nav>
 
             {/* ── HERO ─────────────────────────────────────── */}
-            <section className="lp5-hero-section" style={{ position: "relative", minHeight: "100vh", display: "flex", alignItems: "center", overflow: "hidden", paddingTop: 72 }}>
+            <section className="lp5-hero-section" style={{ position: "relative", minHeight: "90vh", display: "flex", alignItems: "center", overflow: "hidden", paddingTop: 40 }}>
                 <canvas ref={canvasRef} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }} />
                 {/* bg orbs – absolute, won't affect layout */}
                 <div style={{ position: "absolute", top: "8%", left: "5%", width: 520, height: 520, borderRadius: "50%", background: "radial-gradient(circle,rgba(99,102,241,0.16) 0%,transparent 70%)", pointerEvents: "none", animation: "lp3-orb-a 20s ease-in-out infinite" }} />
@@ -412,11 +421,11 @@ export default function Landing() {
                             <div className="lp3-hero-in lp3-hi-1" style={{ marginBottom: 20 }}>
                                 <span className="lp4-pill"><Sparkles style={{ height: 10, width: 10 }} /> Now free for teams up to 5</span>
                             </div>
-                            <h1 className="lp3-hero-in lp3-hi-2" style={{ fontSize: "clamp(40px,6vw,84px)", fontWeight: 900, letterSpacing: "-0.045em", lineHeight: 1.02, marginBottom: 24, wordBreak: "break-word", textShadow: "0 10px 40px rgba(0,0,0,0.6)" }}>
-                                Master your chaos<br />with <span className="lp3-grad">ultimate precision.</span>
+                            <h1 className="lp3-hero-in lp3-hi-2" style={{ fontSize: "clamp(32px,5vw,64px)", fontWeight: 900, letterSpacing: "-0.04em", lineHeight: 1.1, marginBottom: 24, wordBreak: "break-word", textShadow: "0 10px 30px rgba(0,0,0,0.4)" }}>
+                                Bring clarity to<br /><span className="lp3-grad">every project.</span>
                             </h1>
-                            <p className="lp3-hero-in lp3-hi-3" style={{ fontSize: "clamp(16px,1.8vw,20px)", color: "rgba(255,255,255,0.65)", lineHeight: 1.8, marginBottom: 40, maxWidth: 540 }}>
-                                Stop juggling tools and start shipping results. TaskFlow Pro is the central workspace that actually keeps your team in sync — in real-time.
+                            <p className="lp3-hero-in lp3-hi-3" style={{ fontSize: "clamp(15px,1.5vw,17px)", color: "rgba(255,255,255,0.6)", lineHeight: 1.8, marginBottom: 40, maxWidth: 500 }}>
+                                Plan work, align your team, and track progress in one streamlined workspace designed for speed and focus.
                             </p>
                             <div className="lp3-hero-in lp3-hi-4 lp5-hero-btns" style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 20 }}>
                                 <Link href="/signup"><a className="lp4-cta-btn" style={{ height: 52, padding: "0 30px", fontSize: 15 }}>Start Free Workspace <ArrowRight style={{ height: 16, width: 16 }} /></a></Link>
