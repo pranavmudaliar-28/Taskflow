@@ -28,8 +28,10 @@ const PLANS = [
     {
         id: "free",
         name: "Free",
-        price: "$0",
-        per: "/forever",
+        monthlyPrice: 0,
+        annualPrice: 0,
+        monthlyPer: "/forever",
+        annualPer: "/forever",
         description: "For individuals and small projects",
         icon: Shield,
         color: "text-muted-foreground",
@@ -46,8 +48,10 @@ const PLANS = [
     {
         id: "pro",
         name: "Pro",
-        price: "$29",
-        per: "/month",
+        monthlyPrice: 29,
+        annualPrice: 22,
+        monthlyPer: "/mo",
+        annualPer: "/mo",
         description: "For growing teams",
         icon: Zap,
         color: "text-primary",
@@ -65,8 +69,10 @@ const PLANS = [
     {
         id: "team",
         name: "Team",
-        price: "$99",
-        per: "/month",
+        monthlyPrice: 99,
+        annualPrice: 79,
+        monthlyPer: "/mo",
+        annualPer: "/mo",
         description: "For large organizations",
         icon: Users,
         color: "text-primary/90",
@@ -91,8 +97,8 @@ export default function BillingPage() {
     const { toast } = useToast();
     const [, setLocation] = useLocation();
     const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+    const [annual, setAnnual] = useState(false);
 
-    // ── Handle Stripe redirect query params ─────────────────────────────────────
     // ── Handle Stripe redirect query params ─────────────────────────────────────
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
@@ -141,8 +147,8 @@ export default function BillingPage() {
 
     // ── Checkout mutation ────────────────────────────────────────────────────────
     const checkoutMutation = useMutation({
-        mutationFn: async (plan: string) => {
-            const res = await apiRequest("POST", "/api/stripe/create-checkout-session", { plan });
+        mutationFn: async ({ plan, interval }: { plan: string; interval: "monthly" | "annual" }) => {
+            const res = await apiRequest("POST", "/api/stripe/create-checkout-session", { plan, interval });
             return res.json() as Promise<{ url: string }>;
         },
         onSuccess: async (data) => {
@@ -189,7 +195,7 @@ export default function BillingPage() {
         if (hasPaidSub) {
             portalMutation.mutate();
         } else {
-            checkoutMutation.mutate(planId);
+            checkoutMutation.mutate({ plan: planId, interval: annual ? "annual" : "monthly" });
         }
     };
 
@@ -283,11 +289,34 @@ export default function BillingPage() {
                 )}
             </div>
 
+            {/* ── Toggle ──────────────────────────────────────────────────────────── */}
+            <div className="flex flex-col items-center justify-center gap-4 py-4">
+                <div className="lp3-toggle">
+                    <button
+                        className={`lp3-tog-btn ${!annual ? "active" : ""}`}
+                        onClick={() => setAnnual(false)}
+                    >
+                        Monthly
+                    </button>
+                    <button
+                        className={`lp3-tog-btn ${annual ? "active" : ""}`}
+                        onClick={() => setAnnual(true)}
+                    >
+                        Annual
+                        <span className="ml-2 bg-emerald-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
+                            Save 25%
+                        </span>
+                    </button>
+                </div>
+            </div>
+
             {/* ── Plan Cards ──────────────────────────────────────────────────────── */}
             <div className="grid md:grid-cols-3 gap-4">
                 {PLANS.map((plan) => {
                     const isCurrent = isCurrentPlan(plan.id);
                     const isPaid = plan.id !== "free";
+                    const price = annual ? plan.annualPrice : plan.monthlyPrice;
+                    const per = annual ? plan.annualPer : plan.monthlyPer;
 
                     return (
                         <div
@@ -315,9 +344,18 @@ export default function BillingPage() {
 
                             <h3 className="font-bold text-foreground mb-0.5">{plan.name}</h3>
                             <div className="flex items-baseline gap-0.5 mb-1">
-                                <span className="text-2xl font-extrabold text-foreground">{plan.price}</span>
-                                <span className="text-xs text-muted-foreground">{plan.per}</span>
+                                <span className="text-2xl font-extrabold text-foreground">
+                                    {price === 0 ? "Free" : `$${price}`}
+                                </span>
+                                <span className="text-xs text-muted-foreground">{per}</span>
                             </div>
+
+                            {annual && price > 0 && (
+                                <div className="text-[10px] text-emerald-600 font-semibold mb-2">
+                                    Save ${(plan.monthlyPrice - plan.annualPrice) * 12}/yr when billed annually
+                                </div>
+                            )}
+
                             <p className="text-xs text-muted-foreground mb-4">{plan.description}</p>
 
                             <ul className="space-y-1.5 flex-1 mb-5">

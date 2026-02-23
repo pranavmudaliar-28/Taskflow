@@ -17,15 +17,33 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
 
 // ── Plan config ────────────────────────────────────────────────────────────────
 export const STRIPE_PLANS = {
-    free: { name: "Free", priceId: null, amount: 0 },
-    pro: { name: "Pro", priceId: process.env.STRIPE_PRO_PRICE_ID || null, amount: 2900 },
-    team: { name: "Team", priceId: process.env.STRIPE_TEAM_PRICE_ID || null, amount: 9900 },
+    free: { name: "Free", prices: { monthly: null, annual: null }, amount: 0 },
+    pro: {
+        name: "Pro",
+        prices: {
+            monthly: process.env.STRIPE_PRO_MONTHLY_PRICE_ID || null,
+            annual: process.env.STRIPE_PRO_ANNUAL_PRICE_ID || null,
+        },
+        amount: 2900,
+    },
+    team: {
+        name: "Team",
+        prices: {
+            monthly: process.env.STRIPE_TEAM_MONTHLY_PRICE_ID || null,
+            annual: process.env.STRIPE_TEAM_ANNUAL_PRICE_ID || null,
+        },
+        amount: 9900,
+    },
 };
 
 // ── Helper: resolve plan from price ID ─────────────────────────────────────────
 function getPlanFromPriceId(priceId: string | null | undefined): string {
-    if (priceId === process.env.STRIPE_PRO_PRICE_ID) return "pro";
-    if (priceId === process.env.STRIPE_TEAM_PRICE_ID) return "team";
+    const p = priceId?.trim();
+    if (!p) return "free";
+
+    if (p === process.env.STRIPE_PRO_MONTHLY_PRICE_ID || p === process.env.STRIPE_PRO_ANNUAL_PRICE_ID) return "pro";
+    if (p === process.env.STRIPE_TEAM_MONTHLY_PRICE_ID || p === process.env.STRIPE_TEAM_ANNUAL_PRICE_ID) return "team";
+
     return "free";
 }
 
@@ -64,15 +82,22 @@ export function registerStripeRoutes(app: Express) {
                 return res.status(403).json({ message: "Only organization admins can manage billing." });
             }
 
-            const { plan, returnTo } = req.body as { plan: string; returnTo?: string };
+            const { plan, returnTo, interval = "monthly" } = req.body as {
+                plan: string;
+                returnTo?: string;
+                interval?: "monthly" | "annual";
+            };
+
             if (!plan || plan === "free") {
                 return res.status(400).json({ message: "Select a paid plan (pro or team)" });
             }
 
             const planConfig = STRIPE_PLANS[plan as keyof typeof STRIPE_PLANS];
-            if (!planConfig?.priceId) {
+            const priceId = planConfig?.prices[interval as keyof typeof planConfig.prices];
+
+            if (!priceId) {
                 return res.status(400).json({
-                    message: `Price ID for plan "${plan}" is not configured. Set STRIPE_${plan.toUpperCase()}_PRICE_ID in your .env file.`,
+                    message: `Price ID for plan "${plan}" (${interval}) is not configured. Set STRIPE_${plan.toUpperCase()}_${interval.toUpperCase()}_PRICE_ID in your .env file.`,
                 });
             }
 
@@ -103,7 +128,7 @@ export function registerStripeRoutes(app: Express) {
             const session = await stripe.checkout.sessions.create({
                 customer: customerId,
                 payment_method_types: ["card"],
-                line_items: [{ price: planConfig.priceId, quantity: 1 }],
+                line_items: [{ price: priceId, quantity: 1 }],
                 success_url: successUrl,
                 cancel_url: cancelUrl,
                 subscription_data: { metadata: { userId, plan } },
