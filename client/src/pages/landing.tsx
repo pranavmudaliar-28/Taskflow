@@ -260,6 +260,83 @@ function MetricCell({ num, label, display }: { num: number; label: string; suffi
     );
 }
 
+/* ── TechStackBadge ──────────────────────────────── */
+function TechStackBadge() {
+    const [open, setOpen] = useState(false);
+    const ref = useRef<HTMLDivElement>(null);
+
+    // close on outside click
+    useEffect(() => {
+        const handler = (e: MouseEvent) => {
+            if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+        };
+        document.addEventListener("mousedown", handler);
+        return () => document.removeEventListener("mousedown", handler);
+    }, []);
+
+    const stack = [
+        { cat: "Frontend", icon: "⚛️", items: ["React 18 + TypeScript", "Vite", "TailwindCSS", "React Query", "Wouter (routing)"] },
+        { cat: "Backend", icon: "🟢", items: ["Node.js + Express", "Passport.js (auth)", "Socket.io (realtime)"] },
+        { cat: "Database", icon: "🗄️", items: ["PostgreSQL", "Drizzle ORM"] },
+        { cat: "Payments", icon: "💳", items: ["Stripe"] },
+    ];
+
+    return (
+        <div ref={ref} style={{ position: "fixed", bottom: 80, right: 20, zIndex: 9999 }}>
+            {/* ── Badge trigger ── */}
+            <button
+                onClick={() => setOpen(!open)}
+                className="lp6-badge-btn"
+                aria-label="Tech stack info"
+            >
+                <span className="lp6-badge-dot" />
+                <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: "-0.01em" }}>Built by Pranav Mudaliyar</span>
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ transition: "transform 0.3s", transform: open ? "rotate(180deg)" : "rotate(0deg)" }}>
+                    <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+            </button>
+
+            {/* ── Popup panel ── */}
+            {open && (
+                <div className="lp6-popup">
+                    {/* header */}
+                    <div className="lp6-popup-head">
+                        <span style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 800, fontSize: 15, color: "#fff" }}>
+                            <span style={{ fontSize: 18 }}>{'</>'}</span> Tech Stack
+                        </span>
+                        <button onClick={() => setOpen(false)} className="lp6-close-btn" aria-label="Close">×</button>
+                    </div>
+
+                    {/* stack rows */}
+                    <div style={{ padding: "12px 16px" }}>
+                        {stack.map(({ cat, icon, items }) => (
+                            <div key={cat} className="lp6-stack-row">
+                                <div className="lp6-stack-cat">
+                                    <span>{icon}</span>
+                                    <span>{cat}</span>
+                                </div>
+                                <div className="lp6-stack-pills">
+                                    {items.map(i => <span key={i} className="lp6-pill">{i}</span>)}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* footer */}
+                    <div className="lp6-popup-footer">
+                        <span>Made with </span>
+                        <span style={{ color: "#EF4444", fontSize: 15 }}>♥</span>
+                        <span> by </span>
+                        <span style={{ fontWeight: 800, background: "linear-gradient(90deg,#6366F1,#8B5CF6)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+                            Pranav Mudaliyar
+                        </span>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
 /* ── AccordionItem ────────────────────────────────── */
 
 function Acc({ q, a }: { q: string; a: string }) {
@@ -659,6 +736,9 @@ export default function Landing() {
                 <span style={{ fontSize: 13, fontWeight: 600, color: TXT }}>Ready to get organised?</span>
                 <Link href="/signup"><a className="lp4-cta-btn" style={{ height: 40, padding: "0 18px", fontSize: 13, borderRadius: 10, flexShrink: 0 }}>Start Free</a></Link>
             </div>
+
+            {/* ── TECH STACK BADGE ─────────────────────────── */}
+            <TechStackBadge />
         </div>
     );
 }
