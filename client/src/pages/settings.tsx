@@ -25,6 +25,7 @@ import {
   Edit2, Save, X, Key, CreditCard, ExternalLink,
   AlertTriangle, Check,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 /* ── nav tab config ──────────────────────────────────────── */
 const TABS = [
