@@ -669,8 +669,15 @@ export default function Landing() {
                         {plans.map(({ name, mp, yp, badge, cta, link, featured, perks }, i) => {
                             const price = annual ? yp : mp;
                             return (
-                                <div key={name} className={`lp4-price-card lp3-reveal lp3-d${i + 1}${featured ? " featured" : ""}`}>
-                                    {badge && <div style={{ position: "absolute", top: -12, left: "50%", transform: "translateX(-50%)", background: IND, color: "#fff", fontSize: 11, fontWeight: 800, padding: "4px 14px", borderRadius: 999, whiteSpace: "nowrap", boxShadow: "0 4px 14px rgba(99,102,241,0.4)" }}>{badge}</div>}
+                                <div key={name} className={`lp4-price-card lp3-reveal lp3-d${i + 1}${featured ? " featured lp5-popular-card" : ""}`}>
+                                    {badge && (
+                                        <div className="lp5-badge-shimmer-wrapper" style={{ position: "absolute", top: -14, left: "50%", transform: "translateX(-50%)", zIndex: 10 }}>
+                                            <div style={{ background: "linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)", color: "#fff", fontSize: 11, fontWeight: 800, padding: "5px 16px", borderRadius: 999, whiteSpace: "nowrap", boxShadow: "0 8px 20px rgba(99,102,241,0.5)", display: "flex", alignItems: "center", gap: 6 }}>
+                                                <Sparkles style={{ height: 12, width: 12, fill: "#fff" }} />
+                                                {badge}
+                                            </div>
+                                        </div>
+                                    )}
                                     <div style={{ fontSize: 13, fontWeight: 700, color: SEC, marginBottom: 8 }}>{name}</div>
                                     <div style={{ display: "flex", alignItems: "baseline", gap: 4, marginBottom: 4 }}>
                                         <span style={{ fontSize: 42, fontWeight: 900, letterSpacing: "-0.04em", color: TXT }}>{price === 0 ? "Free" : `$${price}`}</span>
