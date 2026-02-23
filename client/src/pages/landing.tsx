@@ -382,8 +382,10 @@ export default function Landing() {
 
             {/* ── NAV ─────────────────────────────────────── */}
             <nav style={{
-                position: "sticky",
+                position: "fixed",
                 top: 0,
+                left: 0,
+                width: "100%",
                 zIndex: 1000,
                 background: navBg ? "rgba(11,15,25,0.96)" : "rgba(11,15,25,0.7)",
                 backdropFilter: "blur(20px)",
@@ -407,13 +409,13 @@ export default function Landing() {
             </nav>
 
             {/* ── HERO ─────────────────────────────────────── */}
-            <section className="lp5-hero-section" style={{ position: "relative", minHeight: "90vh", display: "flex", alignItems: "center", overflow: "hidden", paddingTop: 40 }}>
+            <section className="lp5-hero-section" style={{ position: "relative", minHeight: "90vh", display: "flex", alignItems: "center", overflow: "hidden", paddingTop: 110 }}>
                 <canvas ref={canvasRef} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }} />
                 {/* bg orbs – absolute, won't affect layout */}
                 <div style={{ position: "absolute", top: "8%", left: "5%", width: 520, height: 520, borderRadius: "50%", background: "radial-gradient(circle,rgba(99,102,241,0.16) 0%,transparent 70%)", pointerEvents: "none", animation: "lp3-orb-a 20s ease-in-out infinite" }} />
                 <div style={{ position: "absolute", bottom: "5%", right: "5%", width: 420, height: 420, borderRadius: "50%", background: "radial-gradient(circle,rgba(139,92,246,0.12) 0%,transparent 70%)", pointerEvents: "none", animation: "lp3-orb-b 24s ease-in-out infinite" }} />
 
-                <div style={{ ...W, position: "relative", paddingTop: 40, paddingBottom: 80 }}>
+                <div style={{ ...W, position: "relative", paddingTop: 0, paddingBottom: 80 }}>
                     {/* ── 2-column hero grid ── */}
                     <div className="lp5-hero-grid">
                         {/* LEFT — copy */}
