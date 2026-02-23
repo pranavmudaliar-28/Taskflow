@@ -96,8 +96,8 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
 
             {pageTitle && (
               <div className="hidden sm:flex items-center gap-2">
-                <div className="h-4 w-px bg-slate-200" />
-                <span className="text-sm font-semibold text-slate-800">{pageTitle}</span>
+                <div className="h-4 w-px bg-border" />
+                <span className="text-sm font-semibold text-foreground/80">{pageTitle}</span>
               </div>
             )}
           </div>

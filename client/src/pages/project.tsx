@@ -376,8 +376,8 @@ export default function ProjectPage() {
       </header>
 
       {/* ── Toolbar ──────────────────────────────────────────────────────── */}
-      <div className="bg-card border-b border-border px-6 py-2 shrink-0 flex items-center justify-between">
-        <div className="flex items-center gap-1 bg-accent/50 border border-border/50 rounded-xl p-1 relative">
+      <div className="bg-card border-b border-border px-6 py-3 shrink-0 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div className="flex items-center gap-1 bg-accent/50 border border-border/50 rounded-xl p-1 relative w-fit self-center lg:self-auto">
           <div
             className="absolute h-[calc(100%-8px)] bg-background rounded-lg shadow-sm animate-tab-indicator"
             style={{
@@ -415,36 +415,38 @@ export default function ProjectPage() {
           </button>
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="relative group">
+        <div className="flex flex-wrap items-center justify-center lg:justify-end gap-2">
+          <div className="relative group flex-1 min-w-[200px] lg:flex-none">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground group-focus-within:text-primary transition-colors" />
             <Input
               placeholder="Search tasks..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 h-9 w-48 focus:w-64 border-border bg-muted/50 focus:bg-background focus:border-primary/50 focus:ring-4 focus:ring-primary/10 rounded-xl text-sm transition-all"
+              className="pl-9 h-9 w-full lg:w-48 lg:focus:w-64 border-border bg-muted/50 focus:bg-background focus:border-primary/50 focus:ring-4 focus:ring-primary/10 rounded-xl text-sm transition-all"
             />
           </div>
 
-          <Select value={status} onValueChange={setStatus}>
-            <SelectTrigger className="h-9 w-[120px] rounded-xl border-border bg-muted/50 text-muted-foreground font-bold text-xs ring-offset-0 focus:ring-4 focus:ring-primary/10">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent className="rounded-xl border-border shadow-elevation">
-              <SelectItem value="all" className="font-bold text-muted-foreground">Any Status</SelectItem>
-              {TASK_STATUSES.map(s => <SelectItem key={s.id} value={s.id} className="font-bold text-foreground">{s.label}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <Select value={status} onValueChange={setStatus}>
+              <SelectTrigger className="h-9 flex-1 sm:w-[120px] rounded-xl border-border bg-muted/50 text-muted-foreground font-bold text-xs ring-offset-0 focus:ring-4 focus:ring-primary/10">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent className="rounded-xl border-border shadow-elevation">
+                <SelectItem value="all" className="font-bold text-muted-foreground">Any Status</SelectItem>
+                {TASK_STATUSES.map(s => <SelectItem key={s.id} value={s.id} className="font-bold text-foreground">{s.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
 
-          <Select value={priority} onValueChange={setPriority}>
-            <SelectTrigger className="h-9 w-[120px] rounded-xl border-border bg-muted/50 text-muted-foreground font-bold text-xs ring-offset-0 focus:ring-4 focus:ring-primary/10">
-              <SelectValue placeholder="Priority" />
-            </SelectTrigger>
-            <SelectContent className="rounded-xl border-border shadow-elevation">
-              <SelectItem value="all" className="font-bold text-muted-foreground">Any Priority</SelectItem>
-              {TASK_PRIORITIES.map(p => <SelectItem key={p.id} value={p.id} className="font-bold text-foreground">{p.label}</SelectItem>)}
-            </SelectContent>
-          </Select>
+            <Select value={priority} onValueChange={setPriority}>
+              <SelectTrigger className="h-9 flex-1 sm:w-[120px] rounded-xl border-border bg-muted/50 text-muted-foreground font-bold text-xs ring-offset-0 focus:ring-4 focus:ring-primary/10">
+                <SelectValue placeholder="Priority" />
+              </SelectTrigger>
+              <SelectContent className="rounded-xl border-border shadow-elevation">
+                <SelectItem value="all" className="font-bold text-muted-foreground">Any Priority</SelectItem>
+                {TASK_PRIORITIES.map(p => <SelectItem key={p.id} value={p.id} className="font-bold text-foreground">{p.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 

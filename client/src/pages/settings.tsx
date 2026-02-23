@@ -401,29 +401,31 @@ export default function Settings() {
         </div>
 
         {/* Two-column layout */}
-        <div className="flex gap-6">
+        <div className="flex flex-col lg:flex-row gap-6">
           {/* Left nav */}
-          <nav className="w-52 shrink-0">
-            <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm p-1.5">
+          <nav className="w-full lg:w-52 shrink-0">
+            <div className="bg-card rounded-xl border border-border overflow-x-auto lg:overflow-visible shadow-sm p-1.5 flex lg:flex-col gap-1">
               {TABS.map(({ id, label, icon: Icon }) => (
                 <button
                   key={id}
                   onClick={() => setTab(id)}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left ${tab === id
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                    }`}
+                  className={cn(
+                    "w-full lg:w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left whitespace-nowrap lg:whitespace-normal",
+                    tab === id
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  )}
                 >
-                  <Icon className={`h-4 w-4 shrink-0 ${tab === id ? "text-primary" : "text-muted-foreground"}`} />
+                  <Icon className={cn("h-4 w-4 shrink-0", tab === id ? "text-primary" : "text-muted-foreground")} />
                   {label}
-                  {tab === id && <Check className="h-3.5 w-3.5 text-primary ml-auto" />}
+                  {tab === id && <Check className="h-3.5 w-3.5 text-primary ml-auto hidden lg:block" />}
                 </button>
               ))}
             </div>
           </nav>
 
           {/* Right panel */}
-          <div className="flex-1 bg-card rounded-xl border border-border p-6 shadow-sm">
+          <div className="flex-1 bg-card rounded-xl border border-border p-5 sm:p-6 shadow-sm min-w-0">
             {renderPanel()}
           </div>
         </div>

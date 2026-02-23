@@ -141,7 +141,7 @@ export default function Dashboard() {
 
       <div className="p-6 space-y-6">
         {/* ── KPI Cards ── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {kpiCards.map(({ label, value, sub, icon: Icon, iconBg, iconColor, accent }) => (
             <div key={label} className={cn("bg-card rounded-2xl border border-border shadow-sm p-6 transition-all hover:shadow-md", accent)}>
               {statsLoading ? (

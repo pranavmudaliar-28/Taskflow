@@ -330,10 +330,10 @@ export default function TaskView() {
                 </div>
             </header>
 
-            <div className="flex-1 flex overflow-hidden">
+            <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
                 {/* Main Content Area */}
                 <ScrollArea className="flex-1 bg-background">
-                    <div className="p-10 max-w-4xl mx-auto space-y-10 animate-fade-in">
+                    <div className="p-6 sm:p-10 max-w-4xl mx-auto space-y-10 animate-fade-in">
                         {/* Title & Badges */}
                         <div className="space-y-6">
                             {isEditingTitle ? (
@@ -497,7 +497,7 @@ export default function TaskView() {
                 </ScrollArea>
 
                 {/* Sticky Sidebar */}
-                <aside className="w-80 border-l border-border bg-background p-6 space-y-8 overflow-y-auto shrink-0 shadow-[-4px_0_24px_rgba(0,0,0,0.02)]">
+                <aside className="w-full lg:w-80 border-t lg:border-t-0 lg:border-l border-border bg-background p-6 space-y-8 overflow-y-auto shrink-0 shadow-[-4px_0_24px_rgba(0,0,0,0.02)]">
                     <div className="space-y-6">
                         <div className="space-y-2">
                             <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider px-1">Current Status</label>
