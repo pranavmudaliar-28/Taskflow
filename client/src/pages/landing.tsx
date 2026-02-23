@@ -25,29 +25,55 @@ function useParticles(ref: React.RefObject<HTMLCanvasElement>) {
         const canvas = ref.current; if (!canvas) return;
         const ctx = canvas.getContext("2d")!;
         let raf: number;
-        const resize = () => { canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight; };
+
+        const resize = () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        };
         resize();
         window.addEventListener("resize", resize);
-        const N = 55;
+
+        const N = 85; // Increased for full page
         type P = { x: number; y: number; vx: number; vy: number; r: number; a: number };
         const pts: P[] = Array.from({ length: N }, () => ({
-            x: Math.random() * canvas.width, y: Math.random() * canvas.height,
-            vx: (Math.random() - 0.5) * 0.28, vy: (Math.random() - 0.5) * 0.28,
-            r: Math.random() * 1.6 + 0.5, a: Math.random(),
+            x: Math.random() * window.innerWidth,
+            y: Math.random() * window.innerHeight,
+            vx: (Math.random() - 0.5) * 0.2,
+            vy: (Math.random() - 0.5) * 0.2,
+            r: Math.random() * 1.4 + 0.4,
+            a: Math.random(),
         }));
+
         const draw = () => {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+
             pts.forEach((p) => {
                 p.x += p.vx; p.y += p.vy;
-                if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
-                if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
-                ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-                ctx.fillStyle = `rgba(129,140,248,${p.a * 0.55})`; ctx.fill();
+                if (p.x < 0) p.x = canvas.width;
+                if (p.x > canvas.width) p.x = 0;
+                if (p.y < 0) p.y = canvas.height;
+                if (p.y > canvas.height) p.y = 0;
+
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(129,140,248,${p.a * 0.65})`; // Increased opacity
+                ctx.fill();
             });
-            for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) {
-                const dx = pts[i].x - pts[j].x, dy = pts[i].y - pts[j].y;
-                const d = Math.sqrt(dx * dx + dy * dy);
-                if (d < 110) { ctx.beginPath(); ctx.moveTo(pts[i].x, pts[i].y); ctx.lineTo(pts[j].x, pts[j].y); ctx.strokeStyle = `rgba(99,102,241,${(1 - d / 110) * 0.18})`; ctx.lineWidth = 0.6; ctx.stroke(); }
+
+            for (let i = 0; i < pts.length; i++) {
+                for (let j = i + 1; j < pts.length; j++) {
+                    const dx = pts[i].x - pts[j].x;
+                    const dy = pts[i].y - pts[j].y;
+                    const d = Math.sqrt(dx * dx + dy * dy);
+                    if (d < 160) { // Slightly longer connections
+                        ctx.beginPath();
+                        ctx.moveTo(pts[i].x, pts[i].y);
+                        ctx.lineTo(pts[j].x, pts[j].y);
+                        ctx.strokeStyle = `rgba(99,102,241,${(1 - d / 160) * 0.25})`; // Increased opacity
+                        ctx.lineWidth = 0.5;
+                        ctx.stroke();
+                    }
+                }
             }
             raf = requestAnimationFrame(draw);
         };
@@ -116,7 +142,7 @@ function HeroBadges() {
 
 /* ── tokens ───────────────────────────────────────── */
 const BG = "#0B0F19", SURF = "#111827", IND = "#6366F1", INDL = "#818CF8";
-const GN = "#22C55E", TXT = "#F9FAFB", SEC = "#9CA3AF", BOR = "rgba(255,255,255,0.08)";
+const GN = "#22C55E", TXT = "#F9FAFB", SEC = "#B4BCC7", BOR = "rgba(255,255,255,0.08)";
 
 /* ── data ─────────────────────────────────────────── */
 const features = [
@@ -234,7 +260,7 @@ function DashMockup({ panel }: { panel: number }) {
                         {["@monika left a comment on Design hero", "@grace completed API integration", "@david assigned 3 tasks to Alen", "Sprint 4 review scheduled for Feb 28"].map((ev, i) => (
                             <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "10px 0", borderBottom: i < 3 ? `1px solid ${BOR}` : "none" }}>
                                 <div style={{ height: 28, width: 28, borderRadius: 99, background: [IND, GN, "#8B5CF6", "#F59E0B"][i], display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 800, color: "#fff", flexShrink: 0 }}>{["MH", "GK", "DP", "AB"][i]}</div>
-                                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.65)", lineHeight: 1.5 }}>{ev}</div>
+                                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.85)", lineHeight: 1.5 }}>{ev}</div>
                             </div>
                         ))}
                     </div>
@@ -252,7 +278,7 @@ function MetricCell({ num, label, display }: { num: number; label: string; suffi
     return (
         <div style={{ textAlign: "center", padding: "28px 16px", background: "rgba(255,255,255,0.025)", borderRight: `1px solid rgba(255,255,255,0.08)` }}>
             <span ref={ref} className="lp5-stat-num">{shown}</span>
-            <div style={{ fontSize: 12, color: "#9CA3AF", marginTop: 6, display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.5)", marginTop: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
                 {label === "Tasks daily" && <span className="lp5-live-dot" style={{ width: 6, height: 6, flexShrink: 0 }} />}
                 {label}
             </div>
@@ -378,7 +404,21 @@ export default function Landing() {
     const sec: React.CSSProperties = { fontSize: "clamp(30px,4vw,48px)", fontWeight: 900, letterSpacing: "-0.035em", lineHeight: 1.06, color: TXT };
 
     return (
-        <div style={{ fontFamily: "'Inter',system-ui,-apple-system,sans-serif", background: BG, color: TXT }}>
+        <div style={{ fontFamily: "'Inter',system-ui,-apple-system,sans-serif", background: BG, color: TXT, position: "relative" }}>
+            {/* ── BACKGROUND ANIMATION ────────────────────── */}
+            <canvas
+                ref={canvasRef}
+                style={{
+                    position: "fixed",
+                    inset: 0,
+                    width: "100%",
+                    height: "100%",
+                    pointerEvents: "none",
+                    zIndex: 0,
+                    opacity: 1 // Full visibility
+                }}
+            />
+
 
             {/* ── NAV ─────────────────────────────────────── */}
             <nav style={{
@@ -394,9 +434,13 @@ export default function Landing() {
                 transition: "all 0.3s ease"
             }}>
                 <div style={{ ...W, height: 64, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 20 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 9, flexShrink: 0 }}>
-                        <span style={{ height: 30, width: 30, borderRadius: 9, background: "linear-gradient(135deg,#6366F1,#8B5CF6)", display: "inline-flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px rgba(99,102,241,0.5)" }}><Zap style={{ height: 14, width: 14, color: "#fff" }} /></span>
-                        <span style={{ fontWeight: 800, fontSize: 16, color: TXT, letterSpacing: "-0.02em" }}>TaskFlow Pro</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+                        <div style={{ height: 34, width: 34, borderRadius: 10, background: "linear-gradient(135deg,#6366F1,#8B5CF6)", display: "inline-flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px rgba(99,102,241,0.5)", border: "1px solid rgba(255,255,255,0.1)" }}>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" fill="white" stroke="white" strokeWidth="1" strokeLinejoin="round" />
+                            </svg>
+                        </div>
+                        <span style={{ fontWeight: 900, fontSize: 18, color: TXT, letterSpacing: "-0.03em" }}>TaskFlow Pro</span>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 28 }} className="lp4-hide-tab">
                         {["Product", "Features", "Pricing", "Docs"].map(l => <a key={l} href={`#${l.toLowerCase()}`} className="lp4-nav-link">{l}</a>)}
@@ -410,7 +454,7 @@ export default function Landing() {
 
             {/* ── HERO ─────────────────────────────────────── */}
             <section className="lp5-hero-section" style={{ position: "relative", minHeight: "90vh", display: "flex", alignItems: "center", overflow: "hidden", paddingTop: 110 }}>
-                <canvas ref={canvasRef} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }} />
+
                 {/* bg orbs – absolute, won't affect layout */}
                 <div style={{ position: "absolute", top: "8%", left: "5%", width: 520, height: 520, borderRadius: "50%", background: "radial-gradient(circle,rgba(99,102,241,0.16) 0%,transparent 70%)", pointerEvents: "none", animation: "lp3-orb-a 20s ease-in-out infinite" }} />
                 <div style={{ position: "absolute", bottom: "5%", right: "5%", width: 420, height: 420, borderRadius: "50%", background: "radial-gradient(circle,rgba(139,92,246,0.12) 0%,transparent 70%)", pointerEvents: "none", animation: "lp3-orb-b 24s ease-in-out infinite" }} />
@@ -452,27 +496,30 @@ export default function Landing() {
 
 
             {/* ── TRUST BAR ────────────────────────────────── */}
-            <div style={{ borderTop: `1px solid ${BOR}`, borderBottom: `1px solid ${BOR}`, padding: "36px 0" }}>
+            <div style={{ borderTop: `1px solid ${BOR}`, borderBottom: `1px solid ${BOR}`, padding: "48px 0", background: "rgba(255,255,255,0.01)" }}>
                 <div style={{ ...W, textAlign: "center" }}>
-                    <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.25)", marginBottom: 28 }}>Trusted by 2,000+ teams worldwide</p>
+                    <p style={{ fontSize: 13, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(255,255,255,0.5)", marginBottom: 32 }}>Trusted by 2,000+ teams worldwide</p>
                     <div className="lp5-trust-bar" style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "clamp(24px, 4vw, 56px)", flexWrap: "wrap" }}>
                         {[
-                            { name: "Stripe", path: "M0 6.75C0 5.784.784 5 1.75 5h12.5c.966 0 1.75.784 1.75 1.75v2.5c0 .966-.784 1.75-1.75 1.75H1.75C.784 11 0 10.216 0 9.25v-2.5zm4.226 1.385c-.584 0-.937-.164-.937-.593 0-.468.607-.674 1.36-.93 1.228-.415 2.844-.963 2.851-2.993C7.5 1.868 5.924 1 3.63 1A7.7 7.7 0 0 0 .621 1.626v2.616c.926-.506 2.095-.88 3.01-.88.617 0 1.058.165 1.058.671 0 .518-.658.755-1.453 1.041C1.026 5.49 0 6.94 0 8.11c0 1.145 1.488 2.31 3.726 2.31a7.3 7.3 0 0 0 2.734-.505V7.332c-.838.45-1.896.703-2.734.703z", viewBox: "0 0 16 12", h: 22 },
-                            { name: "Vercel", path: "M12 1L1 21h22L12 1z", viewBox: "0 0 24 24", h: 18 },
-                            { name: "Linear", path: "M12.5 0L10.5 1L0.5 8.5C0.2 8.7 0 9.1 0 9.5C0 9.9 0.2 10.3 0.5 10.5L10.5 18L12.5 19C13.6 19.5 15 18.7 15 17.5V1.5C15 0.3 13.6 -0.5 12.5 0Z", viewBox: "0 0 15 19", h: 20 },
-                            { name: "Notion", path: "M4 2v18h16V2H4zm11 13.5v-6.5h.5l4 6h.5v-6.5", viewBox: "0 0 24 24", h: 20 },
-                            { name: "Figma", path: "M12 4a4 4 0 1 1-8 0 4 4 0 0 1 8 0zM4 12a4 4 0 1 1 8 0 4 4 0 0 1-8 0zM12 12a4 4 0 1 1 8 0 4 4 0 0 1-8 0zM4 20a4 4 0 1 1 8 0 4 4 0 0 1-8 0zM12 20a4 4 0 0 1 4 4v4h-4v-4z", viewBox: "0 0 24 28", h: 20 },
-                            { name: "GitHub", path: "M8 0c4.42 0 8 3.58 8 8c0 3.54-2.29 6.53-5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8", viewBox: "0 0 16 16", h: 22 }
+                            { name: "Stripe", color: "#635BFF", path: "M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.545-2.354 1.545-1.875 0-4.965-.921-5.69-.974l.439-2.737c.725.053 2.115.155 3.332.155 1.14 0 1.854-.258 1.854-.806 0-.619-.594-.96-1.789-.96-1.423 0-3.155.679-4.509 1.341L6.1 1.096c1.788-.702 4.195-1.127 6.065-1.127 2.668 0 4.887.697 6.136 1.921 1.258 1.233 1.892 3.09 1.892 5.589 0 4.568-2.617 6.279-6.917 7.784-2.859 1.03-3.791 1.761-3.791 2.898 0 1.107.96 1.734 2.646 1.734 2.227 0 5.48-.846 6.945-1.584l-.872 5.494c-1.547.603-4.148 1.038-6.883 1.038-2.617 0-4.886-.667-6.241-1.872-1.391-1.242-2.115-3.08-2.115-5.589 0-4.437 2.684-6.279 6.983-7.73z", viewBox: "0 0 24 24", h: 22 },
+                            { name: "Vercel", color: "#FFFFFF", path: "M12 1L24 22H0L12 1Z", viewBox: "0 0 24 24", h: 20 },
+                            { name: "Linear", color: "#5E6AD2", path: "M12.5 0L10.5 1L0.5 8.5C0.2 8.7 0 9.1 0 9.5C0 9.9 0.2 10.3 0.5 10.5L10.5 18L12.5 19C13.6 19.5 15 18.7 15 17.5V1.5C15 0.3 13.6 -0.5 12.5 0Z", viewBox: "0 0 15 19", h: 20 },
+                            { name: "Notion", color: "#FFFFFF", path: "M4.46 4.35V19.65H19.54V4.35H4.46ZM5.36 5.26H18.64V18.74H5.36V5.26ZM7.71 7.41V8.22L9.16 8.36V14.98L7.62 15.12V15.93H11.65V15.12L10.08 14.98V8.81L14.56 15.35H15.04V8.17L16.56 8.03V7.22H13.24V8.03L14.71 8.17V13.21L10.61 7.11H10.16V8.28H9.71L10.16 7.11H9.71V8.28H9.26L9.71 7.11H9.26V7.41H7.71Z", viewBox: "0 0 24 24", h: 24 },
+                            { name: "Figma", color: "#F24E1E", path: "M12 0C14.209 0 16 1.791 16 4C16 6.209 14.209 8 12 8H12V0ZM8 0C5.791 0 4 1.791 4 4C4 6.209 5.791 8 8 8V0ZM8 8C5.791 8 4 9.791 4 12C4 14.209 5.791 16 8 16V8ZM12 8C14.209 8 16 9.791 16 12C16 14.209 14.209 16 12 16H8V8H12ZM8 16C5.791 16 4 17.791 4 20C4 22.209 5.791 24 8 24C10.209 24 12 22.209 12 20V16H8Z", viewBox: "0 0 24 24", h: 22 },
+                            { name: "GitHub", color: "#FFFFFF", path: "M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.43.372.823 1.102.823 2.222 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12", viewBox: "0 0 24 24", h: 22 }
                         ].map(brand => (
-                            <div key={brand.name} style={{ display: "flex", alignItems: "center", gap: 9, opacity: 0.45, transition: "all 0.3s ease", cursor: "default" }}
-                                onMouseEnter={e => { e.currentTarget.style.opacity = "0.9"; e.currentTarget.style.transform = "translateY(-1px)"; }}
-                                onMouseLeave={e => { e.currentTarget.style.opacity = "0.45"; e.currentTarget.style.transform = "translateY(0)"; }}>
-                                <svg height={brand.h} viewBox={brand.viewBox} fill="white">
+                            <div key={brand.name} style={{ display: "flex", alignItems: "center", gap: 12, opacity: 0.9, transition: "all 0.3s ease", cursor: "default" }}
+                                onMouseEnter={e => { e.currentTarget.style.opacity = "1"; e.currentTarget.style.transform = "translateY(-3px)"; }}
+                                onMouseLeave={e => { e.currentTarget.style.opacity = "0.9"; e.currentTarget.style.transform = "translateY(0)"; }}>
+                                <svg height={brand.h} viewBox={brand.viewBox} fill={brand.color} style={{ filter: "drop-shadow(0 0 6px rgba(255,255,255,0.02))" }}>
                                     <path d={brand.path} />
                                 </svg>
-                                <span style={{ fontSize: 16, fontWeight: 700, color: "white", letterSpacing: "-0.01em" }}>{brand.name}</span>
+                                <span style={{ fontSize: 18, fontWeight: 900, color: "white", letterSpacing: "-0.03em" }}>{brand.name}</span>
                             </div>
                         ))}
+
+
+
                     </div>
                 </div>
             </div>
@@ -678,15 +725,15 @@ export default function Landing() {
                                             </div>
                                         </div>
                                     )}
-                                    <div style={{ fontSize: 13, fontWeight: 700, color: SEC, marginBottom: 8 }}>{name}</div>
-                                    <div style={{ display: "flex", alignItems: "baseline", gap: 4, marginBottom: 4 }}>
-                                        <span style={{ fontSize: 42, fontWeight: 900, letterSpacing: "-0.04em", color: TXT }}>{price === 0 ? "Free" : `$${price}`}</span>
-                                        {price > 0 && <span style={{ fontSize: 13, color: SEC }}>/mo</span>}
+                                    <div style={{ fontSize: 13, fontWeight: 800, color: featured ? "#fff" : "rgba(255,255,255,0.7)", marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.05em" }}>{name}</div>
+                                    <div style={{ display: "flex", alignItems: "baseline", gap: 4, marginBottom: 6 }}>
+                                        <span style={{ fontSize: 48, fontWeight: 900, letterSpacing: "-0.04em", color: featured ? "#fff" : TXT }}>{price === 0 ? "Free" : `$${price}`}</span>
+                                        {price > 0 && <span style={{ fontSize: 16, color: featured ? "rgba(255,255,255,0.7)" : SEC }}>/mo</span>}
                                     </div>
-                                    {annual && price > 0 && <div style={{ fontSize: 12, color: GN, fontWeight: 600, marginBottom: 6 }}>Save ${(mp - yp) * 12}/yr when billed annually</div>}
+                                    {annual && price > 0 && <div style={{ fontSize: 13, color: featured ? "#A7F3D0" : GN, fontWeight: 700, marginBottom: 12 }}>Save ${(mp - yp) * 12}/yr when billed annually</div>}
                                     <Link href={link}><a className="lp4-cta-btn" style={{ width: "100%", justifyContent: "center", height: 44, fontSize: 14, borderRadius: 11, marginTop: 16, marginBottom: 20, display: "inline-flex" }}>{cta}</a></Link>
-                                    <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
-                                        {perks.map(f => <div key={f} style={{ display: "flex", gap: 9, alignItems: "flex-start" }}><CheckCircle2 style={{ height: 15, width: 15, color: featured ? INDL : GN, flexShrink: 0, marginTop: 1 }} /><span style={{ fontSize: 13, color: SEC }}>{f}</span></div>)}
+                                    <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
+                                        {perks.map(f => <div key={f} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}><CheckCircle2 style={{ height: 16, width: 16, color: featured ? "#fff" : INDL, flexShrink: 0, marginTop: 1 }} /><span style={{ fontSize: 14, color: featured ? "rgba(255,255,255,0.95)" : SEC, fontWeight: featured ? 500 : 400 }}>{f}</span></div>)}
                                     </div>
                                 </div>
                             );
@@ -707,7 +754,8 @@ export default function Landing() {
             </section>
 
             {/* ── FINAL CTA ────────────────────────────────── */}
-            <section className="lp5-cta-section" style={{ padding: "92px 0", background: "linear-gradient(135deg,#0D1020 0%,#1a0e35 50%,#0B1520 100%)", position: "relative", overflow: "hidden" }}>
+            <section className="lp5-cta-section" style={{ padding: "92px 0", background: "linear-gradient(135deg,rgba(13,16,32,0.8) 0%,rgba(26,14,53,0.7) 50%,rgba(11,21,32,0.8) 100%)", position: "relative", overflow: "hidden" }}>
+
                 <div style={{ position: "absolute", top: "20%", left: "15%", width: 420, height: 420, borderRadius: "50%", background: "radial-gradient(circle,rgba(99,102,241,0.18) 0%,transparent 70%)", animation: "lp3-orb-a 18s ease-in-out infinite", pointerEvents: "none" }} />
                 <div style={{ position: "absolute", bottom: "10%", right: "12%", width: 360, height: 360, borderRadius: "50%", background: "radial-gradient(circle,rgba(139,92,246,0.14) 0%,transparent 70%)", animation: "lp3-orb-b 22s ease-in-out infinite", pointerEvents: "none" }} />
                 <div style={{ ...W, textAlign: "center", position: "relative" }}>
@@ -726,7 +774,8 @@ export default function Landing() {
             </section>
 
             {/* ── FOOTER ───────────────────────────────────── */}
-            <footer style={{ borderTop: `1px solid ${BOR}`, padding: "52px 0 28px", background: BG }}>
+            <footer style={{ borderTop: `1px solid ${BOR}`, padding: "52px 0 28px", background: "transparent" }}>
+
                 <div style={W}>
                     <div className="lp5-footer-grid" style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr 1fr 1fr 1fr", gap: 28, marginBottom: 44 }}>
                         <div>
