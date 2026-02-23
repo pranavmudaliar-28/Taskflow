@@ -277,7 +277,7 @@ function TechStackBadge() {
     const stack = [
         { cat: "Frontend", icon: "⚛️", items: ["React 18 + TypeScript", "Vite", "TailwindCSS", "React Query", "Wouter (routing)"] },
         { cat: "Backend", icon: "🟢", items: ["Node.js + Express", "Passport.js (auth)", "Socket.io (realtime)"] },
-        { cat: "Database", icon: "🗄️", items: ["PostgreSQL", "Drizzle ORM"] },
+        { cat: "Database", icon: "🗄️", items: ["MongoDB", "Mongoose"] },
         { cat: "Payments", icon: "💳", items: ["Stripe"] },
     ];
 
@@ -290,7 +290,7 @@ function TechStackBadge() {
                 aria-label="Tech stack info"
             >
                 <span className="lp6-badge-dot" />
-                <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: "-0.01em" }}>Built by Pranav Mudaliyar</span>
+                <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: "-0.01em" }}>Built by SlashEasy</span>
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ transition: "transform 0.3s", transform: open ? "rotate(180deg)" : "rotate(0deg)" }}>
                     <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
@@ -323,13 +323,16 @@ function TechStackBadge() {
                     </div>
 
                     {/* footer */}
-                    <div className="lp6-popup-footer">
-                        <span>Made with </span>
-                        <span style={{ color: "#EF4444", fontSize: 15 }}>♥</span>
-                        <span> by </span>
-                        <span style={{ fontWeight: 800, background: "linear-gradient(90deg,#6366F1,#8B5CF6)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-                            Pranav Mudaliyar
-                        </span>
+                    <div className="lp6-popup-footer" style={{ flexDirection: "column", gap: 2 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                            <span>Made with </span>
+                            <span style={{ color: "#EF4444", fontSize: 15 }}>♥</span>
+                            <span> by </span>
+                            <span style={{ fontWeight: 800, background: "linear-gradient(90deg,#6366F1,#8B5CF6)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+                                SlashEasy
+                            </span>
+                        </div>
+                        <div style={{ fontSize: 11, opacity: 0.8 }}>Developer: Pranav Mudaliyar</div>
                     </div>
                 </div>
             )}
