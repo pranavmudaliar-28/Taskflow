@@ -441,24 +441,26 @@ export default function Landing() {
 
 
             {/* ── TRUST BAR ────────────────────────────────── */}
-            <div style={{ borderTop: `1px solid ${BOR}`, borderBottom: `1px solid ${BOR}`, padding: "32px 0" }}>
+            <div style={{ borderTop: `1px solid ${BOR}`, borderBottom: `1px solid ${BOR}`, padding: "36px 0" }}>
                 <div style={{ ...W, textAlign: "center" }}>
-                    <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.25)", marginBottom: 24 }}>Trusted by 2,000+ teams worldwide</p>
-                    <div className="lp5-trust-bar" style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "clamp(30px, 5vw, 60px)", flexWrap: "wrap", opacity: 0.6 }}>
+                    <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.25)", marginBottom: 28 }}>Trusted by 2,000+ teams worldwide</p>
+                    <div className="lp5-trust-bar" style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "clamp(24px, 4vw, 56px)", flexWrap: "wrap" }}>
                         {[
-                            { name: "Stripe", path: "M0 6.75C0 5.784.784 5 1.75 5h12.5c.966 0 1.75.784 1.75 1.75v2.5c0 .966-.784 1.75-1.75 1.75H1.75C.784 11 0 10.216 0 9.25v-2.5zm4.226 1.385c-.584 0-.937-.164-.937-.593 0-.468.607-.674 1.36-.93 1.228-.415 2.844-.963 2.851-2.993C7.5 1.868 5.924 1 3.63 1A7.7 7.7 0 0 0 .621 1.626v2.616c.926-.506 2.095-.88 3.01-.88.617 0 1.058.165 1.058.671 0 .518-.658.755-1.453 1.041C1.026 5.49 0 6.94 0 8.11c0 1.145 1.488 2.31 3.726 2.31a7.3 7.3 0 0 0 2.734-.505V7.332c-.838.45-1.896.703-2.734.703z", viewBox: "0 0 16 12" },
-                            { name: "Vercel", path: "M12 1L1 21h22L12 1z", viewBox: "0 0 24 24" },
-                            { name: "Linear", path: "M12.5 0L10.5 1L0.5 8.5C0.2 8.7 0 9.1 0 9.5C0 9.9 0.2 10.3 0.5 10.5L10.5 18L12.5 19C13.6 19.5 15 18.7 15 17.5V1.5C15 0.3 13.6 -0.5 12.5 0Z", viewBox: "0 0 15 19" },
-                            { name: "Notion", path: "M4 2v18h16V2H4zm11 13.5v-6.5h.5l4 6h.5v-6.5", viewBox: "0 0 24 24" },
-                            { name: "Figma", path: "M12 4a4 4 0 1 1-8 0 4 4 0 0 1 8 0zM4 12a4 4 0 1 1 8 0 4 4 0 0 1-8 0zM12 12a4 4 0 1 1 8 0 4 4 0 0 1-8 0zM4 20a4 4 0 1 1 8 0 4 4 0 0 1-8 0zM12 20a4 4 0 0 1 4 4v4h-4v-4z", viewBox: "0 0 24 28" },
-                            { name: "GitHub", path: "M8 0c4.42 0 8 3.58 8 8c0 3.54-2.29 6.53-5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8", viewBox: "0 0 16 16" }
+                            { name: "Stripe", path: "M0 6.75C0 5.784.784 5 1.75 5h12.5c.966 0 1.75.784 1.75 1.75v2.5c0 .966-.784 1.75-1.75 1.75H1.75C.784 11 0 10.216 0 9.25v-2.5zm4.226 1.385c-.584 0-.937-.164-.937-.593 0-.468.607-.674 1.36-.93 1.228-.415 2.844-.963 2.851-2.993C7.5 1.868 5.924 1 3.63 1A7.7 7.7 0 0 0 .621 1.626v2.616c.926-.506 2.095-.88 3.01-.88.617 0 1.058.165 1.058.671 0 .518-.658.755-1.453 1.041C1.026 5.49 0 6.94 0 8.11c0 1.145 1.488 2.31 3.726 2.31a7.3 7.3 0 0 0 2.734-.505V7.332c-.838.45-1.896.703-2.734.703z", viewBox: "0 0 16 12", h: 22 },
+                            { name: "Vercel", path: "M12 1L1 21h22L12 1z", viewBox: "0 0 24 24", h: 18 },
+                            { name: "Linear", path: "M12.5 0L10.5 1L0.5 8.5C0.2 8.7 0 9.1 0 9.5C0 9.9 0.2 10.3 0.5 10.5L10.5 18L12.5 19C13.6 19.5 15 18.7 15 17.5V1.5C15 0.3 13.6 -0.5 12.5 0Z", viewBox: "0 0 15 19", h: 20 },
+                            { name: "Notion", path: "M4 2v18h16V2H4zm11 13.5v-6.5h.5l4 6h.5v-6.5", viewBox: "0 0 24 24", h: 20 },
+                            { name: "Figma", path: "M12 4a4 4 0 1 1-8 0 4 4 0 0 1 8 0zM4 12a4 4 0 1 1 8 0 4 4 0 0 1-8 0zM12 12a4 4 0 1 1 8 0 4 4 0 0 1-8 0zM4 20a4 4 0 1 1 8 0 4 4 0 0 1-8 0zM12 20a4 4 0 0 1 4 4v4h-4v-4z", viewBox: "0 0 24 28", h: 20 },
+                            { name: "GitHub", path: "M8 0c4.42 0 8 3.58 8 8c0 3.54-2.29 6.53-5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8", viewBox: "0 0 16 16", h: 22 }
                         ].map(brand => (
-                            <svg key={brand.name} height="22" viewBox={brand.viewBox} fill="white" style={{ opacity: 0.35, transition: "all 0.3s ease", cursor: "default" }}
-                                onMouseEnter={e => { e.currentTarget.style.opacity = "0.8"; e.currentTarget.style.transform = "scale(1.05)"; }}
-                                onMouseLeave={e => { e.currentTarget.style.opacity = "0.35"; e.currentTarget.style.transform = "scale(1)"; }}>
-                                <title>{brand.name}</title>
-                                <path d={brand.path} />
-                            </svg>
+                            <div key={brand.name} style={{ display: "flex", alignItems: "center", gap: 9, opacity: 0.45, transition: "all 0.3s ease", cursor: "default" }}
+                                onMouseEnter={e => { e.currentTarget.style.opacity = "0.9"; e.currentTarget.style.transform = "translateY(-1px)"; }}
+                                onMouseLeave={e => { e.currentTarget.style.opacity = "0.45"; e.currentTarget.style.transform = "translateY(0)"; }}>
+                                <svg height={brand.h} viewBox={brand.viewBox} fill="white">
+                                    <path d={brand.path} />
+                                </svg>
+                                <span style={{ fontSize: 16, fontWeight: 700, color: "white", letterSpacing: "-0.01em" }}>{brand.name}</span>
+                            </div>
                         ))}
                     </div>
                 </div>
