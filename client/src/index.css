@@ -2551,3 +2551,70 @@ body {
     max-width: 320px;
   }
 }
+
+/* ── Hero Improvements (lp3) ────────────────────────────────── */
+
+.lp3-grad {
+  background: linear-gradient(135deg, #6366F1 0%, #A855F7 50%, #EC4899 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 900;
+}
+
+.lp3-hero-in {
+  opacity: 0;
+  transform: translateY(24px);
+  animation: lp3-fade-in-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.lp3-hi-1 {
+  animation-delay: 0.1s;
+}
+
+.lp3-hi-2 {
+  animation-delay: 0.2s;
+}
+
+.lp3-hi-3 {
+  animation-delay: 0.3s;
+}
+
+.lp3-hi-4 {
+  animation-delay: 0.4s;
+}
+
+.lp3-hi-5 {
+  animation-delay: 0.5s;
+}
+
+@keyframes lp3-fade-in-up {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes lp3-orb-a {
+
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+
+  50% {
+    transform: translate(20px, -30px);
+  }
+}
+
+@keyframes lp3-orb-b {
+
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+
+  50% {
+    transform: translate(-30px, 20px);
+  }
+}

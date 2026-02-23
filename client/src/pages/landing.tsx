@@ -412,11 +412,11 @@ export default function Landing() {
                             <div className="lp3-hero-in lp3-hi-1" style={{ marginBottom: 20 }}>
                                 <span className="lp4-pill"><Sparkles style={{ height: 10, width: 10 }} /> Now free for teams up to 5</span>
                             </div>
-                            <h1 className="lp3-hero-in lp3-hi-2" style={{ fontSize: "clamp(36px,5.5vw,76px)", fontWeight: 900, letterSpacing: "-0.04em", lineHeight: 1.06, marginBottom: 22, wordBreak: "break-word" }}>
-                                Ship projects<br />with <span className="lp3-grad">perfect clarity.</span>
+                            <h1 className="lp3-hero-in lp3-hi-2" style={{ fontSize: "clamp(40px,6vw,84px)", fontWeight: 900, letterSpacing: "-0.045em", lineHeight: 1.02, marginBottom: 24, wordBreak: "break-word", textShadow: "0 10px 40px rgba(0,0,0,0.6)" }}>
+                                Master your chaos<br />with <span className="lp3-grad">ultimate precision.</span>
                             </h1>
-                            <p className="lp3-hero-in lp3-hi-3" style={{ fontSize: "clamp(15px,1.6vw,18px)", color: SEC, lineHeight: 1.75, marginBottom: 36, maxWidth: 480 }}>
-                                Plan work, track progress and keep every team member aligned — all in one fast, focused workspace.
+                            <p className="lp3-hero-in lp3-hi-3" style={{ fontSize: "clamp(16px,1.8vw,20px)", color: "rgba(255,255,255,0.65)", lineHeight: 1.8, marginBottom: 40, maxWidth: 540 }}>
+                                Stop juggling tools and start shipping results. TaskFlow Pro is the central workspace that actually keeps your team in sync — in real-time.
                             </p>
                             <div className="lp3-hero-in lp3-hi-4 lp5-hero-btns" style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 20 }}>
                                 <Link href="/signup"><a className="lp4-cta-btn" style={{ height: 52, padding: "0 30px", fontSize: 15 }}>Start Free Workspace <ArrowRight style={{ height: 16, width: 16 }} /></a></Link>
