@@ -11,22 +11,34 @@ const allowedOrigins = [
     'http://127.0.0.1:5001',
     'http://127.0.0.1:5002',
     process.env.FRONTEND_URL,
-    process.env.PORT ? `http://localhost:${process.env.PORT}` : null,
-    process.env.PORT ? `http://0.0.0.0:${process.env.PORT}` : null,
-    process.env.PORT ? `http://127.0.0.1:${process.env.PORT}` : null,
 ].filter(Boolean) as string[];
 
 export const corsConfig = cors({
     origin: (origin, callback) => {
-        // Allow requests with no origin (like mobile apps or curl) if not in production
-        // For enterprise security, we might want to restrict this further
-        if (!origin || allowedOrigins.includes(origin)) {
-            callback(null, true);
-        } else {
-            callback(new Error('Not allowed by CORS'));
+        // 1. Allow requests with no origin (like mobile apps or curl)
+        if (!origin) {
+            return callback(null, true);
         }
+
+        // 2. Allow if in explicit whitelist
+        if (allowedOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+
+        // 3. Allow if it's a Render subdomain (common for this project)
+        if (origin.endsWith('.onrender.com')) {
+            return callback(null, true);
+        }
+
+        // 4. Fallback for development/internal testing if origin matches a local pattern
+        if (origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1')) {
+            return callback(null, true);
+        }
+
+        console.warn(`[CORS] Rejected origin: ${origin}`);
+        callback(new Error('Not allowed by CORS'));
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-API-Version'],
 });
