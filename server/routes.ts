@@ -199,11 +199,30 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/auth/logout", authMiddleware, (req, res) => {
-    logger.info('User logged out', { userId: (req as any).user.id });
-    res.json({
-      message: "Logged out successfully",
-      instructions: "Clear local storage, session storage, and cookies on the frontend."
+  app.post("/api/auth/logout", (req, res) => {
+    const userId = (req as any).user?.id;
+
+    req.logout((err) => {
+      if (err) {
+        logger.error('Logout error', { error: err.message });
+        return res.status(500).json({ message: "Logout failed" });
+      }
+
+      if (req.session) {
+        req.session.destroy((destroyErr) => {
+          if (destroyErr) {
+            logger.error('Session destruction error', { error: destroyErr.message });
+          }
+
+          res.clearCookie('connect.sid');
+          logger.info('User logged out and session destroyed', { userId });
+          res.json({ message: "Logged out successfully" });
+        });
+      } else {
+        res.clearCookie('connect.sid');
+        logger.info('User logged out (no session to destroy)', { userId });
+        res.json({ message: "Logged out successfully" });
+      }
     });
   });
 
