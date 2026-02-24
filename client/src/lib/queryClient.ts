@@ -4,7 +4,13 @@ async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     if (res.status === 401) {
       queryClient.setQueryData(["/api/auth/user"], null);
-      if (window.location.pathname !== "/" && window.location.pathname !== "/login" && window.location.pathname !== "/signup") {
+
+      // Prevent redirect loop if we're already on an auth page, 
+      // or if we're on a deep page and just need to show login (without hard reload if possible)
+      const isAuthPage = ["/", "/login", "/signup"].includes(window.location.pathname);
+      const isCallback = window.location.pathname === "/api/callback";
+
+      if (!isAuthPage && !isCallback) {
         window.location.href = "/login";
       }
     }
@@ -34,18 +40,18 @@ export const getQueryFn: <T>(options: {
   on401: UnauthorizedBehavior;
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
-  async ({ queryKey }) => {
-    const res = await fetch(queryKey.join("/") as string, {
-      credentials: "include",
-    });
+    async ({ queryKey }) => {
+      const res = await fetch(queryKey.join("/") as string, {
+        credentials: "include",
+      });
 
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      return null;
-    }
+      if (unauthorizedBehavior === "returnNull" && res.status === 401) {
+        return null;
+      }
 
-    await throwIfResNotOk(res);
-    return await res.json();
-  };
+      await throwIfResNotOk(res);
+      return await res.json();
+    };
 
 export const queryClient = new QueryClient({
   defaultOptions: {

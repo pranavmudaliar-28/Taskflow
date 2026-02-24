@@ -132,11 +132,19 @@ export async function registerRoutes(
         role: "member", // Default role
       });
 
-      logger.info('User registered', { userId: user.id, email: user.email });
+      // Initialize session
+      req.login(user, (err) => {
+        if (err) {
+          console.error("Session initialization error during registration:", err);
+          return res.status(500).json({ message: "Registration succeeded but session failed" });
+        }
 
-      res.json({
-        user: Serializer.user(user),
-        token
+        logger.info('User registered and logged in', { userId: user.id, email: user.email });
+
+        res.json({
+          user: Serializer.user(user),
+          token
+        });
       });
     } catch (error: any) {
       if (error?.issues) {
@@ -168,11 +176,19 @@ export async function registerRoutes(
         role: user.role || "member",
       });
 
-      logger.info('User logged in', { userId: user.id });
+      // Initialize session
+      req.login(user, (err) => {
+        if (err) {
+          console.error("Session initialization error during login:", err);
+          return res.status(500).json({ message: "Login succeeded but session failed" });
+        }
 
-      res.json({
-        user: Serializer.user(user),
-        token
+        logger.info('User logged in with session', { userId: user.id });
+
+        res.json({
+          user: Serializer.user(user),
+          token
+        });
       });
     } catch (error: any) {
       if (error?.issues) {

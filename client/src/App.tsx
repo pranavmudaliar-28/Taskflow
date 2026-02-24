@@ -24,23 +24,25 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { Project, Notification } from "@shared/schema";
 
-import { lazy, Suspense } from "react";
-const Landing = lazy(() => import("@/pages/landing"));
-const Login = lazy(() => import("@/pages/login"));
-const Signup = lazy(() => import("@/pages/signup"));
-const Dashboard = lazy(() => import("@/pages/dashboard"));
-const TasksPage = lazy(() => import("@/pages/tasks"));
-const TaskView = lazy(() => import("@/pages/task-view"));
-const ProjectPage = lazy(() => import("@/pages/project"));
-const TimeTracking = lazy(() => import("@/pages/time-tracking"));
-const Analytics = lazy(() => import("@/pages/analytics"));
-const Notifications = lazy(() => import("@/pages/notifications"));
-const SettingsPage = lazy(() => import("@/pages/settings"));
-const OrganizationSettings = lazy(() => import("@/pages/organization-settings"));
-const AcceptInvitation = lazy(() => import("@/pages/accept-invitation"));
-const Onboarding = lazy(() => import("@/pages/onboarding"));
-const BillingPage = lazy(() => import("@/pages/billing"));
-const NotFound = lazy(() => import("@/pages/not-found"));
+import { Suspense } from "react";
+import { lazyRetry } from "./lib/lazy-retry";
+const Landing = lazyRetry(() => import("@/pages/landing"));
+const Login = lazyRetry(() => import("@/pages/login"));
+const Signup = lazyRetry(() => import("@/pages/signup"));
+const Dashboard = lazyRetry(() => import("@/pages/dashboard"));
+const TasksPage = lazyRetry(() => import("@/pages/tasks"));
+const TaskView = lazyRetry(() => import("@/pages/task-view"));
+const ProjectPage = lazyRetry(() => import("@/pages/project"));
+const TimeTracking = lazyRetry(() => import("@/pages/time-tracking"));
+const Analytics = lazyRetry(() => import("@/pages/analytics"));
+const Notifications = lazyRetry(() => import("@/pages/notifications"));
+const SettingsPage = lazyRetry(() => import("@/pages/settings"));
+const OrganizationSettings = lazyRetry(() => import("@/pages/organization-settings"));
+const AcceptInvitation = lazyRetry(() => import("@/pages/accept-invitation"));
+const Onboarding = lazyRetry(() => import("@/pages/onboarding"));
+const BillingPage = lazyRetry(() => import("@/pages/billing"));
+const NotFound = lazyRetry(() => import("@/pages/not-found"));
+
 
 
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {

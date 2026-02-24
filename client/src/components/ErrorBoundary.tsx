@@ -29,8 +29,56 @@ export class ErrorBoundary extends Component<Props, State> {
         };
     }
 
-    public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-        console.error('ErrorBoundary caught an error:', error, errorInfo);
+    public componentDidCatch(error: any, errorInfo: ErrorInfo) {
+        // Use a very robust way to get the error message
+        const errorMessage = (error?.message || String(error) || '').toLowerCase();
+
+        console.error('ErrorBoundary caught an error:', error);
+        console.group('Error Details');
+        console.log('Message:', errorMessage);
+        console.log('Stack:', error?.stack);
+        console.log('Info:', errorInfo?.componentStack);
+        console.groupEnd();
+
+        // Handle chunk load errors/dynamic import failures
+        const isChunkLoadError =
+            errorMessage.includes('failed to fetch dynamically imported module') ||
+            errorMessage.includes('css_chunk_load_failed') ||
+            errorMessage.includes('loading chunk') ||
+            errorMessage.includes('module not found') ||
+            errorMessage.includes('script error');
+
+        if (isChunkLoadError) {
+            console.warn('Chunk load error detected. Attempting automatic recovery...');
+
+            const RELOAD_KEY = 'last_chunk_load_reload';
+            const now = Date.now();
+            const lastReload = sessionStorage.getItem(RELOAD_KEY);
+
+            // Allow up to 2 reloads in short succession, then stop
+            const reloadCountKey = 'chunk_load_reload_count';
+            const reloadCount = parseInt(sessionStorage.getItem(reloadCountKey) || '0');
+
+            if (!lastReload || (now - parseInt(lastReload) > 30000)) {
+                // If it's been more than 30 seconds since last reload, reset count
+                sessionStorage.setItem(reloadCountKey, '1');
+                sessionStorage.setItem(RELOAD_KEY, now.toString());
+
+                console.log('Reloading page to refresh modules...');
+                window.location.href = window.location.href; // Force a hard-ish reload
+                return;
+            } else if (reloadCount < 2) {
+                // Allow one more retry within the 30s window
+                sessionStorage.setItem(reloadCountKey, (reloadCount + 1).toString());
+                sessionStorage.setItem(RELOAD_KEY, now.toString());
+
+                console.log(`Reload attempt ${reloadCount + 1}. Refreshing...`);
+                window.location.reload();
+                return;
+            } else {
+                console.error('Recovery failed after multiple attempts. Manual intervention required.');
+            }
+        }
 
         this.setState({
             error,

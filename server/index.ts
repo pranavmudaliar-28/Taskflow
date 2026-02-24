@@ -19,6 +19,7 @@ declare module "http" {
 }
 
 // Security headers
+const isDev = process.env.NODE_ENV !== "production";
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -26,14 +27,16 @@ app.use(helmet({
       scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://js.stripe.com"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", "data:", "https:", "https://*.stripe.com"],
-      connectSrc: ["'self'", "https://api.stripe.com"],
+      connectSrc: ["'self'", "https://api.stripe.com", "ws:", "wss:", "http://localhost:*", "http://127.0.0.1:*"],
       fontSrc: ["'self'", "data:"],
       objectSrc: ["'none'"],
       mediaSrc: ["'self'"],
       frameSrc: ["'self'", "https://js.stripe.com"],
+      upgradeInsecureRequests: isDev ? null : [], // Don't upgrade in dev
     },
   },
-  crossOriginEmbedderPolicy: false, // Allow embedding for development
+  crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: { policy: "cross-origin" },
 }));
 
 app.use(corsConfig);

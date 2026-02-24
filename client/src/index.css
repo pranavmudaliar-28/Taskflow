@@ -2662,10 +2662,6 @@ body {
   animation: lp5-popular-glow 4s ease-in-out infinite, lp5-float-price 6s ease-in-out infinite !important;
 }
 
-.lp5-popular-card.lp3-reveal {
-  /* override reveal animation if needed, but usually we just want to ADD to it */
-}
-
 .lp5-badge-shimmer-wrapper {
   position: relative;
   overflow: hidden;
