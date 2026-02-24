@@ -179,6 +179,8 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
 
 function AppRouter() {
   const { user, isLoading } = useAuth();
+  const params = new URLSearchParams(window.location.search);
+  const isLoggingOut = params.get("logout") === "1";
 
   if (isLoading) {
     return (
@@ -191,7 +193,11 @@ function AppRouter() {
     );
   }
 
-  if (!user) {
+  // If user is logged out, OR if we are in the middle of a hard logout failsafe redirect
+  if (!user || isLoggingOut) {
+    if (isLoggingOut && user) {
+      console.log("[Router] Logout flag detected, ignoring user session to break loop");
+    }
     return (
       <Switch>
         <Route path="/" component={Landing} />

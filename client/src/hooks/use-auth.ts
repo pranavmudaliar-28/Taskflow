@@ -19,20 +19,24 @@ async function fetchUser(): Promise<User | null> {
 }
 
 async function logout(): Promise<void> {
+  console.log("[Logout] Starting frontend logout cleanup...");
   try {
     await fetch("/api/auth/logout", {
       method: "POST",
       credentials: "include",
     });
-  } catch {
-    // fallback
+    console.log("[Logout] Backend logout API call successful");
+  } catch (error) {
+    console.error("[Logout] Backend logout API call failed", error);
   }
 
   // Clear frontend storage
+  console.log("[Logout] Clearing localStorage and sessionStorage");
   localStorage.clear();
   sessionStorage.clear();
 
   // Clear all readable cookies
+  console.log("[Logout] Clearing all readable cookies");
   document.cookie.split(";").forEach((c) => {
     document.cookie = c
       .replace(/^ +/, "")
@@ -40,10 +44,12 @@ async function logout(): Promise<void> {
   });
 
   // Wipe entire React Query cache to prevent stale data visibility
+  console.log("[Logout] Clearing globalQueryClient cache");
   globalQueryClient.clear();
 
-  // Use replace to prevent back-button loops
-  window.location.replace("/login");
+  // Use a hard redirect with a failsafe flag to break auto-login loops
+  console.log("[Logout] Performing hard failsafe redirect to /login?logout=1");
+  window.location.href = "/login?logout=1";
 }
 
 export function useAuth() {
@@ -52,7 +58,7 @@ export function useAuth() {
     queryKey: ["/api/auth/user"],
     queryFn: fetchUser,
     retry: false,
-    staleTime: 1000 * 60 * 5,
+    staleTime: 0, // Force fresh check on mount to catch logout state
     refetchOnWindowFocus: true,
   });
 

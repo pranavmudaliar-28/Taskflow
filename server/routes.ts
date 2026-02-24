@@ -177,12 +177,14 @@ export async function registerRoutes(
       });
 
       // Initialize session
+      console.log(`[Auth] Initializing session for user: ${user.id}`);
       req.login(user, (err) => {
         if (err) {
-          console.error("Session initialization error during login:", err);
+          console.error("[Auth] Session initialization error during login:", err);
           return res.status(500).json({ message: "Login succeeded but session failed" });
         }
 
+        console.log(`[Auth] Session initialized successfully for user: ${user.id}`);
         logger.info('User logged in with session', { userId: user.id });
 
         res.json({
@@ -201,6 +203,13 @@ export async function registerRoutes(
 
   app.post("/api/auth/logout", (req, res) => {
     const userId = (req as any).user?.id;
+    console.log(`[Logout] Starting aggressive logout for user: ${userId}`);
+
+    // 1. Manually unset req.user if present
+    if ((req as any).user) {
+      console.log(`[Logout] Unsetting req.user manually`);
+      (req as any).user = undefined;
+    }
 
     req.logout((err) => {
       if (err) {
