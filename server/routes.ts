@@ -224,6 +224,12 @@ export async function registerRoutes(
         sameSite: 'lax' as const
       };
 
+      // Also clear without sameSite/secure just in case
+      const simpleCookieOptions = {
+        path: '/',
+        httpOnly: true
+      };
+
       if (req.session) {
         req.session.destroy((destroyErr) => {
           if (destroyErr) {
@@ -231,14 +237,19 @@ export async function registerRoutes(
           }
 
           res.clearCookie('connect.sid', cookieOptions);
-          res.clearCookie('token', cookieOptions); // Clear any JWT cookie if present
-          logger.info('User logged out and session destroyed', { userId });
+          res.clearCookie('connect.sid', simpleCookieOptions);
+          res.clearCookie('token', cookieOptions);
+          res.clearCookie('token', simpleCookieOptions);
+
+          console.log(`[Logout] Session destroyed and cookies cleared for user: ${userId}`);
           res.json({ message: "Logged out successfully" });
         });
       } else {
         res.clearCookie('connect.sid', cookieOptions);
+        res.clearCookie('connect.sid', simpleCookieOptions);
         res.clearCookie('token', cookieOptions);
-        logger.info('User logged out (no session to destroy)', { userId });
+        res.clearCookie('token', simpleCookieOptions);
+        console.log(`[Logout] No session found, cookies cleared for user: ${userId}`);
         res.json({ message: "Logged out successfully" });
       }
     });

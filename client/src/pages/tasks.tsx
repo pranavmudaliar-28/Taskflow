@@ -414,7 +414,7 @@ export default function TasksPage() {
                                         onTaskClick={handleTaskClick}
                                         getTaskUrl={getTaskUrl}
                                         onTaskUpdate={handleTaskUpdate}
-                                        onReorder={groupBy === "none" && sortBy === "order" ? handleReorder : undefined}
+                                        onReorder={sortBy === "order" ? handleReorder : undefined}
                                         onCreateSubtask={handleCreateSubtask}
                                         expanded={expanded}
                                         onExpandedChange={setExpanded}

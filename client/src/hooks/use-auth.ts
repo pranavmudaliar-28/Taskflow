@@ -3,19 +3,24 @@ import { queryClient as globalQueryClient } from "@/lib/queryClient";
 import type { User } from "@shared/models/auth";
 
 async function fetchUser(): Promise<User | null> {
+  console.log("[Auth] Fetching user session status...");
   const response = await fetch("/api/auth/user", {
     credentials: "include",
   });
 
   if (response.status === 401) {
+    console.log("[Auth] Session status: Unauthorized (401)");
     return null;
   }
 
   if (!response.ok) {
+    console.error(`[Auth] Session status error: ${response.status}`);
     throw new Error(`${response.status}: ${response.statusText}`);
   }
 
-  return response.json();
+  const user = await response.json();
+  console.log("[Auth] Session status: Authenticated", { userId: user.id });
+  return user;
 }
 
 async function logout(): Promise<void> {

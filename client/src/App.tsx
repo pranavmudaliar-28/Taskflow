@@ -180,6 +180,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
 function AppRouter() {
   const { user, isLoading } = useAuth();
   const params = new URLSearchParams(window.location.search);
+  // Honor the logout flag to force login view even if user state is still lingering
   const isLoggingOut = params.get("logout") === "1";
 
   if (isLoading) {
@@ -204,58 +205,62 @@ function AppRouter() {
         <Route path="/login" component={Login} />
         <Route path="/signup" component={Signup} />
         <Route path="/accept-invitation" component={AcceptInvitation} />
-        <Route component={Landing} />
+        <Route>
+          <Redirect to={`/login${window.location.search}`} />
+        </Route>
       </Switch>
     );
   }
 
-  // If user is logged in but hasn't completed onboarding
-  // NOTE: /billing is intentionally allowed here so users returning from Stripe
-  // aren't immediately bounced to /onboarding before session-status updates the DB.
-  if (user.onboardingStep !== "completed") {
-    return (
-      <Switch>
-        <Route path="/onboarding" component={Onboarding} />
-        <Route path="/accept-invitation" component={AcceptInvitation} />
-        <Route path="/billing">
-          {user.isAdmin ? <BillingPage /> : <Redirect to="/onboarding" />}
-        </Route>
-        <Route>
-          <Redirect to="/onboarding" />
-        </Route>
-      </Switch>
-    );
-  }
+  // If user is logged in, handle onboarding and dashboard routing
+  const isOnboarded = user.onboardingStep === "completed";
 
   return (
-    <AuthenticatedLayout>
-      <Switch>
-        <Route path="/" component={Dashboard} />
-        <Route path="/dashboard" component={Dashboard} />
-        <Route path="/tasks" component={TasksPage} />
-        <Route path="/tasks/:id" component={TaskView} />
-        <Route path="/projects/:projectId/:taskId" component={TaskView} />
-        <Route path="/projects/:projectId/:parentTaskId/:taskId" component={TaskView} />
-        <Route path="/projects/:id" component={ProjectPage} />
-        <Route path="/time-tracking" component={TimeTracking} />
-        <Route path="/analytics" component={Analytics} />
-        <Route path="/notifications" component={Notifications} />
-        <Route path="/settings" component={SettingsPage} />
-        <Route path="/organization-settings" component={OrganizationSettings} />
-        <Route path="/accept-invitation" component={AcceptInvitation} />
-        <Route path="/onboarding">
-          <Redirect to="/dashboard" />
-        </Route>
-        <Route path="/billing">
-          {user.isAdmin ? <BillingPage /> : <Redirect to="/dashboard" />}
-        </Route>
-        {/* Redirect auth pages → dashboard for logged-in users */}
-        <Route path="/login"><Redirect to="/dashboard" /></Route>
-        <Route path="/signup"><Redirect to="/dashboard" /></Route>
-        <Route path="/"><Redirect to="/dashboard" /></Route>
-        <Route component={NotFound} />
-      </Switch>
-    </AuthenticatedLayout>
+    <Switch>
+      {/* Onboarding pages */}
+      <Route path="/onboarding">
+        {isOnboarded ? <Redirect to="/dashboard" /> : <Onboarding />}
+      </Route>
+
+      {/* Billing is special (allowed during onboarding for Stripe returns) */}
+      <Route path="/billing">
+        {user.isAdmin ? <BillingPage /> : (isOnboarded ? <Redirect to="/dashboard" /> : <Redirect to="/onboarding" />)}
+      </Route>
+
+      {/* Auth pages -> Dashboard (user is logged in) */}
+      <Route path="/login">
+        <Redirect to={isOnboarded ? "/dashboard" : "/onboarding"} />
+      </Route>
+      <Route path="/signup">
+        <Redirect to={isOnboarded ? "/dashboard" : "/onboarding"} />
+      </Route>
+
+      {/* Main App Routes (AuthenticatedLayout) */}
+      <Route path="/:rest*">
+        {!isOnboarded ? (
+          <Redirect to="/onboarding" />
+        ) : (
+          <AuthenticatedLayout>
+            <Switch>
+              <Route path="/" component={Dashboard} />
+              <Route path="/dashboard" component={Dashboard} />
+              <Route path="/tasks" component={TasksPage} />
+              <Route path="/tasks/:id" component={TaskView} />
+              <Route path="/projects/:projectId/:taskId" component={TaskView} />
+              <Route path="/projects/:projectId/:parentTaskId/:taskId" component={TaskView} />
+              <Route path="/projects/:id" component={ProjectPage} />
+              <Route path="/time-tracking" component={TimeTracking} />
+              <Route path="/analytics" component={Analytics} />
+              <Route path="/notifications" component={Notifications} />
+              <Route path="/settings" component={SettingsPage} />
+              <Route path="/organization-settings" component={OrganizationSettings} />
+              <Route path="/accept-invitation" component={AcceptInvitation} />
+              <Route component={NotFound} />
+            </Switch>
+          </AuthenticatedLayout>
+        )}
+      </Route>
+    </Switch>
   );
 }
 

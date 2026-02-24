@@ -24,9 +24,8 @@ export default function Signup() {
       const res = await apiRequest("POST", "/api/auth/register", { email, password, firstName, lastName });
       return res.json();
     },
-    onSuccess: (user) => {
-      queryClient.setQueryData(["/api/auth/user"], user);
-      setLocation(redirect || "/onboarding");
+    onSuccess: (data) => {
+      queryClient.setQueryData(["/api/auth/user"], data.user);
     },
     onError: (error: any) => {
       toast({

@@ -499,7 +499,7 @@ export default function ProjectPage() {
                         onTaskClick={(t) => setLocation(getTaskUrl(t))}
                         getTaskUrl={getTaskUrl}
                         onTaskUpdate={(id, up) => updateTaskMutation.mutate({ taskId: id, updates: up })}
-                        onReorder={groupBy === "none" && sortBy === "order" ? handleReorder : undefined}
+                        onReorder={sortBy === "order" ? handleReorder : undefined}
                         onCreateSubtask={(id) => setCreatingSubtaskFor(id)}
                         expanded={expanded}
                         onExpandedChange={setExpanded}

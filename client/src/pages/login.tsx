@@ -22,9 +22,15 @@ export default function Login() {
       const res = await apiRequest("POST", "/api/auth/login", { email, password });
       return res.json();
     },
-    onSuccess: (user) => {
-      queryClient.setQueryData(["/api/auth/user"], user);
-      setLocation(redirect || "/dashboard");
+    onSuccess: (data) => {
+      // data is { user, token }
+      queryClient.setQueryData(["/api/auth/user"], data.user);
+
+      // Clear the logout flag from URL to allow AppRouter to recognize the new session
+      if (window.location.search.includes("logout=1")) {
+        const newUrl = window.location.pathname + window.location.search.replace(/[?&]logout=1/, "").replace(/^&/, "?");
+        window.history.replaceState({}, "", newUrl);
+      }
     },
     onError: (error: any) => {
       toast({

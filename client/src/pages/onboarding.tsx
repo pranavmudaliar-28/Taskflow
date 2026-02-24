@@ -184,8 +184,7 @@ export default function Onboarding() {
     const handleSkipToDashboard = async () => {
         try {
             await apiRequest("POST", "/api/onboarding/complete");
-            await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-            setLocation("/dashboard");
+            await queryClient.refetchQueries({ queryKey: ["/api/auth/user"] });
         } catch {
             toast({ title: "Failed to complete setup", variant: "destructive" });
         }
@@ -204,9 +203,8 @@ export default function Onboarding() {
             await apiRequest("POST", "/api/onboarding/setup-organization", {
                 name: orgName, email: orgEmail, address: orgAddress, invitations: filteredInvites,
             });
-            await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+            await queryClient.refetchQueries({ queryKey: ["/api/auth/user"] });
             toast({ title: "Welcome aboard! 🎉", description: "Your organization is ready." });
-            setLocation("/dashboard");
         } catch {
             toast({ title: "Setup failed. Please try again.", variant: "destructive" });
         } finally {

@@ -98,7 +98,7 @@ interface SortableRowProps {
     onTaskClick: (task: Task) => void;
 }
 
-function SortableRow({ row, onTaskClick }: SortableRowProps) {
+function SortableRow({ row, onTaskClick, enabled }: SortableRowProps & { enabled: boolean }) {
     const {
         attributes,
         listeners,
@@ -106,7 +106,10 @@ function SortableRow({ row, onTaskClick }: SortableRowProps) {
         transform,
         transition,
         isDragging,
-    } = useSortable({ id: row.original.id });
+    } = useSortable({
+        id: row.original.id,
+        disabled: !enabled
+    });
 
     const style = {
         transform: CSS.Transform.toString(transform),
@@ -121,17 +124,24 @@ function SortableRow({ row, onTaskClick }: SortableRowProps) {
             style={style}
             data-state={row.getIsSelected() && "selected"}
             onClick={() => onTaskClick(row.original)}
-            className={cn("cursor-pointer border-b border-border/50 hover:bg-muted/50 transition-colors duration-200", isDragging && "bg-accent opacity-50")}
+            className={cn(
+                "cursor-pointer border-b border-border/50 hover:bg-muted/50 transition-colors duration-200",
+                isDragging && "bg-accent opacity-50",
+                !enabled && "cursor-default"
+            )}
         >
             {row.getVisibleCells().map((cell: any) => {
                 if (cell.column.id === "drag") {
                     return (
                         <TableCell key={cell.id} className="w-[30px] sm:w-[40px] p-0 pl-1 sm:pl-2">
                             <div
-                                {...attributes}
-                                {...listeners}
-                                className="cursor-grab hover:text-primary text-muted-foreground/70 transition-colors p-1"
-                                title="Drag to reorder"
+                                {...(enabled ? attributes : {})}
+                                {...(enabled ? listeners : {})}
+                                className={cn(
+                                    "transition-colors p-1",
+                                    enabled ? "cursor-grab hover:text-primary text-muted-foreground/70" : "cursor-not-allowed text-muted-foreground/30"
+                                )}
+                                title={enabled ? "Drag to reorder" : "Reordering is disabled when sorting is active"}
                             >
                                 <GripVertical className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                             </div>
@@ -202,13 +212,13 @@ export function TaskTable({ tasks, users, milestones, onTaskClick, getTaskUrl, o
 
     const columns: ColumnDef<TaskWithChildren, any>[] = [
         // Drag Handle Column
-        ...(enableDnd ? [{
+        {
             id: "drag",
             header: () => null,
             cell: () => null, // Rendered by SortableRow
             size: 40,
             enableResizing: false,
-        }] : []),
+        },
         // Selection Column
         ...(setRowSelection ? [{
             id: "select",
@@ -843,26 +853,12 @@ export function TaskTable({ tasks, users, milestones, onTaskClick, getTaskUrl, o
                             >
                                 {table.getRowModel().rows?.length ? (
                                     table.getRowModel().rows.map((row) => (
-                                        enableDnd ? (
-                                            <SortableRow
-                                                key={row.id}
-                                                row={row}
-                                                onTaskClick={onTaskClick}
-                                            />
-                                        ) : (
-                                            <TableRow
-                                                key={row.id}
-                                                data-state={row.getIsSelected() && "selected"}
-                                                onClick={() => onTaskClick(row.original)}
-                                                className="cursor-pointer hover:bg-muted/50"
-                                            >
-                                                {row.getVisibleCells().map((cell) => (
-                                                    <TableCell key={cell.id} style={{ width: cell.column.getSize() }} className="p-3">
-                                                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                                    </TableCell>
-                                                ))}
-                                            </TableRow>
-                                        )
+                                        <SortableRow
+                                            key={row.id}
+                                            row={row}
+                                            onTaskClick={onTaskClick}
+                                            enabled={enableDnd}
+                                        />
                                     ))
                                 ) : (
                                     <TableRow>
