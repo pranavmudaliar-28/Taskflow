@@ -10,7 +10,7 @@ const allowedOrigins = [
     'http://127.0.0.1:5000',
     'http://127.0.0.1:5001',
     'http://127.0.0.1:5002',
-    process.env.FRONTEND_URL,
+    process.env.FRONTEND_URL?.replace(/\/$/, ''),
 ].filter(Boolean) as string[];
 
 export const corsConfig = cors({

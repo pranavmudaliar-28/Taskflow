@@ -95,6 +95,22 @@ import { connectMongo } from "./db";
     // Initialize MongoDB connection
     await connectMongo();
 
+    log(`NODE_ENV: ${process.env.NODE_ENV}`);
+    log(`FRONTEND_URL: ${process.env.FRONTEND_URL?.replace(/\/$/, '')}`);
+    log(`DATABASE_URL: ${!!process.env.DATABASE_URL ? 'configured' : 'not configured'}`);
+    log(`MONGODB_URI: ${!!process.env.MONGODB_URI ? 'configured' : 'not configured'}`);
+
+    // Health check endpoint
+    app.get("/api/health", (_req, res) => {
+      res.json({
+        status: "ok",
+        timestamp: new Date().toISOString(),
+        env: process.env.NODE_ENV,
+        db: !!process.env.DATABASE_URL,
+        mongo: !!process.env.MONGODB_URI
+      });
+    });
+
     // Standardize auth result for all routes
     await registerRoutes(httpServer, app);
 

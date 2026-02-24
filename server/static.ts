@@ -19,6 +19,7 @@ export function serveStatic(app: Express) {
     if (req.path.startsWith("/api")) {
       return next();
     }
+    console.log(`[Static] Catch-all route hit for: ${req.path}. Serving index.html`);
     res.sendFile(path.resolve(distPath, "index.html"));
   });
 }
