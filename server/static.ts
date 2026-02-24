@@ -15,11 +15,13 @@ export function serveStatic(app: Express) {
   app.use(express.static(distPath));
 
   // fall through to index.html for SPA routing, avoiding API routes
-  app.get("(.*)", (req, res, next) => {
-    if (req.path.startsWith("/api")) {
-      return next();
+  // Using pathless middleware for Express 5 catch-all compatibility
+  app.use((req, res, next) => {
+    // Only handle GET requests that are not API calls or file requests
+    if (req.method === "GET" && !req.path.startsWith("/api") && !req.path.includes(".")) {
+      console.log(`[Static] Catch-all middleware hit for: ${req.path}. Serving index.html`);
+      return res.sendFile(path.resolve(distPath, "index.html"));
     }
-    console.log(`[Static] Catch-all route hit for: ${req.path}. Serving index.html`);
-    res.sendFile(path.resolve(distPath, "index.html"));
+    next();
   });
 }
