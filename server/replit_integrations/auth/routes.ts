@@ -7,6 +7,12 @@ import { storage } from "../../storage";
 export function registerAuthRoutes(app: Express): void {
   // Get current authenticated user
   app.get("/api/auth/user", isAuthenticated, async (req: any, res) => {
+    // Prevent caching of authentication status
+    res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    res.set("Pragma", "no-cache");
+    res.set("Expires", "0");
+    res.set("Surrogate-Control", "no-store");
+
     try {
       const userId = req.user?.claims?.sub || req.user?.id;
       if (!userId) {

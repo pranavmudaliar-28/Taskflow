@@ -208,18 +208,25 @@ export async function registerRoutes(
         return res.status(500).json({ message: "Logout failed" });
       }
 
+      const cookieOptions = {
+        path: '/',
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: 'lax' as const
+      };
+
       if (req.session) {
         req.session.destroy((destroyErr) => {
           if (destroyErr) {
             logger.error('Session destruction error', { error: destroyErr.message });
           }
 
-          res.clearCookie('connect.sid');
+          res.clearCookie('connect.sid', cookieOptions);
           logger.info('User logged out and session destroyed', { userId });
           res.json({ message: "Logged out successfully" });
         });
       } else {
-        res.clearCookie('connect.sid');
+        res.clearCookie('connect.sid', cookieOptions);
         logger.info('User logged out (no session to destroy)', { userId });
         res.json({ message: "Logged out successfully" });
       }
