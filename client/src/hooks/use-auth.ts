@@ -26,7 +26,13 @@ async function logout(): Promise<void> {
   } catch {
     // fallback
   }
-  window.location.href = "/";
+
+  // Clear frontend storage
+  localStorage.clear();
+  sessionStorage.clear();
+
+  // Redirect to login
+  window.location.href = "/login";
 }
 
 export function useAuth() {
