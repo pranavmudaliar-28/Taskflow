@@ -222,11 +222,13 @@ export async function registerRoutes(
           }
 
           res.clearCookie('connect.sid', cookieOptions);
+          res.clearCookie('token', cookieOptions); // Clear any JWT cookie if present
           logger.info('User logged out and session destroyed', { userId });
           res.json({ message: "Logged out successfully" });
         });
       } else {
         res.clearCookie('connect.sid', cookieOptions);
+        res.clearCookie('token', cookieOptions);
         logger.info('User logged out (no session to destroy)', { userId });
         res.json({ message: "Logged out successfully" });
       }

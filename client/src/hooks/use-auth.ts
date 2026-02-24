@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { queryClient as globalQueryClient } from "@/lib/queryClient";
 import type { User } from "@shared/models/auth";
 
 async function fetchUser(): Promise<User | null> {
@@ -38,8 +39,11 @@ async function logout(): Promise<void> {
       .replace(/=.*/, "=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/");
   });
 
-  // Redirect to login (hard refresh)
-  window.location.href = "/login";
+  // Wipe entire React Query cache to prevent stale data visibility
+  globalQueryClient.clear();
+
+  // Use replace to prevent back-button loops
+  window.location.replace("/login");
 }
 
 export function useAuth() {
