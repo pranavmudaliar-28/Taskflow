@@ -15,7 +15,7 @@ export function serveStatic(app: Express) {
   app.use(express.static(distPath));
 
   // fall through to index.html for SPA routing, avoiding API routes
-  app.get("*", (req, res, next) => {
+  app.get("(.*)", (req, res, next) => {
     if (req.path.startsWith("/api")) {
       return next();
     }
