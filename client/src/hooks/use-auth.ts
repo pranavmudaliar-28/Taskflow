@@ -31,7 +31,14 @@ async function logout(): Promise<void> {
   localStorage.clear();
   sessionStorage.clear();
 
-  // Redirect to login
+  // Clear all readable cookies
+  document.cookie.split(";").forEach((c) => {
+    document.cookie = c
+      .replace(/^ +/, "")
+      .replace(/=.*/, "=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/");
+  });
+
+  // Redirect to login (hard refresh)
   window.location.href = "/login";
 }
 
