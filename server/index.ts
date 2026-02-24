@@ -25,14 +25,14 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://js.stripe.com"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       imgSrc: ["'self'", "data:", "https:", "https://*.stripe.com"],
-      connectSrc: ["'self'", "https://api.stripe.com", "ws:", "wss:", "http://localhost:*", "http://127.0.0.1:*"],
-      fontSrc: ["'self'", "data:"],
+      connectSrc: ["'self'", "https://api.stripe.com", "ws:", "wss:", "http://localhost:*", "http://127.0.0.1:*", "*.onrender.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
       objectSrc: ["'none'"],
       mediaSrc: ["'self'"],
       frameSrc: ["'self'", "https://js.stripe.com"],
-      upgradeInsecureRequests: isDev ? null : [], // Don't upgrade in dev
+      upgradeInsecureRequests: [], // Always try to upgrade if possible, or omit if strictly dev-local
     },
   },
   crossOriginEmbedderPolicy: false,
@@ -86,6 +86,7 @@ app.use('/api', (req, res, next) => {
   res.setHeader('X-API-Version', 'v1');
   next();
 });
+
 
 import { connectMongo } from "./db";
 

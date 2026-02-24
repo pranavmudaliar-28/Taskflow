@@ -419,6 +419,28 @@ export class MongoStorage implements IStorage {
         return this.transformArray<Comment>(comments);
     }
 
+    async toggleCommentReaction(commentId: string, userId: string, emoji: string): Promise<Comment | undefined> {
+        const comment = await CommentMongo.findById(commentId);
+        if (!comment) return undefined;
+
+        const reactionStr = `${emoji}:${userId}`;
+        let newReactions = comment.reactions || [];
+
+        if (newReactions.includes(reactionStr)) {
+            newReactions = newReactions.filter((r: string) => r !== reactionStr);
+        } else {
+            newReactions.push(reactionStr);
+        }
+
+        const updated = await CommentMongo.findByIdAndUpdate(
+            commentId,
+            { reactions: newReactions, updatedAt: new Date() },
+            { new: true }
+        );
+
+        return this.transform<Comment>(updated);
+    }
+
     // Attachments
     async getAttachmentsByTask(taskId: string): Promise<Attachment[]> {
         const attachments = await AttachmentMongo.find({ taskId }).sort({ createdAt: 1 });

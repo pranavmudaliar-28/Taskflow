@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
     useReactTable,
     getCoreRowModel,
@@ -61,6 +61,8 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { ArrowUpDown, Calendar as CalendarIcon, User as UserIcon, Check, MoreHorizontal, GripVertical, ChevronDown, ChevronRight, Share2 } from "lucide-react";
 import { TASK_STATUSES, TASK_PRIORITIES } from "@/lib/constants";
+import { useSidebar } from "@/components/ui/sidebar";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
     Command,
     CommandEmpty,
@@ -124,20 +126,20 @@ function SortableRow({ row, onTaskClick }: SortableRowProps) {
             {row.getVisibleCells().map((cell: any) => {
                 if (cell.column.id === "drag") {
                     return (
-                        <TableCell key={cell.id} className="w-[40px] p-0 pl-2">
+                        <TableCell key={cell.id} className="w-[30px] sm:w-[40px] p-0 pl-1 sm:pl-2">
                             <div
                                 {...attributes}
                                 {...listeners}
                                 className="cursor-grab hover:text-primary text-muted-foreground/70 transition-colors p-1"
                                 title="Drag to reorder"
                             >
-                                <GripVertical className="h-4 w-4" />
+                                <GripVertical className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                             </div>
                         </TableCell>
                     )
                 }
                 return (
-                    <TableCell key={cell.id} style={{ width: cell.column.getSize() }} className="p-3">
+                    <TableCell key={cell.id} style={{ width: cell.column.getSize() }} className="p-2 sm:p-3">
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                 )
@@ -149,6 +151,14 @@ function SortableRow({ row, onTaskClick }: SortableRowProps) {
 const columnHelper = createColumnHelper<TaskWithChildren>();
 
 export function TaskTable({ tasks, users, milestones, onTaskClick, getTaskUrl, onTaskUpdate, onReorder, onCreateSubtask, rowSelection, setRowSelection, expanded: controlledExpanded, onExpandedChange }: TaskTableProps) {
+    const isMobile = useIsMobile();
+    const [isLargeScreen, setIsLargeScreen] = useState(typeof window !== "undefined" ? window.innerWidth >= 1024 : true);
+
+    useEffect(() => {
+        const handleResize = () => setIsLargeScreen(window.innerWidth >= 1024);
+        window.addEventListener("resize", handleResize);
+        return () => window.removeEventListener("resize", handleResize);
+    }, []);
     const [sorting, setSorting] = useState<SortingState>([]);
     const [internalExpanded, setInternalExpanded] = useState<ExpandedState>({});
     const [editingTitleId, setEditingTitleId] = useState<string | null>(null);
@@ -228,15 +238,15 @@ export function TaskTable({ tasks, users, milestones, onTaskClick, getTaskUrl, o
                     <Button
                         variant="ghost"
                         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-                        className="pl-0 hover:bg-transparent -ml-3 h-8 text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+                        className="pl-0 hover:bg-transparent -ml-3 h-8 text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-muted-foreground"
                     >
                         Name
-                        <ArrowUpDown className="ml-2 h-3 w-3" />
+                        <ArrowUpDown className="ml-1.5 h-3 w-3" />
                     </Button>
                 );
             },
             cell: ({ row, getValue }) => (
-                <div style={{ paddingLeft: `${row.depth * 20}px` }} className="flex items-center gap-2 group/title w-full">
+                <div style={{ paddingLeft: `${row.depth * (isLargeScreen ? 20 : 12)}px` }} className="flex items-center gap-1 sm:gap-2 group/title w-full">
                     {row.getCanExpand() ? (
                         <button
                             onClick={(e) => {

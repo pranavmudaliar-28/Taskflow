@@ -91,20 +91,20 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
         onCreateProject={() => setShowCreateProject(true)}
       />
       <SidebarInset className="flex flex-col h-screen overflow-hidden bg-background">
-        <header className="flex items-center justify-between gap-4 px-5 h-14 border-b border-border shrink-0 bg-background/80 backdrop-blur-sm sticky top-0 z-30">
-          <div className="flex items-center gap-3">
-            {/* Sidebar toggle visible ONLY on mobile */}
-            <SidebarTrigger className="md:hidden text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg transition-colors" />
+        <header className="flex items-center justify-between gap-2 px-[var(--page-padding)] h-14 border-b border-border shrink-0 bg-background/80 backdrop-blur-sm sticky top-0 z-30">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            {/* Sidebar toggle visible on mobile and tablet */}
+            <SidebarTrigger className="lg:hidden text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg transition-colors" />
 
             {pageTitle && (
-              <div className="hidden sm:flex items-center gap-2">
-                <div className="h-4 w-px bg-border" />
-                <span className="text-sm font-semibold text-foreground/80">{pageTitle}</span>
+              <div className="flex items-center gap-2 truncate">
+                <div className="hidden xs:block h-4 w-px bg-border" />
+                <span className="text-sm font-semibold text-foreground/80 truncate">{pageTitle}</span>
               </div>
             )}
           </div>
 
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
             <Link href="/notifications">
               <Button variant="ghost" size="icon" className="relative h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg">
                 <Bell className="h-4 w-4" />
@@ -115,7 +115,9 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
                 )}
               </Button>
             </Link>
-            <ThemeToggle />
+            <div className="hidden xs:block">
+              <ThemeToggle />
+            </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-accent">
@@ -129,8 +131,8 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <div className="px-2 py-1.5">
-                  <p className="text-sm font-semibold">{getUserDisplayName()}</p>
-                  <p className="text-xs text-muted-foreground">{user?.email}</p>
+                  <p className="text-sm font-semibold truncate">{getUserDisplayName()}</p>
+                  <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
                 </div>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>

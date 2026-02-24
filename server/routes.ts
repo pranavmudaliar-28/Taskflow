@@ -128,7 +128,7 @@ export async function registerRoutes(
       // Generate JWT
       const token = TokenService.generateToken({
         sub: user.id,
-        email: user.email,
+        email: user.email || "",
         role: "member", // Default role
       });
 
@@ -172,8 +172,8 @@ export async function registerRoutes(
       // Generate JWT
       const token = TokenService.generateToken({
         sub: user.id,
-        email: user.email,
-        role: user.role || "member",
+        email: user.email || "",
+        role: (user as any).role || "member",
       });
 
       // Initialize session
@@ -1627,6 +1627,7 @@ export async function registerRoutes(
         taskId: taskId,
         authorId: userId,
         content: req.body.content,
+        parentId: req.body.parentId,
         mentions: req.body.mentions || [],
       });
       const comment = await storage.createComment(validated);
@@ -1681,6 +1682,28 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Invalid comment data", errors: error.errors });
       }
       res.status(500).json({ message: "Failed to create comment" });
+    }
+  });
+
+  app.post("/api/comments/:id/react", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const commentId = req.params.id;
+      const { emoji } = req.body;
+
+      if (!emoji) {
+        return res.status(400).json({ message: "Emoji is required" });
+      }
+
+      const updatedComment = await storage.toggleCommentReaction(String(commentId), String(userId), String(emoji));
+      if (!updatedComment) {
+        return res.status(404).json({ message: "Comment not found" });
+      }
+
+      res.json(updatedComment);
+    } catch (error) {
+      console.error("Error toggling reaction:", error);
+      res.status(500).json({ message: "Failed to toggle reaction" });
     }
   });
 

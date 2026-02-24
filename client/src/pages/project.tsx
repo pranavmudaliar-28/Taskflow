@@ -335,51 +335,50 @@ export default function ProjectPage() {
   return (
     <div className="flex flex-col h-full bg-background/50 overflow-hidden">
       {/* ── Sticky Header ────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-30 bg-card/80 backdrop-blur-md border-b border-border px-6 py-3 shrink-0">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="h-10 w-10 rounded-xl bg-primary flex items-center justify-center shadow-premium">
+      <header className="sticky top-0 z-30 bg-card/80 backdrop-blur-md border-b border-border px-[var(--page-padding)] py-4 shrink-0 transition-all">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+            <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-primary flex items-center justify-center shadow-premium shrink-0">
               <Plus className="h-5 w-5 text-primary-foreground" />
             </div>
-            <div>
-              <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-0.5">
-                <span className="hover:text-foreground cursor-pointer">Projects</span>
-                <ChevronRight className="h-2.5 w-2.5 opacity-50" />
-                <span className="text-foreground truncate max-w-[100px]">{project.name}</span>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 text-[9px] sm:text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-0.5">
+                <span className="hover:text-foreground cursor-pointer whitespace-nowrap">Projects</span>
+                <ChevronRight className="h-2.5 w-2.5 opacity-50 shrink-0" />
+                <span className="text-foreground truncate">{project.name}</span>
               </div>
-              <h1 className="text-xl font-extrabold text-foreground tracking-tight leading-none">{project.name}</h1>
+              <h1 className="text-lg sm:text-xl font-extrabold text-foreground tracking-tight leading-none truncate">{project.name}</h1>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-muted/50 rounded-lg border border-border">
-              <div className="w-16 h-1 bg-secondary rounded-full overflow-hidden">
+          <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-muted/50 rounded-lg border border-border">
+              <div className="w-12 sm:w-16 h-1 bg-secondary rounded-full overflow-hidden">
                 <div className="h-full bg-primary transition-all duration-700" style={{ width: `${projectProgress}%` }} />
               </div>
               <span className="text-[10px] font-bold text-muted-foreground">{projectProgress}%</span>
             </div>
 
             <div className="flex items-center gap-1">
-              <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg" onClick={() => setShowMembers(true)} title="Members">
+              <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9 text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg" onClick={() => setShowMembers(true)} title="Members">
                 <Users className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg" onClick={() => setShowSettings(true)} title="Settings">
+              <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9 text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg" onClick={() => setShowSettings(true)} title="Settings">
                 <Settings className="h-4 w-4" />
               </Button>
+              <Button className="h-8 sm:h-9 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-bold px-3 sm:px-4 shadow-premium transition-all text-xs" onClick={() => { setCreateTaskStatus("todo"); setShowCreateTask(true); }}>
+                <Plus className="h-4 w-4 sm:mr-1.5" /> <span className="hidden xs:inline">New Task</span>
+              </Button>
             </div>
-
-            <Button className="h-9 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-bold px-4 shadow-premium transition-all hover:scale-[1.02] active:scale-[0.98]" onClick={() => { setCreateTaskStatus("todo"); setShowCreateTask(true); }}>
-              <Plus className="h-4 w-4 mr-1.5" /> New Task
-            </Button>
           </div>
         </div>
       </header>
 
       {/* ── Toolbar ──────────────────────────────────────────────────────── */}
-      <div className="bg-card border-b border-border px-6 py-3 shrink-0 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-        <div className="flex items-center gap-1 bg-accent/50 border border-border/50 rounded-xl p-1 relative w-fit self-center lg:self-auto">
+      <div className="bg-card border-b border-border px-[var(--page-padding)] py-3 shrink-0 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div className="flex items-center gap-1 bg-accent/50 border border-border/50 rounded-xl p-1 relative w-full sm:w-fit self-center lg:self-auto overflow-x-auto scrollbar-none">
           <div
-            className="absolute h-[calc(100%-8px)] bg-background rounded-lg shadow-sm animate-tab-indicator"
+            className="absolute h-[calc(100%-8px)] bg-background rounded-lg shadow-sm animate-tab-indicator transition-all duration-300"
             style={{
               width: "calc(33.33% - 4px)",
               left: activeTab === "list" ? "4px" : activeTab === "board" ? "33.33%" : "66.66%",
@@ -389,7 +388,7 @@ export default function ProjectPage() {
           <button
             onClick={() => setActiveTab("list")}
             className={cn(
-              "relative z-10 px-5 py-1.5 rounded-lg text-sm font-bold transition-all duration-200 w-28",
+              "relative z-10 px-3 sm:px-5 py-1.5 rounded-lg text-[10px] sm:text-xs lg:text-sm font-bold transition-all duration-200 flex-1 sm:w-28 whitespace-nowrap",
               activeTab === "list" ? "text-foreground" : "text-muted-foreground hover:text-foreground"
             )}
           >
@@ -398,7 +397,7 @@ export default function ProjectPage() {
           <button
             onClick={() => setActiveTab("board")}
             className={cn(
-              "relative z-10 px-5 py-1.5 rounded-lg text-sm font-bold transition-all duration-200 w-28",
+              "relative z-10 px-3 sm:px-5 py-1.5 rounded-lg text-[10px] sm:text-xs lg:text-sm font-bold transition-all duration-200 flex-1 sm:w-28 whitespace-nowrap",
               activeTab === "board" ? "text-foreground" : "text-muted-foreground hover:text-foreground"
             )}
           >
@@ -407,7 +406,7 @@ export default function ProjectPage() {
           <button
             onClick={() => setActiveTab("milestones")}
             className={cn(
-              "relative z-10 px-5 py-1.5 rounded-lg text-sm font-bold transition-all duration-200 w-28",
+              "relative z-10 px-3 sm:px-5 py-1.5 rounded-lg text-[10px] sm:text-xs lg:text-sm font-bold transition-all duration-200 flex-1 sm:w-28 whitespace-nowrap",
               activeTab === "milestones" ? "text-foreground" : "text-muted-foreground hover:text-foreground"
             )}
           >
@@ -416,34 +415,34 @@ export default function ProjectPage() {
         </div>
 
         <div className="flex flex-wrap items-center justify-center lg:justify-end gap-2">
-          <div className="relative group flex-1 min-w-[200px] lg:flex-none">
+          <div className="relative group w-full sm:flex-1 lg:w-48 transition-all">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground group-focus-within:text-primary transition-colors" />
             <Input
-              placeholder="Search tasks..."
+              placeholder="Search..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 h-9 w-full lg:w-48 lg:focus:w-64 border-border bg-muted/50 focus:bg-background focus:border-primary/50 focus:ring-4 focus:ring-primary/10 rounded-xl text-sm transition-all"
+              className="pl-9 h-9 w-full border-border bg-muted/50 focus:bg-background focus:border-primary/50 focus:ring-4 focus:ring-primary/10 rounded-xl text-xs transition-all"
             />
           </div>
 
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <Select value={status} onValueChange={setStatus}>
-              <SelectTrigger className="h-9 flex-1 sm:w-[120px] rounded-xl border-border bg-muted/50 text-muted-foreground font-bold text-xs ring-offset-0 focus:ring-4 focus:ring-primary/10">
+              <SelectTrigger className="h-9 flex-1 sm:w-[110px] rounded-xl border-border bg-muted/50 text-muted-foreground font-bold text-[10px] ring-offset-0 focus:ring-4 focus:ring-primary/10">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent className="rounded-xl border-border shadow-elevation">
-                <SelectItem value="all" className="font-bold text-muted-foreground">Any Status</SelectItem>
-                {TASK_STATUSES.map(s => <SelectItem key={s.id} value={s.id} className="font-bold text-foreground">{s.label}</SelectItem>)}
+                <SelectItem value="all" className="font-bold text-[10px]">Any Status</SelectItem>
+                {TASK_STATUSES.map(s => <SelectItem key={s.id} value={s.id} className="font-bold text-[10px]">{s.label}</SelectItem>)}
               </SelectContent>
             </Select>
 
             <Select value={priority} onValueChange={setPriority}>
-              <SelectTrigger className="h-9 flex-1 sm:w-[120px] rounded-xl border-border bg-muted/50 text-muted-foreground font-bold text-xs ring-offset-0 focus:ring-4 focus:ring-primary/10">
+              <SelectTrigger className="h-9 flex-1 sm:w-[110px] rounded-xl border-border bg-muted/50 text-muted-foreground font-bold text-[10px] ring-offset-0 focus:ring-4 focus:ring-primary/10">
                 <SelectValue placeholder="Priority" />
               </SelectTrigger>
               <SelectContent className="rounded-xl border-border shadow-elevation">
-                <SelectItem value="all" className="font-bold text-muted-foreground">Any Priority</SelectItem>
-                {TASK_PRIORITIES.map(p => <SelectItem key={p.id} value={p.id} className="font-bold text-foreground">{p.label}</SelectItem>)}
+                <SelectItem value="all" className="font-bold text-[10px]">Any Priority</SelectItem>
+                {TASK_PRIORITIES.map(p => <SelectItem key={p.id} value={p.id} className="font-bold text-[10px]">{p.label}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
@@ -451,16 +450,16 @@ export default function ProjectPage() {
       </div>
 
       {/* ── Main View Area ───────────────────────────────────────────────── */}
-      <main className="flex-1 overflow-y-auto min-h-0 bg-background/50 p-6 relative">
+      <main className="flex-1 overflow-y-auto min-h-0 bg-background/50 p-[var(--page-padding)] relative">
         {/* Bulk Action Pill */}
         {isBulkSelected && (
-          <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50 bg-foreground text-background rounded-2xl shadow-2xl px-5 py-3 flex items-center gap-5 border border-border/10 animate-fade-up">
-            <span className="text-sm font-bold">{Object.keys(rowSelection).length} tasks selected</span>
-            <div className="w-px h-4 bg-muted-foreground/20" />
-            <div className="flex items-center gap-2">
-              <Button size="sm" className="h-8 bg-primary hover:bg-primary/90 text-primary-foreground font-bold" onClick={() => setIsBulkEditDialogOpen(true)}>Bulk Edit</Button>
-              <Button size="sm" variant="ghost" className="h-8 text-destructive hover:text-destructive/80 hover:bg-destructive/10 font-bold" onClick={handleBulkDelete}>Delete</Button>
-              <Button size="sm" variant="ghost" className="h-8 opacity-60 hover:opacity-100" onClick={() => setRowSelection({})}>Cancel</Button>
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-foreground text-background rounded-2xl shadow-2xl px-4 sm:px-5 py-2.5 sm:py-3 flex items-center gap-3 sm:gap-5 border border-border/10 animate-fade-up w-[calc(100%-32px)] sm:w-auto justify-between sm:justify-start">
+            <span className="text-[10px] sm:text-sm font-bold whitespace-nowrap">{Object.keys(rowSelection).length} selected</span>
+            <div className="hidden sm:block w-px h-4 bg-muted-foreground/20" />
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <Button size="sm" className="h-7 sm:h-8 bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-[10px] sm:text-xs" onClick={() => setIsBulkEditDialogOpen(true)}>Edit</Button>
+              <Button size="sm" variant="ghost" className="h-7 sm:h-8 text-destructive hover:text-destructive/80 hover:bg-destructive/10 font-bold text-[10px] sm:text-xs" onClick={handleBulkDelete}>Delete</Button>
+              <Button size="sm" variant="ghost" className="h-7 sm:h-8 opacity-60 hover:opacity-100 text-[10px] sm:text-xs px-2" onClick={() => setRowSelection({})}>X</Button>
             </div>
           </div>
         )}
@@ -470,13 +469,13 @@ export default function ProjectPage() {
             {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-12 w-full rounded-lg" />)}
           </div>
         ) : tasks.length === 0 ? (
-          <div className="bg-card rounded-2xl border border-dashed border-border p-12 text-center">
-            <div className="h-16 w-16 bg-muted/50 rounded-full flex items-center justify-center mx-auto mb-4">
-              <ListTodo className="h-8 w-8 text-muted-foreground/30" />
+          <div className="bg-card rounded-2xl border border-dashed border-border p-8 sm:p-12 text-center">
+            <div className="h-12 w-12 sm:h-16 sm:w-16 bg-muted/50 rounded-full flex items-center justify-center mx-auto mb-4">
+              <ListTodo className="h-6 w-6 sm:h-8 sm:w-8 text-muted-foreground/30" />
             </div>
-            <h3 className="text-lg font-bold text-foreground mb-1">No tasks found</h3>
-            <p className="text-muted-foreground text-sm mb-6 max-w-sm mx-auto">Create your first task to start tracking progress on this project.</p>
-            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold" onClick={() => setShowCreateTask(true)}>
+            <h3 className="text-base sm:text-lg font-bold text-foreground mb-1">No tasks found</h3>
+            <p className="text-muted-foreground text-[10px] sm:text-sm mb-6 max-w-sm mx-auto">Create your first task to start tracking progress on this project.</p>
+            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs" onClick={() => setShowCreateTask(true)}>
               <Plus className="h-4 w-4 mr-2" /> Add first task
             </Button>
           </div>
@@ -488,11 +487,11 @@ export default function ProjectPage() {
                   <div key={title} className="animate-fade-up" style={{ animationDelay: `${idx * 100}ms` }}>
                     {groupBy !== "none" && (
                       <div className="flex items-center gap-2 mb-3 px-2">
-                        <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{title}</h3>
-                        <span className="text-[10px] font-bold bg-accent text-accent-foreground px-1.5 py-0.5 rounded-full">{group.length}</span>
+                        <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{title}</h3>
+                        <span className="text-[9px] font-bold bg-accent text-accent-foreground px-1.5 py-0.5 rounded-full">{group.length}</span>
                       </div>
                     )}
-                    <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden overflow-x-auto">
+                    <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
                       <TaskTable
                         tasks={group}
                         users={usersMap}
@@ -515,9 +514,9 @@ export default function ProjectPage() {
 
             {activeTab === "board" && (
               <DragDropContext onDragEnd={handleDragEnd}>
-                <div className="h-full flex gap-5 overflow-x-auto pb-4">
+                <div className="h-full flex flex-col lg:flex-row gap-5 overflow-auto pb-4">
                   {TASK_STATUSES.map((s, idx) => (
-                    <div key={s.id} className="w-80 shrink-0 flex flex-col animate-fade-up" style={{ animationDelay: `${idx * 100}ms` }}>
+                    <div key={s.id} className="min-w-full lg:min-w-[280px] lg:max-w-[320px] shrink-0 flex flex-col animate-fade-up" style={{ animationDelay: `${idx * 100}ms` }}>
                       <div className="flex items-center justify-between mb-4 px-1">
                         <div className="flex items-center gap-2">
                           <div className={cn("h-2.5 w-2.5 rounded-full", s.color)} />

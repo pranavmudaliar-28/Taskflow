@@ -33,8 +33,8 @@ export function KanbanColumn({
   taskDurations = {},
 }: KanbanColumnProps) {
   return (
-    <div className="flex flex-col bg-muted/30 rounded-lg min-w-[280px] max-w-[320px] h-full border border-border/50">
-      <div className="flex items-center justify-between gap-2 p-3 border-b">
+    <div className="flex flex-col bg-muted/40 rounded-2xl min-w-full lg:min-w-[280px] lg:max-w-[320px] h-full border border-border/60 shadow-sm overflow-hidden transition-all group/column">
+      <div className="flex items-center justify-between gap-2 px-4 py-3.5 border-b border-border/40 bg-card/30 backdrop-blur-sm">
         <div className="flex items-center gap-2">
           <div className={`h-2 w-2 rounded-full ${color}`} />
           <span className="font-medium text-sm">{title}</span>

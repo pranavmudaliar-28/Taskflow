@@ -202,18 +202,18 @@ export default function BillingPage() {
     const isCurrentPlan = (planId: string) => planId === currentPlan;
 
     return (
-        <div className="p-5 sm:p-6 max-w-4xl space-y-6">
+        <div className="p-[var(--page-padding)] max-w-4xl mx-auto space-y-6">
             {/* ── Header ──────────────────────────────────────────────────────────── */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
                     <Link href="/settings">
-                        <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-sm">
-                            <ArrowLeft className="h-3.5 w-3.5" /> Settings
+                        <Button variant="ghost" size="sm" className="h-8 w-8 sm:w-auto sm:px-3 gap-1.5 text-xs">
+                            <ArrowLeft className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Settings</span>
                         </Button>
                     </Link>
                     <div>
-                        <h1 className="text-xl font-bold">Billing & Plans</h1>
-                        <p className="text-xs text-muted-foreground mt-0.5">
+                        <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight">Billing & Plans</h1>
+                        <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">
                             Manage your subscription via Stripe
                         </p>
                     </div>
@@ -224,7 +224,7 @@ export default function BillingPage() {
                     <Button
                         variant="outline"
                         size="sm"
-                        className="h-8 gap-1.5 text-sm"
+                        className="h-8 sm:h-9 gap-1.5 text-xs font-bold"
                         onClick={() => portalMutation.mutate()}
                         disabled={portalMutation.isPending}
                         data-testid="button-manage-subscription"

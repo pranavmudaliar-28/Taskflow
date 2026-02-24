@@ -268,29 +268,29 @@ export default function TasksPage() {
         <div className="flex flex-col h-full bg-background/50">
 
             {/* ── Page header ── */}
-            <div className="sticky top-0 z-20 bg-card/80 backdrop-blur-md border-b border-border px-6 py-4">
-                <div className="flex items-center justify-between gap-4">
-                    <div>
-                        <h1 className="text-3xl font-bold text-foreground tracking-tight">All Tasks</h1>
-                        <p className="text-xs text-muted-foreground mt-1 font-medium">
+            <div className="sticky top-0 z-20 bg-card/80 backdrop-blur-md border-b border-border px-[var(--page-padding)] py-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="min-w-0">
+                        <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight truncate">All Tasks</h1>
+                        <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 font-medium truncate">
                             {isLoading ? "Loading…" : `${searchResult?.total ?? 0} tasks`}
                             {hasActiveFilters && " · filtered"}
                         </p>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 self-end sm:self-auto">
                         {/* Bulk action bar */}
                         {selectedCount > 0 && (
-                            <div className="flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-lg px-3 py-1.5 animate-in fade-in slide-in-from-top-1">
-                                <span className="text-xs font-semibold text-primary">{selectedCount} selected</span>
+                            <div className="flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-lg px-2 sm:px-3 py-1.5 animate-in fade-in slide-in-from-top-1">
+                                <span className="text-[10px] sm:text-xs font-semibold text-primary">{selectedCount} <span className="hidden xs:inline">selected</span></span>
                                 <div className="w-[1px] h-3 bg-primary/20" />
-                                <Button variant="ghost" size="sm" className="h-6 text-xs text-primary hover:text-primary hover:bg-primary/10 px-2"
+                                <Button variant="ghost" size="sm" className="h-6 text-[10px] sm:text-xs text-primary hover:text-primary hover:bg-primary/10 px-1 sm:px-2"
                                     onClick={() => setIsBulkEditDialogOpen(true)}>
-                                    <CheckCircle2 className="h-3 w-3 mr-1" /> Edit
+                                    <CheckCircle2 className="h-3 w-3 sm:mr-1" /> <span className="hidden xs:inline">Edit</span>
                                 </Button>
-                                <Button variant="ghost" size="sm" className="h-6 text-xs text-destructive hover:text-destructive hover:bg-destructive/10 px-2"
+                                <Button variant="ghost" size="sm" className="h-6 text-[10px] sm:text-xs text-destructive hover:text-destructive hover:bg-destructive/10 px-1 sm:px-2"
                                     onClick={handleBulkDelete}>
-                                    <Trash2 className="h-3 w-3 mr-1" /> Delete
+                                    <Trash2 className="h-3 w-3 sm:mr-1" /> <span className="hidden xs:inline">Delete</span>
                                 </Button>
                             </div>
                         )}
@@ -298,23 +298,23 @@ export default function TasksPage() {
                         <Button
                             size="sm"
                             onClick={() => setIsCreateOpen(true)}
-                            className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-5 h-10 rounded-xl transition-all"
+                            className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-4 sm:px-5 h-9 sm:h-10 rounded-xl transition-all text-xs"
                         >
-                            <Plus className="h-4 w-4" /> New Task
+                            <Plus className="h-3.5 w-3.5 sm:mr-1" /> <span className="hidden xs:inline">New Task</span><span className="xs:hidden">Task</span>
                         </Button>
                     </div>
                 </div>
 
                 {/* ── Filter bar ── */}
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mt-4">
+                <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3 mt-4">
                     {/* Search */}
-                    <div className="relative flex-1 max-w-sm">
+                    <div className="relative flex-1">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
                             placeholder="Search tasks…"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            className="pl-9 h-10 bg-card border-border focus:border-primary/50 focus:ring-4 focus:ring-primary/10 text-sm rounded-xl transition-all"
+                            className="pl-9 h-9 sm:h-10 bg-card border-border focus:border-primary/50 focus:ring-4 focus:ring-primary/10 text-xs sm:text-sm rounded-xl transition-all w-full lg:max-w-sm"
                         />
                         {search && (
                             <button onClick={() => setSearch("")}
@@ -324,11 +324,11 @@ export default function TasksPage() {
                         )}
                     </div>
 
-                    <div className="flex items-center gap-2 flex-wrap">
-                        <div className="h-8 w-px bg-border mx-1 hidden sm:block" />
+                    <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+                        <div className="h-8 w-px bg-border mx-1 hidden lg:block" />
 
                         <Select value={status} onValueChange={setStatus}>
-                            <SelectTrigger className="h-10 w-40 text-xs bg-muted/50 border-border hover:bg-muted hover:border-border rounded-xl font-bold text-muted-foreground transition-all focus:ring-4 focus:ring-primary/10">
+                            <SelectTrigger className="h-8 sm:h-10 min-w-[120px] sm:w-40 text-[10px] sm:text-xs bg-muted/50 border-border hover:bg-muted hover:border-border rounded-xl font-bold text-muted-foreground transition-all focus:ring-4 focus:ring-primary/10">
                                 <div className="flex items-center gap-2">
                                     <Filter className="h-3 w-3 opacity-50" />
                                     <SelectValue placeholder="Status" />
@@ -341,7 +341,7 @@ export default function TasksPage() {
                         </Select>
 
                         <Select value={priority} onValueChange={setPriority}>
-                            <SelectTrigger className="h-10 w-40 text-xs bg-muted/50 border-border hover:bg-muted hover:border-border rounded-xl font-bold text-muted-foreground transition-all focus:ring-4 focus:ring-primary/10">
+                            <SelectTrigger className="h-8 sm:h-10 min-w-[120px] sm:w-40 text-[10px] sm:text-xs bg-muted/50 border-border hover:bg-muted hover:border-border rounded-xl font-bold text-muted-foreground transition-all focus:ring-4 focus:ring-primary/10">
                                 <div className="flex items-center gap-2">
                                     <Flag className="h-3 w-3 opacity-50" />
                                     <SelectValue placeholder="Priority" />
@@ -354,7 +354,7 @@ export default function TasksPage() {
                         </Select>
 
                         <Select value={groupBy} onValueChange={setGroupBy}>
-                            <SelectTrigger className="h-10 w-40 text-xs bg-accent/50 border-border hover:bg-accent hover:border-border/80 rounded-xl font-bold text-muted-foreground transition-all focus:ring-4 focus:ring-accent/20">
+                            <SelectTrigger className="h-8 sm:h-10 min-w-[120px] sm:w-40 text-[10px] sm:text-xs bg-accent/50 border-border hover:bg-accent hover:border-border/80 rounded-xl font-bold text-muted-foreground transition-all focus:ring-4 focus:ring-accent/20">
                                 <div className="flex items-center gap-2">
                                     <LayoutGrid className="h-3 w-3 opacity-50" />
                                     <SelectValue placeholder="Group by" />
@@ -370,11 +370,11 @@ export default function TasksPage() {
                             </SelectContent>
                         </Select>
 
-                        <div className="h-8 w-px bg-border mx-1 hidden sm:block" />
+                        <div className="h-8 w-px bg-border mx-1 hidden lg:block" />
 
                         {hasActiveFilters && (
                             <Button variant="ghost" size="sm" onClick={resetFilters}
-                                className="h-10 text-xs font-bold text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl transition-all gap-1.5">
+                                className="h-8 sm:h-10 text-[10px] sm:text-xs font-bold text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl transition-all gap-1.5 shrink-0">
                                 <X className="h-3.5 w-3.5" /> Reset
                             </Button>
                         )}

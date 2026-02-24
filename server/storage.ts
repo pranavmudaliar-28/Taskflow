@@ -116,6 +116,7 @@ export interface IStorage {
   // Comments
   createComment(comment: InsertComment): Promise<Comment>;
   getCommentsByTask(taskId: string): Promise<Comment[]>;
+  toggleCommentReaction(commentId: string, userId: string, emoji: string): Promise<Comment | undefined>;
 
   // Notifications
   createNotification(notification: InsertNotification): Promise<Notification>;
@@ -753,7 +754,28 @@ export class DatabaseStorage implements IStorage {
   async getCommentsByTask(taskId: string): Promise<Comment[]> {
     return db!.select().from(comments)
       .where(eq(comments.taskId, taskId))
-      .orderBy(comments.createdAt);
+      .orderBy(asc(comments.createdAt));
+  }
+
+  async toggleCommentReaction(commentId: string, userId: string, emoji: string): Promise<Comment | undefined> {
+    const [comment] = await db!.select().from(comments).where(eq(comments.id, commentId));
+    if (!comment) return undefined;
+
+    const reactionStr = `${emoji}:${userId}`;
+    let newReactions = comment.reactions || [];
+
+    if (newReactions.includes(reactionStr)) {
+      newReactions = newReactions.filter(r => r !== reactionStr);
+    } else {
+      newReactions.push(reactionStr);
+    }
+
+    const [updated] = await db!.update(comments)
+      .set({ reactions: newReactions, updatedAt: new Date() })
+      .where(eq(comments.id, commentId))
+      .returning();
+
+    return updated;
   }
 
   // Notifications

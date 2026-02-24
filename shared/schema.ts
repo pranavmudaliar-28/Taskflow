@@ -154,6 +154,8 @@ export const comments = pgTable("comments", {
   taskId: varchar("task_id").notNull(),
   authorId: varchar("author_id").notNull(),
   content: text("content").notNull(),
+  parentId: varchar("parent_id").references((): AnyPgColumn => comments.id),
+  reactions: text("reactions").array().default(sql`ARRAY[]::text[]`), // Array of emoji:userId strings
   mentions: text("mentions").array(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -254,7 +256,10 @@ export const insertTaskSchema = createInsertSchema(tasks).omit({
   parentId: z.string().nullable().optional(),
 });
 export const insertTimeLogSchema = createInsertSchema(timeLogs).omit({ id: true, createdAt: true });
-export const insertCommentSchema = createInsertSchema(comments).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertCommentSchema = createInsertSchema(comments).omit({ id: true, createdAt: true, updatedAt: true }).extend({
+  parentId: z.string().nullable().optional(),
+  reactions: z.array(z.string()).optional(),
+});
 export const insertNotificationSchema = createInsertSchema(notifications).omit({ id: true, createdAt: true });
 export const insertOrganizationMemberSchema = createInsertSchema(organizationMembers).omit({ id: true, joinedAt: true });
 export const insertProjectMemberSchema = createInsertSchema(projectMembers).omit({ id: true, addedAt: true });

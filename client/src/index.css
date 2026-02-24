@@ -6,19 +6,16 @@
 
 @layer base {
   :root {
-    /* Sidebar (dark navy) */
+    /* Sidebar (Dark Navy) */
+    --sidebar: 222 47% 11%;
     --sidebar-bg: 222 47% 11%;
-    /* #0F172A */
-    --sidebar-bg-secondary: 217 33% 17%;
-    /* #1E293B */
-    --sidebar-hover: 217 33% 18%;
-    --sidebar-active: 217 91% 60%;
-    --sidebar-accent: 217 91% 60%;
+    --sidebar-foreground: 215 20% 65%;
+    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 217 33% 17%;
     --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-text: 215 20% 65%;
-    /* slate-400 */
-    --sidebar-text-active: 0 0% 100%;
     --sidebar-border: 217 33% 17%;
+    --sidebar-ring: 217 91% 60%;
     --sidebar-width: 16rem;
     --sidebar-width-icon: 3rem;
 
@@ -62,6 +59,20 @@
     /* Premium Shadows */
     --shadow-premium: 0 10px 15px -3px rgba(0, 0, 0, 0.04), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
     --shadow-elevation: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02);
+
+    /* Fluid Typography (Mobile First) */
+    --text-xs: clamp(0.65rem, 0.6rem + 0.25vw, 0.75rem);
+    --text-sm: clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
+    --text-base: clamp(0.875rem, 0.8rem + 0.35vw, 1rem);
+    --text-lg: clamp(1rem, 0.9rem + 0.5vw, 1.125rem);
+    --text-xl: clamp(1.125rem, 1rem + 0.6vw, 1.25rem);
+    --text-2xl: clamp(1.25rem, 1.1rem + 1vw, 1.5rem);
+    --text-3xl: clamp(1.5rem, 1.3rem + 1.5vw, 2rem);
+    --text-4xl: clamp(2rem, 1.75rem + 2vw, 2.5rem);
+
+    /* Responsive Spacing */
+    --page-padding: clamp(1rem, 5vw, 2rem);
+    --section-spacing: clamp(1.5rem, 6vw, 3rem);
   }
 
   .dark {
@@ -83,7 +94,15 @@
     --destructive-foreground: 0 0% 100%;
     --border: 217 33% 22%;
     --input: 217 33% 22%;
-    --ring: 217 91% 60%;
+    --sidebar: 222 47% 11%;
+    --sidebar-bg: 222 47% 11%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 210 40% 98%;
+    --sidebar-primary-foreground: 222 47% 11%;
+    --sidebar-accent: 217 33% 22%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 217 33% 22%;
+    --sidebar-ring: 217 91% 60%;
   }
 
   .shadow-premium {
@@ -120,7 +139,8 @@
 }
 
 /* ── Sidebar dark navy theme ───────────────────────────────────────────────── */
-[data-sidebar="sidebar"] {
+[data-sidebar="sidebar"],
+.bg-sidebar {
   background: hsl(222, 47%, 11%) !important;
   border-right: 1px solid hsl(217, 33%, 17%) !important;
   color: hsl(215, 20%, 65%);
@@ -134,7 +154,7 @@
 
 [data-sidebar="group-label"] {
   color: hsl(215, 20%, 45%) !important;
-  font-size: 0.7rem;
+  font-size: var(--text-xs);
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -160,6 +180,9 @@
 [data-sidebar="separator"] {
   background: hsl(217, 33%, 17%) !important;
 }
+
+
+
 
 /* ── Stat / KPI card ───────────────────────────────────────────────────────── */
 .stat-card {
@@ -218,15 +241,15 @@
 
 /* ── Page header ───────────────────────────────────────────────────────────── */
 .page-header {
-  @apply flex items-center justify-between px-6 py-5 border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-20;
+  @apply flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-[var(--page-padding)] py-5 border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-20;
 }
 
 .page-title {
-  @apply text-xl font-bold text-foreground;
+  @apply text-xl sm:text-2xl font-bold text-foreground;
 }
 
 .page-subtitle {
-  @apply text-sm text-muted-foreground mt-0.5;
+  @apply text-xs sm:text-sm text-muted-foreground mt-0.5;
 }
 
 /* ── Primary button override ───────────────────────────────────────────────── */

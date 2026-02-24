@@ -9,6 +9,7 @@ const UserSchema = new Schema({
     firstName: { type: String },
     lastName: { type: String },
     profileImageUrl: { type: String },
+    role: { type: String, default: "member" },
     plan: { type: String, default: "free" },
     stripeCustomerId: { type: String },
     onboardingStep: { type: String, default: "plan" },
@@ -85,6 +86,8 @@ const CommentSchema = new Schema({
     taskId: { type: String, required: true },
     authorId: { type: String, required: true },
     content: { type: String, required: true },
+    parentId: { type: String },
+    reactions: { type: [String], default: [] },
     mentions: [{ type: String }],
 }, { timestamps: true });
 

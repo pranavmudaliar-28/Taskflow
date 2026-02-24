@@ -106,19 +106,19 @@ export default function Dashboard() {
   return (
     <div className="flex flex-col min-h-full bg-background/50">
       {/* ── Page header ── */}
-      <div className="bg-card/50 backdrop-blur-sm border-b border-border px-6 py-5 sticky top-0 z-20">
-        <div className="flex items-center justify-between">
+      <div className="bg-card/50 backdrop-blur-sm border-b border-border px-[var(--page-padding)] py-5 sticky top-0 z-20">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-extrabold text-foreground tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight">
               {greeting}, {user?.firstName || "there"}
             </h1>
-            <p className="text-sm text-muted-foreground mt-1.5 font-medium">
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1.5 font-medium">
               Here's what's happening with your work today.
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <div className="text-right hidden sm:block">
-              <p className="text-sm font-medium text-muted-foreground">
+            <div className="text-left hidden xs:block">
+              <p className="text-xs sm:text-sm font-medium text-muted-foreground">
                 {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
               </p>
             </div>
@@ -134,16 +134,16 @@ export default function Dashboard() {
                 style={{ width: `${completionRate}%` }}
               />
             </div>
-            <span className="text-xs text-muted-foreground shrink-0 font-medium">{completionRate}% complete</span>
+            <span className="text-[10px] sm:text-xs text-muted-foreground shrink-0 font-medium">{completionRate}% complete</span>
           </div>
         )}
       </div>
 
-      <div className="p-6 space-y-6">
+      <div className="p-[var(--page-padding)] space-y-6">
         {/* ── KPI Cards ── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-4">
           {kpiCards.map(({ label, value, sub, icon: Icon, iconBg, iconColor, accent }) => (
-            <div key={label} className={cn("bg-card rounded-2xl border border-border shadow-sm p-6 transition-all hover:shadow-md", accent)}>
+            <div key={label} className={cn("bg-card rounded-2xl border border-border shadow-sm p-4 sm:p-6 transition-all hover:shadow-md", accent)}>
               {statsLoading ? (
                 <div className="space-y-2">
                   <Skeleton className="h-4 w-20" />
@@ -152,28 +152,28 @@ export default function Dashboard() {
                 </div>
               ) : (
                 <>
-                  <div className={cn("h-9 w-9 rounded-lg flex items-center justify-center mb-3", iconBg)}>
-                    <Icon className={cn("h-4.5 w-4.5", iconColor)} />
+                  <div className={cn("h-8 w-8 sm:h-9 sm:w-9 rounded-lg flex items-center justify-center mb-3", iconBg)}>
+                    <Icon className={cn("h-4 w-4 sm:h-4.5 sm:w-4.5", iconColor)} />
                   </div>
-                  <p className="text-2xl font-bold text-foreground">{value}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5 font-medium">{label}</p>
-                  <p className="text-xs text-muted-foreground/60 mt-1">{sub}</p>
+                  <p className="text-xl sm:text-2xl font-bold text-foreground">{value}</p>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 font-medium">{label}</p>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground/60 mt-1">{sub}</p>
                 </>
               )}
             </div>
           ))}
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* ── Recent Tasks ── */}
-          <div className="xl:col-span-2 bg-card rounded-xl border border-border shadow-sm">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-border/50">
-              <div>
-                <h2 className="text-base font-bold text-foreground">Recent Tasks</h2>
-                <p className="text-xs text-muted-foreground mt-0.5 font-medium">Your latest task activity</p>
+          <div className="lg:col-span-2 bg-card rounded-xl border border-border shadow-sm overflow-hidden">
+            <div className="flex items-center justify-between px-4 sm:px-5 py-4 border-b border-border/50">
+              <div className="min-w-0">
+                <h2 className="text-sm sm:text-base font-bold text-foreground truncate">Recent Tasks</h2>
+                <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 font-medium truncate">Your latest task activity</p>
               </div>
               <Link href="/tasks">
-                <Button variant="ghost" size="sm" className="text-blue-500 hover:text-blue-600 hover:bg-blue-50 h-8 text-xs gap-1">
+                <Button variant="ghost" size="sm" className="text-blue-500 hover:text-blue-600 hover:bg-blue-50 h-8 text-xs gap-1 shrink-0">
                   View all <ArrowRight className="h-3.5 w-3.5" />
                 </Button>
               </Link>
@@ -295,17 +295,17 @@ export default function Dashboard() {
                   [...Array(3)].map((_, i) => <Skeleton key={i} className="h-10 w-full rounded" />)
                 ) : timeLogs && timeLogs.length > 0 ? (
                   timeLogs.slice(0, 4).map((log) => (
-                    <div key={log.id} className="flex items-center gap-3 py-1.5">
-                      <div className="h-7 w-7 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0">
-                        <Clock className="h-3.5 w-3.5 text-blue-500" />
+                    <div key={log.id} className="flex items-center gap-2 sm:gap-3 py-1.5">
+                      <div className="h-6 w-6 sm:h-7 sm:w-7 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0">
+                        <Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-blue-500" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium text-foreground truncate">Task #{log.taskId?.slice(0, 8)}</p>
-                        <p className="text-[10px] text-muted-foreground">
+                        <p className="text-[10px] sm:text-xs font-medium text-foreground truncate">Task #{log.taskId?.slice(0, 8)}</p>
+                        <p className="text-[9px] sm:text-[10px] text-muted-foreground">
                           {log.startTime ? new Date(log.startTime).toLocaleDateString() : "—"}
                         </p>
                       </div>
-                      <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 shrink-0">
+                      <span className="text-[10px] sm:text-xs font-semibold text-blue-600 dark:text-blue-400 shrink-0">
                         {log.duration ? formatDuration(log.duration) : "running"}
                       </span>
                     </div>

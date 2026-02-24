@@ -91,6 +91,7 @@ export default function TaskView() {
     const queryClient = useQueryClient();
 
     const [comment, setComment] = useState("");
+    const [replyTo, setReplyTo] = useState<string | null>(null);
     const [isEditingTitle, setIsEditingTitle] = useState(false);
     const [title, setTitle] = useState("");
     const [showCreateSubtask, setShowCreateSubtask] = useState(false);
@@ -148,8 +149,8 @@ export default function TaskView() {
 
     // Fetch Milestones
     const { data: milestones } = useQuery<Milestone[]>({
-        queryKey: [`/api/organizations/${project?.organizationId}/milestones`],
-        enabled: !!project?.organizationId,
+        queryKey: [`/api/projects/${task?.projectId || projectIdParam}/milestones`],
+        enabled: !!(task?.projectId || projectIdParam),
     });
 
     const usersMap = useMemo(() => {
@@ -206,18 +207,29 @@ export default function TaskView() {
     });
 
     const createCommentMutation = useMutation({
-        mutationFn: async ({ content, mentions }: { content: string; mentions: string[] }) => {
-            const res = await apiRequest("POST", `/api/tasks/${task?.id}/comments`, { content, mentions });
+        mutationFn: async ({ content, mentions, parentId }: { content: string; mentions: string[]; parentId?: string | null }) => {
+            const res = await apiRequest("POST", `/api/tasks/${task?.id}/comments`, { content, mentions, parentId });
             return res.json();
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: [`/api/tasks/${task?.id}/comments`] });
             setComment("");
+            setReplyTo(null);
             toast({ title: "Comment added" });
         },
     });
 
-    const handleSendComment = () => {
+    const toggleReactionMutation = useMutation({
+        mutationFn: async ({ commentId, emoji }: { commentId: string; emoji: string }) => {
+            const res = await apiRequest("POST", `/api/comments/${commentId}/react`, { emoji });
+            return res.json();
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: [`/api/tasks/${task?.id}/comments`] });
+        },
+    });
+
+    const handleSendComment = (parentId?: string | null) => {
         if (!comment.trim() || !task) return;
         const mentionMatches = comment.match(/@([a-zA-Z]+\s[a-zA-Z]+)/g) || [];
         const mentions: string[] = [];
@@ -226,12 +238,13 @@ export default function TaskView() {
             const member = (orgMembers || members)?.find(m => `${m.user.firstName} ${m.user.lastName}` === name);
             if (member) mentions.push(member.userId);
         });
-        createCommentMutation.mutate({ content: comment, mentions });
+        createCommentMutation.mutate({ content: comment, mentions, parentId: parentId || replyTo });
     };
 
-    const handleCommentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const handleCommentChange = (e: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
         const val = e.target.value;
-        const cursorPosition = e.target.selectionStart || 0;
+        const target = e.target as HTMLTextAreaElement | HTMLInputElement;
+        const cursorPosition = target.selectionStart || 0;
         const textBeforeCursor = val.slice(0, cursorPosition);
         const mentionMatch = textBeforeCursor.match(/@(\w*)$/);
         setComment(val);
@@ -440,28 +453,137 @@ export default function TaskView() {
                             </div>
 
                             <div className="space-y-6 relative before:absolute before:left-[19px] before:top-2 before:bottom-2 before:w-px before:bg-muted">
-                                {comments?.map((c) => (
-                                    <div key={c.id} className="flex gap-4 group relative">
-                                        <div className="relative z-10 shrink-0">
-                                            <Avatar className="h-10 w-10 ring-4 ring-background shadow-premium">
-                                                <AvatarFallback className="bg-muted text-muted-foreground font-bold text-xs">{initials(usersMap.get(c.authorId))}</AvatarFallback>
-                                            </Avatar>
-                                        </div>
-                                        <div className="flex-1 space-y-1.5 min-w-0">
-                                            <div className="flex items-center gap-2 px-0.5">
-                                                <span className="text-sm font-bold text-foreground truncate">
-                                                    {usersMap.get(c.authorId) ? `${usersMap.get(c.authorId).firstName} ${usersMap.get(c.authorId).lastName}` : "System User"}
-                                                </span>
-                                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-tighter">
-                                                    {c.createdAt ? format(new Date(c.createdAt), "h:mm a") : ""}
-                                                </span>
+                                {(() => {
+                                    const commentMap = new Map<string | null, Comment[]>();
+                                    comments?.forEach(c => {
+                                        const pid = c.parentId || null;
+                                        if (!commentMap.has(pid)) commentMap.set(pid, []);
+                                        commentMap.get(pid)!.push(c);
+                                    });
+
+                                    const renderComments = (parentId: string | null = null, depth = 0) => {
+                                        return commentMap.get(parentId)?.map((c) => (
+                                            <div key={c.id} className={cn("flex flex-col gap-2", depth > 0 && "ml-10")}>
+                                                <div className="flex gap-4 group relative">
+                                                    <div className="relative z-10 shrink-0">
+                                                        <Avatar className={cn("ring-4 ring-background shadow-premium", depth === 0 ? "h-10 w-10" : "h-8 w-8")}>
+                                                            <AvatarFallback className="bg-muted text-muted-foreground font-bold text-[10px]">{initials(usersMap.get(c.authorId))}</AvatarFallback>
+                                                        </Avatar>
+                                                    </div>
+                                                    <div className="flex-1 space-y-1.5 min-w-0">
+                                                        <div className="flex items-center gap-2 px-0.5">
+                                                            <span className="text-sm font-bold text-foreground truncate">
+                                                                {usersMap.get(c.authorId) ? `${usersMap.get(c.authorId).firstName} ${usersMap.get(c.authorId).lastName}` : "System User"}
+                                                            </span>
+                                                            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-tighter">
+                                                                {c.createdAt ? format(new Date(c.createdAt), "h:mm a") : ""}
+                                                            </span>
+                                                        </div>
+                                                        <div className="bg-card p-4 rounded-2xl rounded-tl-none text-sm text-foreground/80 leading-relaxed border border-border shadow-sm transition-all group-hover:shadow-md group-hover:border-border/80">
+                                                            {c.content}
+
+                                                            {/* Reactions */}
+                                                            {c.reactions && c.reactions.length > 0 && (
+                                                                <div className="flex flex-wrap gap-1 mt-3">
+                                                                    {Object.entries(
+                                                                        c.reactions.reduce((acc: any, r: string) => {
+                                                                            const [emoji] = r.split(':');
+                                                                            acc[emoji] = (acc[emoji] || 0) + 1;
+                                                                            return acc;
+                                                                        }, {})
+                                                                    ).map(([emoji, count]: [string, any]) => {
+                                                                        const hasReacted = c.reactions?.some(r => r === `${emoji}:${currentUser?.id}`);
+                                                                        return (
+                                                                            <button
+                                                                                key={emoji}
+                                                                                onClick={() => toggleReactionMutation.mutate({ commentId: c.id, emoji })}
+                                                                                className={cn(
+                                                                                    "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border transition-all",
+                                                                                    hasReacted
+                                                                                        ? "bg-primary/10 border-primary/20 text-primary shadow-sm"
+                                                                                        : "bg-muted/50 border-border text-muted-foreground hover:border-primary/20"
+                                                                                )}
+                                                                            >
+                                                                                <span>{emoji}</span>
+                                                                                <span>{count}</span>
+                                                                            </button>
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                            )}
+                                                        </div>
+
+                                                        {/* Actions */}
+                                                        <div className="flex items-center gap-3 px-1">
+                                                            <button
+                                                                onClick={() => setReplyTo(replyTo === c.id ? null : c.id)}
+                                                                className="text-[10px] font-extrabold text-muted-foreground hover:text-primary uppercase tracking-wider transition-colors"
+                                                            >
+                                                                Reply
+                                                            </button>
+
+                                                            <Popover>
+                                                                <PopoverTrigger asChild>
+                                                                    <button className="text-[10px] font-extrabold text-muted-foreground hover:text-primary uppercase tracking-wider transition-colors opacity-0 group-hover:opacity-100">
+                                                                        React
+                                                                    </button>
+                                                                </PopoverTrigger>
+                                                                <PopoverContent className="w-auto p-1 rounded-full border-border shadow-premium flex gap-1 bg-background/95 backdrop-blur-sm" align="start">
+                                                                    {['👍', '❤️', '🔥', '😂', '😮', '🚀'].map(emoji => (
+                                                                        <button
+                                                                            key={emoji}
+                                                                            onClick={() => toggleReactionMutation.mutate({ commentId: c.id, emoji })}
+                                                                            className="h-8 w-8 flex items-center justify-center hover:bg-muted rounded-full transition-all text-lg hover:scale-125"
+                                                                        >
+                                                                            {emoji}
+                                                                        </button>
+                                                                    ))}
+                                                                </PopoverContent>
+                                                            </Popover>
+                                                        </div>
+
+                                                        {/* Inline Reply Form */}
+                                                        {replyTo === c.id && (
+                                                            <div className="mt-4 flex gap-3 animate-slide-down">
+                                                                <Avatar className="h-8 w-8 shadow-sm ring-1 ring-background">
+                                                                    <AvatarFallback className="bg-primary/10 text-primary font-bold text-[10px]">{initials(currentUser)}</AvatarFallback>
+                                                                </Avatar>
+                                                                <div className="flex-1 flex gap-2">
+                                                                    <Input
+                                                                        value={comment}
+                                                                        onChange={handleCommentChange}
+                                                                        placeholder={`Reply to ${usersMap.get(c.authorId)?.firstName}...`}
+                                                                        className="h-9 bg-muted/30 border-border text-xs rounded-xl focus:ring-2 focus:ring-primary/20"
+                                                                        autoFocus
+                                                                    />
+                                                                    <Button
+                                                                        size="sm"
+                                                                        disabled={!comment.trim() || createCommentMutation.isPending}
+                                                                        onClick={() => handleSendComment(c.id)}
+                                                                        className="h-9 rounded-xl px-4"
+                                                                    >
+                                                                        <Send className="h-3.5 w-3.5" />
+                                                                    </Button>
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="sm"
+                                                                        onClick={() => setReplyTo(null)}
+                                                                        className="h-9 rounded-xl text-xs font-bold"
+                                                                    >
+                                                                        Cancel
+                                                                    </Button>
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                {renderComments(c.id, depth + 1)}
                                             </div>
-                                            <div className="bg-card p-4 rounded-2xl rounded-tl-none text-sm text-foreground/80 leading-relaxed border border-border shadow-sm transition-all group-hover:shadow-md group-hover:border-border/80">
-                                                {c.content}
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
+                                        ));
+                                    };
+
+                                    return renderComments();
+                                })()}
 
                                 <div className="flex gap-4 pt-4 sticky bottom-0 bg-background/95 backdrop-blur-sm py-4 border-t border-border">
                                     <div className="shrink-0">
@@ -485,7 +607,7 @@ export default function TaskView() {
                                         )}
                                         <div className="flex gap-2">
                                             <Textarea value={comment} onChange={handleCommentChange} placeholder="Write a comment... Use @ to mention" className="min-h-[100px] bg-muted/50 border-border focus:bg-background focus:border-primary/20 focus:ring-4 focus:ring-primary/10 rounded-2xl p-4 text-sm resize-none transition-all" />
-                                            <Button disabled={!comment.trim() || createCommentMutation.isPending} onClick={handleSendComment} className="h-[100px] w-14 bg-primary hover:bg-primary/90 text-primary-foreground rounded-2xl flex items-center justify-center shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95">
+                                            <Button disabled={!comment.trim() || createCommentMutation.isPending} onClick={() => handleSendComment()} className="h-[100px] w-14 bg-primary hover:bg-primary/90 text-primary-foreground rounded-2xl flex items-center justify-center shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95">
                                                 <Send className="h-5 w-5" />
                                             </Button>
                                         </div>
@@ -569,6 +691,22 @@ export default function TaskView() {
                                         <div className="flex items-center gap-2">
                                             <Avatar className="h-6 w-6 ring-2 ring-background shadow-sm"><AvatarFallback className="text-[8px] font-extrabold bg-muted text-muted-foreground">{initials(usersMap.get(task.reviewerId as any))}</AvatarFallback></Avatar>
                                             <span className="text-xs font-bold text-muted-foreground">{usersMap.get(task.reviewerId as any) ? `${usersMap.get(task.reviewerId as any).firstName} ${usersMap.get(task.reviewerId as any).lastName}` : "None"}</span>
+                                        </div>
+                                    </SelectTrigger>
+                                    <SelectContent className="rounded-xl border-border shadow-elevation">
+                                        <SelectItem value="unassigned" className="font-bold text-xs text-muted-foreground">None</SelectItem>
+                                        {members?.map(m => <SelectItem key={m.user.id} value={String(m.user.id)} className="font-bold text-xs text-foreground/80">{m.user.firstName} {m.user.lastName}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div className="flex flex-col gap-2">
+                                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider px-1">Tester</label>
+                                <Select value={task?.testerId ? String(task.testerId) : "unassigned"} onValueChange={(v) => updateTaskMutation.mutate({ testerId: v === "unassigned" ? null : v as any })}>
+                                    <SelectTrigger className="h-10 border-border bg-muted/50 hover:bg-muted rounded-xl transition-colors ring-offset-0 focus:ring-4 focus:ring-primary/10">
+                                        <div className="flex items-center gap-2">
+                                            <Avatar className="h-6 w-6 ring-2 ring-background shadow-sm"><AvatarFallback className="text-[8px] font-extrabold bg-muted text-muted-foreground">{initials(usersMap.get(task.testerId as any))}</AvatarFallback></Avatar>
+                                            <span className="text-xs font-bold text-muted-foreground">{usersMap.get(task.testerId as any) ? `${usersMap.get(task.testerId as any).firstName} ${usersMap.get(task.testerId as any).lastName}` : "None"}</span>
                                         </div>
                                     </SelectTrigger>
                                     <SelectContent className="rounded-xl border-border shadow-elevation">

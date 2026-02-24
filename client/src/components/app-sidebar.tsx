@@ -1,4 +1,5 @@
 import { useLocation, Link } from "wouter";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -68,8 +69,27 @@ const projectColors = [
 export function AppSidebar({ projects, onCreateProject }: AppSidebarProps) {
   const [location] = useLocation();
   const { user, logout } = useAuth();
-  const { state } = useSidebar();
+  const { state, setOpen } = useSidebar();
   const isMobile = useIsMobile();
+
+  // Desktop persistent, Tablet collapsible, Mobile drawer
+  // lg breakpoint is 1024px.
+  const [isLargeScreen, setIsLargeScreen] = useState(typeof window !== "undefined" ? window.innerWidth >= 1024 : true);
+
+  useEffect(() => {
+    const handleResize = () => {
+      const isLg = window.innerWidth >= 1024;
+      setIsLargeScreen(isLg);
+      // If we're on a large screen, ensure the sidebar is expanded (persistent)
+      if (isLg) {
+        setOpen(true);
+      }
+    };
+    window.addEventListener("resize", handleResize);
+    // Initial check
+    handleResize();
+    return () => window.removeEventListener("resize", handleResize);
+  }, [setOpen]);
 
   const isCollapsed = state === "collapsed" && !isMobile;
 
@@ -93,7 +113,7 @@ export function AppSidebar({ projects, onCreateProject }: AppSidebarProps) {
 
   return (
     <Sidebar
-      collapsible="icon"
+      collapsible={isLargeScreen ? "none" : "icon"}
       className="border-r border-sidebar-border bg-sidebar"
     >
       <SidebarHeader className="px-4 py-4">
@@ -106,10 +126,10 @@ export function AppSidebar({ projects, onCreateProject }: AppSidebarProps) {
                 </div>
                 {!isCollapsed && (
                   <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-extrabold text-[#F8FAFC]">
+                    <span className="truncate font-extrabold text-sidebar-foreground">
                       TaskFlow
                     </span>
-                    <span className="text-[10px] text-slate-400 mt-0.5">
+                    <span className="text-[10px] text-sidebar-foreground/60 mt-0.5">
                       Project Management
                     </span>
                   </div>

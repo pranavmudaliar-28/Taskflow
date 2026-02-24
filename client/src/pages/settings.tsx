@@ -393,12 +393,12 @@ export default function Settings() {
 
   /* ── render ── */
   return (
-    <div className="min-h-full bg-background p-6">
+    <div className="min-h-full bg-background p-[var(--page-padding)]">
       <div className="max-w-4xl mx-auto">
         {/* Page title */}
         <div className="mb-6">
-          <h1 className="text-xl font-bold text-foreground tracking-tight">Settings</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Manage your account and preferences</p>
+          <h1 className="text-xl sm:text-2xl font-extrabold text-foreground tracking-tight">Settings</h1>
+          <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">Manage your account and preferences</p>
         </div>
 
         {/* Two-column layout */}
