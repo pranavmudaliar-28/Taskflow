@@ -54,8 +54,8 @@ const ROLE_ICONS: Record<Role, typeof Shield> = {
   member: UserIcon,
 };
 
-export function ProjectMembersDialog({ open, onClose, projectId, memberData }: ProjectMembersDialogProps) {
-  const { toast } = useToast();
+export function ProjectMembersDialog({ open, onClose, project, memberData }: Omit<ProjectMembersDialogProps, 'projectId'> & { project: Project }) {
+  const projectId = project?.id;
   const { user: currentUser } = useAuth();
   const [openCombobox, setOpenCombobox] = useState(false);
   const [searchValue, setSearchValue] = useState("");
@@ -79,35 +79,38 @@ export function ProjectMembersDialog({ open, onClose, projectId, memberData }: P
     return () => clearTimeout(timer);
   }, [searchValue]);
 
-  // Fetch organization members - use server search if typing, otherwise fetch all (or limit)
+  // Fetch organization members - filter them locally instead of relying on a non-existent backend search route
   const { data: orgMembers = [], isLoading: isLoadingMembers } = useQuery<Array<{ userId: string; user: Omit<User, 'password'>; role: Role }>>({
-    queryKey: debouncedSearch.length > 1
-      ? ["/api/organizations/members/search", debouncedSearch]
-      : ["/api/organizations/members"],
-    queryFn: async ({ queryKey }) => {
-      const [endpoint, q] = queryKey as [string, string?];
-      if (endpoint.includes("search")) {
-        const res = await apiRequest("GET", `${endpoint}?q=${q}`);
-        return res.json();
-      }
-      const res = await apiRequest("GET", endpoint as string);
-      return res.json();
-    },
-    enabled: open && isAdmin,
+    queryKey: [`/api/organizations/${project?.organizationId}/members`],
+    enabled: open && !!project?.organizationId,
   });
 
-  // Filter out users who are already project members
+  // Filter out users who are already project members, and match the search query
   const availableOrgMembers = useMemo(() => {
     if (!orgMembers?.length) return [];
+
+    // 1. Remove people already in project
     const projectMemberIds = new Set(memberData.map(m => m.userId));
-    return orgMembers.filter(om => !projectMemberIds.has(om.userId));
-  }, [orgMembers, memberData]);
+    let available = orgMembers.filter(om => !projectMemberIds.has(om.userId));
+
+    // 2. Filter by search query if any
+    if (debouncedSearch) {
+      const q = debouncedSearch.toLowerCase();
+      available = available.filter(om => {
+        const u = om.user;
+        const fullName = `${u.firstName || ''} ${u.lastName || ''}`.toLowerCase();
+        return fullName.includes(q) || (u.email && u.email.toLowerCase().includes(q));
+      });
+    }
+
+    return available;
+  }, [orgMembers, memberData, debouncedSearch]);
 
   const filteredOrgMembers = availableOrgMembers;
 
   const { data: invitations = [], isLoading: isLoadingInvitations, isError: isInvitationsError } = useQuery<ProjectInvitation[]>({
     queryKey: ["/api/projects", projectId, "invitations"],
-    enabled: open,
+    enabled: open && !!projectId,
   });
 
   const addMemberMutation = useMutation({

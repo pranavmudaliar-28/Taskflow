@@ -621,7 +621,7 @@ export default function ProjectPage() {
       <CreateTaskDialog open={showCreateTask} onClose={() => setShowCreateTask(false)} projectId={project?.id || ""} initialStatus={createTaskStatus} initialMilestone={createTaskMilestone} members={Array.from(usersMap.values()).filter(Boolean)} />
       {creatingSubtaskFor && <CreateTaskDialog open={!!creatingSubtaskFor} onClose={() => setCreatingSubtaskFor(null)} projectId={project?.id || ""} parentId={creatingSubtaskFor} members={Array.from(usersMap.values()).filter(Boolean)} onSuccess={(c: any) => c.parentId && setExpanded((e: any) => e === true ? true : { ...e, [c.parentId]: true })} />}
       <CreateMilestoneDialog open={showCreateMilestone} onClose={() => setShowCreateMilestone(false)} projectId={project?.id || ""} />
-      <ProjectMembersDialog open={showMembers} onClose={() => setShowMembers(false)} projectId={project?.id || ""} memberData={memberData || []} />
+      <ProjectMembersDialog open={showMembers} onClose={() => setShowMembers(false)} project={project!} memberData={memberData || []} />
       {project && <ProjectSettingsDialog open={showSettings} onClose={() => setShowSettings(false)} project={project} />}
 
       <BulkEditDialog

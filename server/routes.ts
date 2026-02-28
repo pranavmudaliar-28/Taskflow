@@ -28,7 +28,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // Helper to resolve project ID or Slug
   const resolveProject = async (idOrSlug: string): Promise<any | undefined> => {
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrSlug);
-    if (isUuid) return storage.getProject(idOrSlug);
+    const isMongoId = /^[0-9a-fA-F]{24}$/.test(idOrSlug);
+
+    if (isUuid || isMongoId) {
+      const byId = await storage.getProject(idOrSlug);
+      if (byId) return byId;
+    }
+
     return storage.getProjectBySlug(idOrSlug);
   };
 
