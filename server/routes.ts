@@ -27,14 +27,11 @@ import { logger } from "./utils/logger";
 export async function registerRoutes(httpServer: Server, app: Express): Promise<Server> {
   // Helper to resolve project ID or Slug
   const resolveProject = async (idOrSlug: string): Promise<any | undefined> => {
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrSlug);
-    const isMongoId = /^[0-9a-fA-F]{24}$/.test(idOrSlug);
+    // Attempt lookup by ID first 
+    const byId = await storage.getProject(idOrSlug);
+    if (byId) return byId;
 
-    if (isUuid || isMongoId) {
-      const byId = await storage.getProject(idOrSlug);
-      if (byId) return byId;
-    }
-
+    // Fallback to searching by slug
     return storage.getProjectBySlug(idOrSlug);
   };
 
@@ -1243,6 +1240,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     try {
       const userId = getUserId(req);
       const projectIdOrSlug = req.params.id as string;
+      console.log(`[Members Post API] projectIdOrSlug:`, projectIdOrSlug);
       const { userId: memberUserId, role } = req.body;
 
       if (!memberUserId) {
@@ -1250,6 +1248,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
 
       const project = await resolveProject(projectIdOrSlug);
+      console.log(`[Members Post API] resolvedProject:`, project?.id || null);
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
       }
