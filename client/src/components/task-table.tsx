@@ -777,6 +777,7 @@ export function TaskTable({ tasks, users, milestones, onTaskClick, getTaskUrl, o
     const table = useReactTable({
         data: tasks,
         columns,
+        getRowId: (row) => row.id,
         getCoreRowModel: getCoreRowModel(),
         getSortedRowModel: getSortedRowModel(),
         getExpandedRowModel: getExpandedRowModel(),

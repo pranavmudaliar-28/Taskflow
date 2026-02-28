@@ -602,7 +602,7 @@ export default function ProjectPage() {
                             {tasks.filter(t => t.status === s.id).map((t, i) => (
                               <Draggable key={t.id} draggableId={t.id} index={i}>
                                 {(p) => (
-                                  <div ref={p.innerRef} {...p.draggableProps} {...p.dragHandleProps} className="mb-2">
+                                  <div ref={p.innerRef} {...p.draggableProps} {...p.dragHandleProps} className="mb-2" style={p.draggableProps.style}>
                                     <KanbanTaskCard
                                       task={t}
                                       user={t.assigneeId ? usersMap.get(t.assigneeId) : null}
@@ -626,17 +626,27 @@ export default function ProjectPage() {
             )}
 
             {activeTab === "milestones" && (
-              <MilestoneBoard
-                tasks={tasks}
-                users={usersMap}
-                onTaskClick={(t) => setLocation(getTaskUrl(t))}
-                onAddTask={(m) => { setCreateTaskStatus("todo"); setCreateTaskMilestone(m); setShowCreateTask(true); }}
-                activeTaskId={activeLogs && activeLogs.find(l => l.taskId && tasks.some(t => t.id === l.taskId))?.taskId}
-                onToggleTimer={handleToggleTimer}
-                taskDurations={taskDurations}
-                milestones={milestones || []}
-                onDragEnd={handleMilestoneDragEnd}
-              />
+              <div className="h-full flex flex-col items-start gap-4 p-[var(--page-padding)]">
+                <div className="flex w-full justify-between items-center sm:-mb-2">
+                  <h2 className="text-xl font-bold bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-transparent">Project Milestones</h2>
+                  <Button onClick={() => setShowCreateMilestone(true)} className="h-9 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-premium transition-all text-xs z-10">
+                    <Plus className="h-4 w-4 sm:mr-1.5" /> <span className="hidden sm:inline">New Milestone</span>
+                  </Button>
+                </div>
+                <div className="w-full flex-1">
+                  <MilestoneBoard
+                    tasks={tasks}
+                    users={usersMap}
+                    onTaskClick={(t) => setLocation(getTaskUrl(t))}
+                    onAddTask={(m) => { setCreateTaskStatus("todo"); setCreateTaskMilestone(m); setShowCreateTask(true); }}
+                    activeTaskId={activeLogs && activeLogs.find(l => l.taskId && tasks.some(t => t.id === l.taskId))?.taskId}
+                    onToggleTimer={handleToggleTimer}
+                    taskDurations={taskDurations}
+                    milestones={milestones || []}
+                    onDragEnd={handleMilestoneDragEnd}
+                  />
+                </div>
+              </div>
             )}
           </>
         )}
