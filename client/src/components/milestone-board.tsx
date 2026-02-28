@@ -68,16 +68,18 @@ function MilestoneColumn({
                                             ref={dragProvided.innerRef}
                                             {...dragProvided.draggableProps}
                                             {...dragProvided.dragHandleProps}
-                                            className={dragSnapshot.isDragging ? "opacity-90 scale-[1.02] transform" : ""}
+                                            style={dragProvided.draggableProps.style}
                                         >
-                                            <TaskCard
-                                                task={task}
-                                                assignee={task.assigneeId ? (users.get(task.assigneeId) as any) : undefined}
-                                                onClick={() => onTaskClick(task)}
-                                                isTracking={activeTaskId === task.id}
-                                                onToggleTimer={onToggleTimer ? () => onToggleTimer(task.id) : undefined}
-                                                totalDuration={taskDurations[task.id] || 0}
-                                            />
+                                            <div className="pb-2">
+                                                <TaskCard
+                                                    task={task}
+                                                    assignee={task.assigneeId ? (users.get(task.assigneeId) as any) : undefined}
+                                                    onClick={() => onTaskClick(task)}
+                                                    isTracking={activeTaskId === task.id}
+                                                    onToggleTimer={onToggleTimer ? () => onToggleTimer(task.id) : undefined}
+                                                    totalDuration={taskDurations[task.id] || 0}
+                                                />
+                                            </div>
                                         </div>
                                     )}
                                 </Draggable>

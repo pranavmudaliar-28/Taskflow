@@ -303,7 +303,7 @@ export default function ProjectPage() {
     return Math.round((completed / tasks.length) * 100);
   }, [tasks]);
 
-  const getTaskUrl = (task: Task) => {
+  const getTaskUrl = useCallback((task: Task) => {
     const projectSlug = project?.slug || project?.id || id;
     if (task.parentId) {
       const parent = tasks.find(t => t.id === task.parentId);
@@ -311,7 +311,12 @@ export default function ProjectPage() {
       return `/projects/${projectSlug}/${parentSlug}/${task.slug || task.id}`;
     }
     return `/projects/${projectSlug}/${task.slug || task.id}`;
-  };
+  }, [project?.slug, project?.id, id, tasks]);
+
+  const handleTaskClick = useCallback((t: Task) => setLocation(getTaskUrl(t)), [setLocation, getTaskUrl]);
+  const { mutate: updateTask } = updateTaskMutation;
+  const handleTaskUpdate = useCallback((taskId: string, up: Partial<Task>) => updateTask({ taskId, updates: up }), [updateTask]);
+  const handleCreateSubtask = useCallback((taskId: string) => setCreatingSubtaskFor(taskId), []);
 
   const buildTaskTree = (flatTasks: Task[]) => {
     const taskMap = new Map<string, Task & { subRows?: Task[] }>();

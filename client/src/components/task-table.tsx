@@ -807,6 +807,8 @@ export function TaskTable({ tasks, users, milestones, onTaskClick, getTaskUrl, o
         } : undefined,
     });
 
+    const sortableRowIds = useMemo(() => tasks.map(t => t.id), [tasks]);
+
     return (
         <div className="rounded-md border overflow-hidden">
             <div className="overflow-x-auto">
@@ -848,7 +850,7 @@ export function TaskTable({ tasks, users, milestones, onTaskClick, getTaskUrl, o
                         </TableHeader>
                         <TableBody>
                             <SortableContext
-                                items={tasks.map(t => t.id)}
+                                items={sortableRowIds}
                                 strategy={verticalListSortingStrategy}
                                 disabled={!enableDnd}
                             >
