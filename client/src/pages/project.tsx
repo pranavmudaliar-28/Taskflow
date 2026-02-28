@@ -157,6 +157,8 @@ export default function ProjectPage() {
     enabled: !!project?.id,
   });
 
+  const stableMilestones = useMemo(() => milestones || [], [milestones]);
+
   const { data: activeLogs } = useQuery<TimeLog[]>({
     queryKey: ["/api/timelogs/active"],
     refetchInterval: 5000,
@@ -558,7 +560,7 @@ export default function ProjectPage() {
             {activeTab === "list" && (
               <div className="space-y-6">
                 {Object.entries(groupedTasks).map(([title, group], idx) => (
-                  <div key={title} className="animate-fade-up" style={{ animationDelay: `${idx * 100}ms` }}>
+                  <div key={title}>
                     {groupBy !== "none" && (
                       <div className="flex items-center gap-2 mb-3 px-2">
                         <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{title}</h3>
@@ -570,11 +572,11 @@ export default function ProjectPage() {
                         tasks={group}
                         users={usersMap}
                         milestones={milestones || []}
-                        onTaskClick={(t) => setLocation(getTaskUrl(t))}
+                        onTaskClick={handleTaskClick}
                         getTaskUrl={getTaskUrl}
-                        onTaskUpdate={(id, up) => updateTaskMutation.mutate({ taskId: id, updates: up })}
+                        onTaskUpdate={handleTaskUpdate}
                         onReorder={sortBy === "order" ? handleReorder : undefined}
-                        onCreateSubtask={(id) => setCreatingSubtaskFor(id)}
+                        onCreateSubtask={handleCreateSubtask}
                         expanded={expanded}
                         onExpandedChange={setExpanded}
                         rowSelection={rowSelection}
@@ -590,7 +592,7 @@ export default function ProjectPage() {
               <DragDropContext onDragEnd={handleDragEnd}>
                 <div className="h-full flex flex-col lg:flex-row gap-5 overflow-auto pb-4">
                   {TASK_STATUSES.map((s, idx) => (
-                    <div key={s.id} className="min-w-full lg:min-w-[280px] lg:max-w-[320px] shrink-0 flex flex-col animate-fade-up" style={{ animationDelay: `${idx * 100}ms` }}>
+                    <div key={s.id} className="min-w-full lg:min-w-[280px] lg:max-w-[320px] shrink-0 flex flex-col">
                       <div className="flex items-center justify-between mb-4 px-1">
                         <div className="flex items-center gap-2">
                           <div className={cn("h-2.5 w-2.5 rounded-full", s.color)} />
@@ -607,15 +609,17 @@ export default function ProjectPage() {
                             {tasks.filter(t => t.status === s.id).map((t, i) => (
                               <Draggable key={t.id} draggableId={t.id} index={i}>
                                 {(p) => (
-                                  <div ref={p.innerRef} {...p.draggableProps} {...p.dragHandleProps} className="mb-2" style={p.draggableProps.style}>
-                                    <KanbanTaskCard
-                                      task={t}
-                                      user={t.assigneeId ? usersMap.get(t.assigneeId) : null}
-                                      onClick={() => setLocation(getTaskUrl(t))}
-                                      onToggleTimer={() => handleToggleTimer(t.id)}
-                                      isActive={activeLogs && activeLogs.some(l => l.taskId === t.id)}
-                                      duration={taskDurations[t.id] || 0}
-                                    />
+                                  <div ref={p.innerRef} {...p.draggableProps} {...p.dragHandleProps} style={p.draggableProps.style}>
+                                    <div className="pb-2">
+                                      <KanbanTaskCard
+                                        task={t}
+                                        user={t.assigneeId ? usersMap.get(t.assigneeId) : null}
+                                        onClick={() => setLocation(getTaskUrl(t))}
+                                        onToggleTimer={() => handleToggleTimer(t.id)}
+                                        isActive={activeLogs && activeLogs.some(l => l.taskId === t.id)}
+                                        duration={taskDurations[t.id] || 0}
+                                      />
+                                    </div>
                                   </div>
                                 )}
                               </Draggable>
@@ -647,7 +651,7 @@ export default function ProjectPage() {
                     activeTaskId={activeLogs && activeLogs.find(l => l.taskId && tasks.some(t => t.id === l.taskId))?.taskId}
                     onToggleTimer={handleToggleTimer}
                     taskDurations={taskDurations}
-                    milestones={milestones || []}
+                    milestones={stableMilestones}
                     onDragEnd={handleMilestoneDragEnd}
                   />
                 </div>
