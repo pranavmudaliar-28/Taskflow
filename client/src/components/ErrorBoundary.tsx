@@ -1,7 +1,4 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface Props {
     children: ReactNode;
@@ -30,131 +27,163 @@ export class ErrorBoundary extends Component<Props, State> {
     }
 
     public componentDidCatch(error: any, errorInfo: ErrorInfo) {
-        // Use a very robust way to get the error message
-        const errorMessage = (error?.message || String(error) || '').toLowerCase();
+        console.error('[ErrorBoundary] Caught render error:', error);
+        console.error('[ErrorBoundary] Component stack:', errorInfo?.componentStack);
 
-        console.error('ErrorBoundary caught an error:', error);
-        console.group('Error Details');
-        console.log('Message:', errorMessage);
-        console.log('Stack:', error?.stack);
-        console.log('Info:', errorInfo?.componentStack);
-        console.groupEnd();
+        // Update state with error info for detailed display
+        this.setState({ error, errorInfo });
 
-        // Handle chunk load errors/dynamic import failures
-        const isChunkLoadError =
-            errorMessage.includes('failed to fetch dynamically imported module') ||
-            errorMessage.includes('css_chunk_load_failed') ||
-            errorMessage.includes('loading chunk') ||
-            errorMessage.includes('module not found') ||
-            errorMessage.includes('script error');
-
-        if (isChunkLoadError) {
-            console.warn('Chunk load error detected. Attempting automatic recovery...');
-
-            const RELOAD_KEY = 'last_chunk_load_reload';
-            const now = Date.now();
-            const lastReload = sessionStorage.getItem(RELOAD_KEY);
-
-            // Allow up to 2 reloads in short succession, then stop
-            const reloadCountKey = 'chunk_load_reload_count';
-            const reloadCount = parseInt(sessionStorage.getItem(reloadCountKey) || '0');
-
-            if (!lastReload || (now - parseInt(lastReload) > 30000)) {
-                // If it's been more than 30 seconds since last reload, reset count
-                sessionStorage.setItem(reloadCountKey, '1');
-                sessionStorage.setItem(RELOAD_KEY, now.toString());
-
-                console.log('Reloading page to refresh modules...');
-                window.location.href = window.location.href; // Force a hard-ish reload
-                return;
-            } else if (reloadCount < 2) {
-                // Allow one more retry within the 30s window
-                sessionStorage.setItem(reloadCountKey, (reloadCount + 1).toString());
-                sessionStorage.setItem(RELOAD_KEY, now.toString());
-
-                console.log(`Reload attempt ${reloadCount + 1}. Refreshing...`);
-                window.location.reload();
-                return;
-            } else {
-                console.error('Recovery failed after multiple attempts. Manual intervention required.');
-            }
-        }
-
-        this.setState({
-            error,
-            errorInfo,
-        });
-
-        // TODO: Log to error tracking service (Sentry, LogRocket, etc.)
-        // logErrorToService(error, errorInfo);
+        // NOTE: We intentionally do NOT auto-reload here.
+        // Auto-reloads created an infinite blank-screen loop because the page
+        // reloaded before the error card could stabilize. Users can manually
+        // reload via the button in the error UI.
     }
 
     private handleReset = () => {
-        this.setState({
-            hasError: false,
-            error: null,
-            errorInfo: null,
-        });
-    };
-
-    private handleGoHome = () => {
-        window.location.href = '/';
+        this.setState({ hasError: false, error: null, errorInfo: null });
     };
 
     public render() {
         if (this.state.hasError) {
-            // Use custom fallback if provided
             if (this.props.fallback) {
                 return this.props.fallback;
             }
 
-            // Default error UI
+            // Use inline styles as a safety net — if Tailwind CSS variables
+            // aren't loaded, the error card is still visually readable.
             return (
-                <div className="min-h-screen flex items-center justify-center bg-background p-4">
-                    <Card className="max-w-2xl w-full">
-                        <CardHeader>
-                            <div className="flex items-center gap-3">
-                                <AlertTriangle className="h-8 w-8 text-destructive" />
-                                <div>
-                                    <CardTitle className="text-2xl">Something went wrong</CardTitle>
-                                    <CardDescription>
-                                        We're sorry, but something unexpected happened. Please try again.
-                                    </CardDescription>
-                                </div>
-                            </div>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            {process.env.NODE_ENV === 'development' && this.state.error && (
-                                <div className="bg-muted p-4 rounded-lg overflow-auto">
-                                    <p className="font-mono text-sm text-destructive font-semibold mb-2">
-                                        {this.state.error.toString()}
-                                    </p>
-                                    {this.state.errorInfo && (
-                                        <pre className="text-xs text-muted-foreground overflow-auto">
-                                            {this.state.errorInfo.componentStack}
-                                        </pre>
-                                    )}
-                                </div>
-                            )}
-
-                            <div className="flex gap-3">
-                                <Button onClick={this.handleReset} className="flex items-center gap-2">
-                                    <RefreshCw className="h-4 w-4" />
-                                    Try Again
-                                </Button>
-                                <Button onClick={this.handleGoHome} variant="outline" className="flex items-center gap-2">
-                                    <Home className="h-4 w-4" />
-                                    Go Home
-                                </Button>
-                            </div>
-
-                            {process.env.NODE_ENV === 'production' && (
-                                <p className="text-sm text-muted-foreground">
-                                    If this problem persists, please contact support with the time this error occurred.
+                <div style={{
+                    minHeight: '100vh',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: '#f9fafb',
+                    padding: '16px',
+                    fontFamily: 'system-ui, sans-serif',
+                }}>
+                    <div style={{
+                        maxWidth: '600px',
+                        width: '100%',
+                        backgroundColor: '#ffffff',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '12px',
+                        padding: '32px',
+                        boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                            <span style={{ fontSize: '32px' }}>⚠️</span>
+                            <div>
+                                <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 700, color: '#111827' }}>
+                                    Something went wrong
+                                </h2>
+                                <p style={{ margin: '4px 0 0', fontSize: '14px', color: '#6b7280' }}>
+                                    An unexpected error occurred. Please try again.
                                 </p>
-                            )}
-                        </CardContent>
-                    </Card>
+                            </div>
+                        </div>
+
+                        {this.state.error && (
+                            <div style={{
+                                backgroundColor: '#fef2f2',
+                                border: '1px solid #fecaca',
+                                borderRadius: '8px',
+                                padding: '12px',
+                                marginBottom: '20px',
+                                overflow: 'auto',
+                            }}>
+                                <p style={{ margin: 0, fontFamily: 'monospace', fontSize: '13px', color: '#dc2626', fontWeight: 600 }}>
+                                    {this.state.error.message || String(this.state.error)}
+                                </p>
+                                {this.state.errorInfo && (
+                                    <pre style={{ margin: '8px 0 0', fontSize: '11px', color: '#9f1239', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
+                                        {this.state.errorInfo.componentStack}
+                                    </pre>
+                                )}
+                            </div>
+                        )}
+
+                        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                            <button
+                                onClick={this.handleReset}
+                                style={{
+                                    padding: '8px 20px',
+                                    backgroundColor: '#7c3aed',
+                                    color: '#ffffff',
+                                    border: 'none',
+                                    borderRadius: '8px',
+                                    fontSize: '14px',
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                }}
+                            >
+                                Try Again
+                            </button>
+                            <button
+                                onClick={() => window.location.reload()}
+                                style={{
+                                    padding: '8px 20px',
+                                    backgroundColor: 'transparent',
+                                    color: '#374151',
+                                    border: '1px solid #d1d5db',
+                                    borderRadius: '8px',
+                                    fontSize: '14px',
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                }}
+                            >
+                                Reload Page
+                            </button>
+                            <button
+                                onClick={() => { window.history.length > 1 ? window.history.back() : window.location.href = '/'; }}
+                                style={{
+                                    padding: '8px 20px',
+                                    backgroundColor: 'transparent',
+                                    color: '#374151',
+                                    border: '1px solid #d1d5db',
+                                    borderRadius: '8px',
+                                    fontSize: '14px',
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                }}
+                            >
+                                Go Back
+                            </button>
+                            <button
+                                onClick={() => {
+                                    const text = `Error: ${this.state.error?.message}\n\nStack: ${this.state.errorInfo?.componentStack}`;
+                                    navigator.clipboard.writeText(text);
+                                    alert('Error details copied to clipboard');
+                                }}
+                                style={{
+                                    padding: '8px 20px',
+                                    backgroundColor: 'transparent',
+                                    color: '#374151',
+                                    border: '1px solid #d1d5db',
+                                    borderRadius: '8px',
+                                    fontSize: '14px',
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                }}
+                            >
+                                Copy Error
+                            </button>
+                            <button
+                                onClick={() => { window.location.href = '/'; }}
+                                style={{
+                                    padding: '8px 20px',
+                                    backgroundColor: 'transparent',
+                                    color: '#374151',
+                                    border: '1px solid #d1d5db',
+                                    borderRadius: '8px',
+                                    fontSize: '14px',
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                }}
+                            >
+                                Go Home
+                            </button>
+                        </div>
+                    </div>
                 </div>
             );
         }

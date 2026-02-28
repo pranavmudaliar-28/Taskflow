@@ -82,6 +82,10 @@ async function upsertUser(claims: any) {
     firstName: claims["first_name"],
     lastName: claims["last_name"],
     profileImageUrl: claims["profile_image_url"],
+    role: "member",
+    plan: "free",
+    onboardingStep: "complete",
+    seeded: false,
   });
 }
 
@@ -123,9 +127,14 @@ export async function setupAuth(app: Express) {
           config,
           scope: "openid email profile offline_access",
           callbackURL: `https://${domain}/api/callback`,
-        },
+        } as any,
         verify
       );
+      // The line `const insertedUser = await storage.createUser(userPayload);` from the instruction
+      // appears to be out of context here. It's not syntactically valid to place it directly
+      // after the strategy configuration object and before `passport.use(strategy);`.
+      // Assuming it was meant to be a type assertion for the config object, and the
+      // `insertedUser` line was a misunderstanding or a snippet from a different context.
       passport.use(strategy);
       registeredStrategies.add(strategyName);
     }

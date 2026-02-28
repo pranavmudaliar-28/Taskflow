@@ -13,3 +13,10 @@ export function formatDurationShort(seconds: number) {
   }
   return `${minutes}m`;
 }
+export function ensureArray<T>(data: T[] | null | undefined): T[] {
+  return Array.isArray(data) ? data : [];
+}
+
+export function ensureObject<T>(data: T | null | undefined): T | Record<string, never> {
+  return data && typeof data === "object" ? data : {};
+}

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -28,7 +28,8 @@ import {
   ChevronRight,
   Clock,
   User as UserIcon,
-  ListTodo
+  ListTodo,
+  AlertCircle,
 } from "lucide-react";
 import { TASK_STATUSES, TASK_PRIORITIES } from "@/lib/constants";
 import { BulkEditDialog } from "@/components/bulk-edit-dialog";
@@ -48,7 +49,7 @@ import { differenceInSeconds } from "date-fns";
 import { TaskTable } from "@/components/task-table";
 import { MilestoneBoard } from "@/components/milestone-board";
 import type { ExpandedState } from "@tanstack/react-table";
-import { cn } from "@/lib/utils";
+import { cn, ensureArray, ensureObject } from "@/lib/utils";
 
 type ProjectMemberWithUser = {
   id: string;
@@ -104,8 +105,18 @@ export default function ProjectPage() {
 
   const debouncedSearch = useDebounce(searchQuery, 300);
 
-  const { data: project, isLoading: projectLoading } = useQuery<Project>({
+  const { data: project, isLoading: projectLoading, isError: projectError, error: projectErrorObj } = useQuery<Project>({
     queryKey: ["/api/projects", id],
+    queryFn: async () => {
+      if (!id) throw new Error("No project ID");
+      const res = await fetch(`/api/projects/${id}`, { credentials: "include" });
+      if (!res.ok) {
+        const text = await res.text().catch(() => res.statusText);
+        throw new Error(`${res.status}: ${text}`);
+      }
+      return res.json() as Promise<Project>;
+    },
+    enabled: !!id,
   });
 
   const queryParams = new URLSearchParams();
@@ -128,7 +139,13 @@ export default function ProjectPage() {
     enabled: !!project?.id,
   });
 
-  const tasks = searchResult?.tasks || [];
+  const tasks = ensureArray(searchResult?.tasks);
+
+  useEffect(() => {
+    if (project?.id) {
+      console.info(`[ProjectPage] Loaded project: ${project.name} (${project.id})`);
+    }
+  }, [project?.id, project?.name]);
 
   const { data: memberData, isLoading: membersLoading } = useQuery<ProjectMemberWithUser[]>({
     queryKey: ["/api/projects", project?.id, "members"],
@@ -140,7 +157,7 @@ export default function ProjectPage() {
     enabled: !!project?.id,
   });
 
-  const { data: activeLogs = [] } = useQuery<TimeLog[]>({
+  const { data: activeLogs } = useQuery<TimeLog[]>({
     queryKey: ["/api/timelogs/active"],
     refetchInterval: 5000,
   });
@@ -150,7 +167,7 @@ export default function ProjectPage() {
   });
 
   useEffect(() => {
-    if (activeLogs.length > 0) {
+    if (activeLogs && activeLogs.length > 0) {
       const interval = setInterval(() => {
         const newElapsedTimes: Record<string, number> = {};
         activeLogs.forEach(log => {
@@ -161,7 +178,7 @@ export default function ProjectPage() {
       }, 1000);
       return () => clearInterval(interval);
     } else {
-      setElapsedTimes({});
+      setElapsedTimes(prev => Object.keys(prev).length === 0 ? prev : {});
     }
   }, [activeLogs]);
 
@@ -213,7 +230,7 @@ export default function ProjectPage() {
   });
 
   const handleToggleTimer = (taskId: string) => {
-    const isActive = activeLogs.some(log => log.taskId === taskId);
+    const isActive = activeLogs && activeLogs.some(log => log.taskId === taskId);
     if (isActive) stopTimerMutation.mutate(taskId);
     else startTimerMutation.mutate(taskId);
   };
@@ -247,7 +264,11 @@ export default function ProjectPage() {
 
   const usersMap = useMemo(() => {
     const map = new Map<string, User>();
-    memberData?.forEach((m) => map.set(m.userId, m.user as User));
+    // Skip members whose user object is null (e.g. deleted users) to prevent
+    // downstream crashes where code accesses .firstName on a null value.
+    memberData?.forEach((m) => {
+      if (m.user) map.set(m.userId, m.user as User);
+    });
     return map;
   }, [memberData]);
 
@@ -328,7 +349,30 @@ export default function ProjectPage() {
     );
   }
 
-  if (!project) return null;
+  if (projectError) return (
+    <div className="flex flex-col items-center justify-center h-full p-12 gap-4 text-center">
+      <div className="h-16 w-16 rounded-2xl bg-destructive/10 flex items-center justify-center">
+        <AlertCircle className="h-8 w-8 text-destructive" />
+      </div>
+      <h2 className="text-2xl font-bold text-foreground">Failed to load project</h2>
+      <p className="text-muted-foreground max-w-sm">{projectErrorObj instanceof Error ? projectErrorObj.message : "An unexpected error occurred while fetching project data."}</p>
+      <div className="flex gap-3">
+        <Button onClick={() => window.location.reload()} variant="default">Try Again</Button>
+        <Button onClick={() => window.history.back()} variant="outline">Go Back</Button>
+      </div>
+    </div>
+  );
+
+  if (!project) return (
+    <div className="flex flex-col items-center justify-center h-full p-12 gap-4 text-center">
+      <div className="h-16 w-16 rounded-2xl bg-destructive/10 flex items-center justify-center">
+        <AlertCircle className="h-8 w-8 text-destructive" />
+      </div>
+      <h2 className="text-2xl font-bold text-foreground">Project not found</h2>
+      <p className="text-muted-foreground max-w-sm">This project may have been deleted or you don't have access to it.</p>
+      <Button onClick={() => window.history.back()} variant="outline">Go Back</Button>
+    </div>
+  );
 
   const isBulkSelected = Object.keys(rowSelection).length > 0;
 
@@ -345,9 +389,9 @@ export default function ProjectPage() {
               <div className="flex items-center gap-1.5 text-[9px] sm:text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-0.5">
                 <span className="hover:text-foreground cursor-pointer whitespace-nowrap">Projects</span>
                 <ChevronRight className="h-2.5 w-2.5 opacity-50 shrink-0" />
-                <span className="text-foreground truncate">{project.name}</span>
+                <span className="text-foreground truncate">{project?.name}</span>
               </div>
-              <h1 className="text-lg sm:text-xl font-extrabold text-foreground tracking-tight leading-none truncate">{project.name}</h1>
+              <h1 className="text-lg sm:text-xl font-extrabold text-foreground tracking-tight leading-none truncate">{project?.name}</h1>
             </div>
           </div>
 
@@ -539,7 +583,7 @@ export default function ProjectPage() {
                                       user={t.assigneeId ? usersMap.get(t.assigneeId) : null}
                                       onClick={() => setLocation(getTaskUrl(t))}
                                       onToggleTimer={() => handleToggleTimer(t.id)}
-                                      isActive={activeLogs.some(l => l.taskId === t.id)}
+                                      isActive={activeLogs && activeLogs.some(l => l.taskId === t.id)}
                                       duration={taskDurations[t.id] || 0}
                                     />
                                   </div>
@@ -562,7 +606,7 @@ export default function ProjectPage() {
                 users={usersMap}
                 onTaskClick={(t) => setLocation(getTaskUrl(t))}
                 onAddTask={(m) => { setCreateTaskStatus("todo"); setCreateTaskMilestone(m); setShowCreateTask(true); }}
-                activeTaskId={activeLogs.find(l => l.taskId && tasks.some(t => t.id === l.taskId))?.taskId}
+                activeTaskId={activeLogs && activeLogs.find(l => l.taskId && tasks.some(t => t.id === l.taskId))?.taskId}
                 onToggleTimer={handleToggleTimer}
                 taskDurations={taskDurations}
                 milestones={milestones || []}
@@ -574,11 +618,11 @@ export default function ProjectPage() {
       </main>
 
       {/* ── Dialogs ────────────────────────────────────────────────────────── */}
-      <CreateTaskDialog open={showCreateTask} onClose={() => setShowCreateTask(false)} projectId={project.id} initialStatus={createTaskStatus} initialMilestone={createTaskMilestone} members={Array.from(usersMap.values())} />
-      {creatingSubtaskFor && <CreateTaskDialog open={!!creatingSubtaskFor} onClose={() => setCreatingSubtaskFor(null)} projectId={project.id} parentId={creatingSubtaskFor} members={Array.from(usersMap.values())} onSuccess={(c: any) => c.parentId && setExpanded((e: any) => e === true ? true : { ...e, [c.parentId]: true })} />}
-      <CreateMilestoneDialog open={showCreateMilestone} onClose={() => setShowCreateMilestone(false)} projectId={project.id} />
-      <ProjectMembersDialog open={showMembers} onClose={() => setShowMembers(false)} projectId={project.id} memberData={memberData || []} />
-      <ProjectSettingsDialog open={showSettings} onClose={() => setShowSettings(false)} project={project} />
+      <CreateTaskDialog open={showCreateTask} onClose={() => setShowCreateTask(false)} projectId={project?.id || ""} initialStatus={createTaskStatus} initialMilestone={createTaskMilestone} members={Array.from(usersMap.values()).filter(Boolean)} />
+      {creatingSubtaskFor && <CreateTaskDialog open={!!creatingSubtaskFor} onClose={() => setCreatingSubtaskFor(null)} projectId={project?.id || ""} parentId={creatingSubtaskFor} members={Array.from(usersMap.values()).filter(Boolean)} onSuccess={(c: any) => c.parentId && setExpanded((e: any) => e === true ? true : { ...e, [c.parentId]: true })} />}
+      <CreateMilestoneDialog open={showCreateMilestone} onClose={() => setShowCreateMilestone(false)} projectId={project?.id || ""} />
+      <ProjectMembersDialog open={showMembers} onClose={() => setShowMembers(false)} projectId={project?.id || ""} memberData={memberData || []} />
+      {project && <ProjectSettingsDialog open={showSettings} onClose={() => setShowSettings(false)} project={project} />}
 
       <BulkEditDialog
         open={isBulkEditDialogOpen}

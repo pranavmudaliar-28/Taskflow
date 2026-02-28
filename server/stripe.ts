@@ -17,20 +17,24 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
 
 // ── Plan config ────────────────────────────────────────────────────────────────
 export const STRIPE_PLANS = {
-    free: { name: "Free", prices: { monthly: null, annual: null }, amount: 0 },
+    free: { name: "Free", prices: { monthly: null as null, annual: null as null }, amount: 0 },
     pro: {
         name: "Pro",
-        prices: {
-            monthly: process.env.STRIPE_PRO_MONTHLY_PRICE_ID || null,
-            annual: process.env.STRIPE_PRO_ANNUAL_PRICE_ID || null,
+        get prices() {
+            return {
+                monthly: process.env.STRIPE_PRO_MONTHLY_PRICE_ID || null,
+                annual: process.env.STRIPE_PRO_ANNUAL_PRICE_ID || null,
+            };
         },
         amount: 2900,
     },
     team: {
         name: "Team",
-        prices: {
-            monthly: process.env.STRIPE_TEAM_MONTHLY_PRICE_ID || null,
-            annual: process.env.STRIPE_TEAM_ANNUAL_PRICE_ID || null,
+        get prices() {
+            return {
+                monthly: process.env.STRIPE_TEAM_MONTHLY_PRICE_ID || null,
+                annual: process.env.STRIPE_TEAM_ANNUAL_PRICE_ID || null,
+            };
         },
         amount: 9900,
     },

@@ -4,11 +4,10 @@ import { storage } from "./storage";
 import { setupAuth, isAuthenticated, registerAuthRoutes } from "./replit_integrations/auth";
 import { authStorage } from "./replit_integrations/auth/storage";
 import { insertProjectSchema, insertTaskSchema, insertCommentSchema, insertOrganizationInvitationSchema, insertMilestoneSchema, type Project } from "@shared/schema";
-import { sendOrganizationInvitationEmail } from "./email";
+import { sendOrganizationInvitationEmail, sendPasswordResetEmail } from "./email";
 import { apiLimiter, authLimiter, inviteLimiter } from "./middleware/rateLimiter";
 import { sanitizeInput } from "./middleware/sanitize";
 import crypto from "crypto";
-import { seedDatabase } from "./seed";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { registerStripeRoutes } from "./stripe";
@@ -25,10 +24,14 @@ import { Serializer } from "./utils/serializers";
 import { logger } from "./utils/logger";
 
 
-export async function registerRoutes(
-  httpServer: Server,
-  app: Express
-): Promise<Server> {
+export async function registerRoutes(httpServer: Server, app: Express): Promise<Server> {
+  // Helper to resolve project ID or Slug
+  const resolveProject = async (idOrSlug: string): Promise<any | undefined> => {
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrSlug);
+    if (isUuid) return storage.getProject(idOrSlug);
+    return storage.getProjectBySlug(idOrSlug);
+  };
+
   console.log("[Routes] Starting route registration...");
 
   // ── Raw body parser for Stripe webhooks (MUST be before express.json) ──────
@@ -44,6 +47,49 @@ export async function registerRoutes(
   console.log("[Routes] Registering Stripe routes...");
   registerStripeRoutes(app);
   console.log("[Routes] Stripe routes registered.");
+
+  // ── Forgot Password Routes (Public) ──────
+  app.post("/api/auth/forgot-password", async (req, res) => {
+    try {
+      const { email } = z.object({ email: z.string().email() }).parse(req.body);
+      console.log(`[Auth] Processing forgot password request for: ${email}`);
+
+      const user = await storage.getUserByEmail(email.toLowerCase());
+
+      if (!user) {
+        console.log(`[Auth] Forgot password aborted: No user found for email ${email}`);
+        return res.status(404).json({ message: "No account found with that email address." });
+      }
+
+      console.log(`[Auth] User found. Proceeding to direct reset step for ${user.email}`);
+      res.json({ message: "Email verified. Proceeding to reset password." });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message || "Failed to process request" });
+    }
+  });
+
+  app.post("/api/auth/reset-password", async (req, res) => {
+    try {
+      const { email, password } = z.object({
+        email: z.string().email(),
+        password: z.string().min(6, "Password must be at least 6 characters")
+      }).parse(req.body);
+
+      const user = await storage.getUserByEmail(email.toLowerCase());
+      if (!user || !user.id) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const hashedPassword = await bcrypt.hash(password, 10);
+      await storage.updateUser(user.id, { password: hashedPassword });
+
+      res.json({ message: "Password has been reset successfully. You can now log in." });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message || "Failed to reset password" });
+    }
+  });
+
+
 
   // Helper to get user ID from request
   const getUserId = (req: any): string => {
@@ -72,65 +118,37 @@ export async function registerRoutes(
         return res.status(400).json({ message: "An account with this email already exists" });
       }
 
-      const hashedPassword = await bcrypt.hash(data.password, 10);
-
+      const hashedPassword = await bcrypt.hash(req.body.password, 10);
       const user = await authStorage.upsertUser({
-        email: data.email,
+        email: req.body.email,
         password: hashedPassword,
-        firstName: data.firstName,
-        lastName: data.lastName,
+        firstName: req.body.firstName || "",
+        lastName: req.body.lastName || "",
         onboardingStep: "plan", // Ensure they start at plan step
+        role: "member",
+        plan: "free",
+        seeded: false
       });
 
       // Initialize workspace for the new user (now part of onboarding completion)
       // await storage.initializeUserWorkspace(user.id);
 
-      // Process any pending invitations for this email
-      try {
-        const normalizedEmail = data.email.trim().toLowerCase();
-
-        // 1. Process Organization Invitations
-        const orgInvites = await storage.getPendingOrganizationInvitationsByEmail(normalizedEmail);
-        for (const invite of orgInvites) {
-          await storage.acceptOrganizationInvitation(invite.token, user.id);
-          console.log(`[Register] Auto-accepted organization invitation for ${normalizedEmail} to org ${invite.organizationId}`);
-        }
-
-        // 2. Process Project Invitations
-        const pendingInvites = await storage.getPendingInvitationsByEmail(normalizedEmail);
-        for (const invite of pendingInvites) {
-          const alreadyMember = await storage.isUserInOrganization(user.id, invite.organizationId);
-          if (!alreadyMember) {
-            await storage.addOrganizationMember({
-              organizationId: invite.organizationId,
-              userId: user.id,
-              role: "member",
-            });
-          }
-          await storage.addProjectMember({
-            projectId: invite.projectId,
-            userId: user.id,
-            role: invite.role || "member",
-          });
-          await storage.createNotification({
-            userId: user.id,
-            type: "added_to_project",
-            title: "Added to project",
-            message: `You have been added to a project via invitation`,
-            relatedProjectId: invite.projectId,
-          });
-          await storage.deleteProjectInvitation(invite.id);
-        }
-      } catch (inviteError) {
-        console.error("Error processing pending invitations:", inviteError);
-      }
+      // We removed the auto path here so that invited users can see the "Accept Invitation" screen instead of bypassing it.
 
       // Generate JWT
+      if (!user.id) {
+        return res.status(500).json({ message: "Registration succeeded but user ID is missing" });
+      }
       const token = TokenService.generateToken({
         sub: user.id,
         email: user.email || "",
         role: "member", // Default role
       });
+
+      // Check if this new user has a pending invitation for their email
+      const normalizedEmail = (req.body.email || "").trim().toLowerCase();
+      const pendingInvites = await storage.getPendingOrganizationInvitationsByEmail(normalizedEmail);
+      const pendingInviteToken = pendingInvites && pendingInvites.length > 0 ? pendingInvites[0].token : null;
 
       // Initialize session
       req.login(user, (err) => {
@@ -143,7 +161,9 @@ export async function registerRoutes(
 
         res.json({
           user: Serializer.user(user),
-          token
+          token,
+          // Tell the client immediately if this user has a pending invite
+          pendingInviteToken,
         });
       });
     } catch (error: any) {
@@ -171,10 +191,15 @@ export async function registerRoutes(
 
       // Generate JWT
       const token = TokenService.generateToken({
-        sub: user.id,
+        sub: user.id as string,
         email: user.email || "",
         role: (user as any).role || "member",
       });
+
+      // Check if this user has a pending invitation for their email
+      const normalizedEmail = (user.email || "").trim().toLowerCase();
+      const pendingInvites = await storage.getPendingOrganizationInvitationsByEmail(normalizedEmail);
+      const pendingInviteToken = pendingInvites && pendingInvites.length > 0 ? pendingInvites[0].token : null;
 
       // Initialize session
       console.log(`[Auth] Initializing session for user: ${user.id}`);
@@ -189,7 +214,9 @@ export async function registerRoutes(
 
         res.json({
           user: Serializer.user(user),
-          token
+          token,
+          // Tell the client immediately if this user has a pending invite
+          pendingInviteToken,
         });
       });
     } catch (error: any) {
@@ -254,6 +281,7 @@ export async function registerRoutes(
       }
     });
   });
+
 
   // === User Profile Routes ===
   const updateProfileSchema = z.object({
@@ -331,9 +359,6 @@ export async function registerRoutes(
     try {
       const userId = getUserId(req);
 
-      // Seed database with sample data for new users
-      await seedDatabase(userId);
-
       const stats = await storage.getDashboardStats(userId);
       res.json(stats);
     } catch (error) {
@@ -359,7 +384,6 @@ export async function registerRoutes(
       const org = await storage.createOrganization({
         name,
         email,
-        address,
         ownerId: userId,
       });
 
@@ -380,10 +404,11 @@ export async function registerRoutes(
             const expiresAt = new Date();
             expiresAt.setDate(expiresAt.getDate() + 7); // 7 days expiry
 
-            await storage.createOrganizationInvitation({
+            const invitation = await storage.createOrganizationInvitation({
               organizationId: org.id,
               email: invitedEmail.trim().toLowerCase(),
               role: "member",
+              status: "pending",
               invitedBy: userId,
               token,
               expiresAt,
@@ -415,9 +440,24 @@ export async function registerRoutes(
     }
   });
 
+  // Only allow marking onboarding complete if the user belongs to an org
+  // (either they created one, or they accepted an invitation)
   app.post("/api/onboarding/complete", authMiddleware, async (req, res) => {
     try {
       const userId = getUserId(req);
+      const { force } = req.body; // only invitation-acceptance path uses force=true
+
+      if (!force) {
+        // Check the user actually has an org before completing onboarding
+        const orgs = await storage.getOrganizationsByUser(userId);
+        if (!orgs || orgs.length === 0) {
+          return res.status(400).json({
+            message: "Please create or join an organization before completing onboarding.",
+            code: "NO_ORGANIZATION"
+          });
+        }
+      }
+
       await storage.updateUser(userId, { onboardingStep: "completed" });
       res.json({ success: true });
     } catch (error) {
@@ -426,27 +466,53 @@ export async function registerRoutes(
     }
   });
 
+  // Onboarding status endpoint — tells frontend what a user has/hasn't done
+  app.get("/api/onboarding/status", authMiddleware, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      const orgs = await storage.getOrganizationsByUser(userId);
+      const hasOrg = orgs.length > 0;
+      const isCompleted = user.onboardingStep === "completed";
+
+      res.json({
+        onboardingStep: user.onboardingStep,
+        hasOrganization: hasOrg,
+        isCompleted,
+        // User can access dashboard only if onboarding is completed
+        canAccessDashboard: isCompleted,
+      });
+    } catch (error) {
+      console.error("Error fetching onboarding status:", error);
+      res.status(500).json({ message: "Failed to fetch onboarding status" });
+    }
+  });
+
   // === Organizations ===
   app.get("/api/organizations", authMiddleware, async (req, res) => {
     try {
       const userId = getUserId(req);
-      let organizations = await storage.getOrganizationsByUser(userId);
-
-      if (organizations.length === 0) {
-        // Lazy initialize workspace if it doesn't exist
-        await storage.initializeUserWorkspace(userId);
-        organizations = await storage.getOrganizationsByUser(userId);
-      }
+      const organizations = await storage.getOrganizationsByUser(userId);
 
       // Enhance organizations with user's role
-      const orgIds = organizations.map(o => o.id);
-      const members = await storage.getOrganizationMembersForUser(userId, orgIds);
+      const userObj = (req.user as any) || {};
+      const orgIds = userObj.role === "admin"
+        ? organizations.map((o: { id: string }) => o.id)
+        : organizations.filter((o: { id: string }) => userObj.organizationIds?.includes(o.id)).map((o: { id: string }) => o.id);
 
-      const enhancedOrgs = organizations.map(org => {
-        const member = members.find(m => m.organizationId === org.id);
+      const memberships = await storage.getOrganizationMembersForUser(userId, orgIds);
+
+      const roleMap: Record<string, string> = {};
+      memberships.forEach((m: { organizationId: string; role: string; }) => {
+        roleMap[m.organizationId] = m.role;
+      });
+
+      const enhancedOrgs = organizations.map((org: { id: string }) => {
         return {
           ...org,
-          role: member?.role || "member"
+          role: roleMap[org.id] || "member"
         };
       });
 
@@ -464,7 +530,7 @@ export async function registerRoutes(
 
       // Verify user belongs to this org
       const userOrgs = await storage.getOrganizationsByUser(userId);
-      if (!userOrgs.some(o => o.id === orgId)) {
+      if (!userOrgs.some((o: { id: string }) => o.id === orgId)) {
         return res.status(403).json({ message: "Access denied to organization" });
       }
 
@@ -481,17 +547,64 @@ export async function registerRoutes(
       const orgId = req.params.id as string;
       const members = await storage.getOrganizationMembers(orgId);
       // Fetch user details for each member
-      const userIds = members.map(m => m.userId);
+      const userIds = members.map((m: { userId: string }) => m.userId);
       const userDetails = await storage.getUsersByIds(userIds);
-      const membersWithUsers = members.map(m => {
-        const user = userDetails.find(u => u.id === m.userId);
-        const { password, ...safeUser } = user || {};
+      const membersWithUsers = members.map((m: { userId: string }) => {
+        const user = userDetails.find((u: any) => u.id === m.userId);
+        const { password: _, ...safeUser } = user || {};
         return { ...m, user: safeUser };
       });
       res.json(membersWithUsers);
     } catch (error) {
       console.error("Error fetching organization members:", error);
       res.status(500).json({ message: "Failed to fetch members" });
+    }
+  });
+
+  app.delete("/api/organizations/:id/members/:memberId", authMiddleware, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const orgId = req.params.id as string;
+      const memberId = req.params.memberId as string;
+
+      const members = await storage.getOrganizationMembers(orgId);
+      const inviterMember = members.find((m: { userId: string, role: string }) => m.userId === userId);
+      if (!inviterMember || (inviterMember.role !== "admin" && inviterMember.role !== "team_lead")) {
+        return res.status(403).json({ message: "Only organization leads can remove members" });
+      }
+
+      const targetMember = members.find((m: { id: string, userId: string }) => m.id === memberId);
+      if (!targetMember) {
+        return res.status(404).json({ message: "Member not found" });
+      }
+
+      await storage.removeOrganizationMember(memberId);
+
+      // Attempt to clean up project memberships for this user in this org
+      // We don't fail the request if it fails, but we try our best.
+      try {
+        const projects = await storage.getProjectsByOrganization(orgId);
+        for (const project of projects) {
+          const projectMembersList = await storage.getProjectMembers(project.id);
+          const projectMember = projectMembersList.find((pm: { userId: string, id: string }) => pm.userId === targetMember.userId);
+          if (projectMember) {
+            await storage.removeProjectMember(projectMember.id);
+          }
+        }
+      } catch (e) {
+        console.error("Failed to remove project memberships after organization removal", e);
+      }
+
+      logger.info('Organization member removed', {
+        orgId,
+        memberId,
+        removedBy: userId
+      });
+
+      res.json({ message: "Member removed successfully" });
+    } catch (error) {
+      console.error("Error removing member:", error);
+      res.status(500).json({ message: "Failed to remove member" });
     }
   });
 
@@ -622,7 +735,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/organizations/:id/invitations/:inviteId", authMiddleware, authorize(['admin', 'team_lead']), async (req, res) => {
+  app.delete("/api/organizations/:id/invitations/:inviteId", authMiddleware, async (req, res) => {
     try {
       const userId = getUserId(req);
       const orgId = req.params.id as string;
@@ -647,6 +760,47 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/invitations/pending", authMiddleware, async (req, res) => {
+    try {
+      const user = await storage.getUser(getUserId(req));
+      if (!user || !user.email) {
+        return res.json([]);
+      }
+
+      const normalizedEmail = user.email.trim().toLowerCase();
+      const orgInvites = await storage.getPendingOrganizationInvitationsByEmail(normalizedEmail);
+      res.json(orgInvites);
+    } catch (error) {
+      console.error("Error fetching pending invitations:", error);
+      res.status(500).json({ message: "Failed to fetch pending invitations" });
+    }
+  });
+
+  // Public endpoint: get invitation details by token (no auth needed, shown before accept)
+  app.get("/api/invitations/:token", async (req, res) => {
+    try {
+      const token = req.params.token as string;
+      const invitation = await storage.getOrganizationInvitation(token);
+      if (!invitation) {
+        return res.status(404).json({ message: "Invitation not found" });
+      }
+      // Fetch org name to display on the accept page
+      const org = await storage.getOrganization(invitation.organizationId);
+      res.json({
+        token: invitation.token,
+        email: invitation.email,
+        organizationId: invitation.organizationId,
+        organizationName: org?.name || "the organization",
+        status: invitation.status,
+        expiresAt: invitation.expiresAt,
+      });
+    } catch (error) {
+      console.error("Error fetching invitation details:", error);
+      res.status(500).json({ message: "Failed to fetch invitation" });
+    }
+  });
+
+
   app.post("/api/invitations/accept/:token", authMiddleware, async (req, res) => {
     try {
       const userId = getUserId(req);
@@ -658,6 +812,9 @@ export async function registerRoutes(
       }
 
       if (invitation.status !== "pending") {
+        if (invitation.status === "accepted") {
+          return res.json({ message: "Invitation already accepted" });
+        }
         return res.status(400).json({ message: "Invitation has already been processed" });
       }
 
@@ -666,6 +823,10 @@ export async function registerRoutes(
       }
 
       await storage.acceptOrganizationInvitation(token, userId);
+
+      // Update onboarding step to completed since they are joining an organization
+      await storage.updateUser(userId, { onboardingStep: "completed" });
+
       res.json({ message: "Invitation accepted successfully" });
     } catch (error) {
       console.error("Error accepting invitation:", error);
@@ -673,7 +834,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/organizations/:id/members/:userId/assign-projects", authMiddleware, authorize(['admin', 'team_lead']), async (req, res) => {
+  app.post("/api/organizations/:id/members/:userId/assign-projects", authMiddleware, async (req, res) => {
     try {
       const adminId = getUserId(req);
       const orgId = req.params.id as string;
@@ -729,16 +890,7 @@ export async function registerRoutes(
       const userId = getUserId(req);
       const projectIdOrSlug = req.params.id as string;
 
-      let project: Project | undefined;
-
-      // Check if it's a UUID
-      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(projectIdOrSlug);
-
-      if (isUuid) {
-        project = await storage.getProject(projectIdOrSlug);
-      } else {
-        project = await storage.getProjectBySlug(projectIdOrSlug);
-      }
+      const project = await resolveProject(projectIdOrSlug);
 
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
@@ -798,9 +950,10 @@ export async function registerRoutes(
       });
 
       const project = await storage.createProject(validated);
-      await storage.addProjectMember({
+      const member = await storage.addProjectMember({
         projectId: project.id,
         userId,
+        role: "admin"
       });
       res.status(201).json(project);
     } catch (error) {
@@ -815,19 +968,21 @@ export async function registerRoutes(
   app.patch("/api/projects/:id", authMiddleware, async (req, res) => {
     try {
       const userId = getUserId(req);
-      const projectId = req.params.id as string;
+      const projectIdOrSlug = req.params.id as string;
+
+      const project = await resolveProject(projectIdOrSlug);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
 
       // Authorization check
-      const hasAccess = await storage.isUserInProject(userId, projectId);
+      const hasAccess = await storage.isUserInProject(userId, project.id);
       if (!hasAccess) {
         return res.status(403).json({ message: "Access denied" });
       }
 
-      const project = await storage.updateProject(projectId, req.body);
-      if (!project) {
-        return res.status(404).json({ message: "Project not found" });
-      }
-      res.json(project);
+      const updated = await storage.updateProject(project.id, req.body);
+      res.json(updated);
     } catch (error) {
       console.error("Error updating project:", error);
       res.status(500).json({ message: "Failed to update project" });
@@ -837,17 +992,22 @@ export async function registerRoutes(
   app.delete("/api/projects/:id", authMiddleware, async (req, res) => {
     try {
       const userId = getUserId(req);
-      const projectId = req.params.id as string;
+      const projectIdOrSlug = req.params.id as string;
+
+      const project = await resolveProject(projectIdOrSlug);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
 
       // Authorization check
-      const hasAccess = await storage.isUserInProject(userId, projectId);
+      const hasAccess = await storage.isUserInProject(userId, project.id);
       if (!hasAccess) {
         return res.status(403).json({ message: "Access denied" });
       }
 
-      await storage.deleteProject(projectId);
+      await storage.deleteProject(project.id);
       logger.info('Project deleted', {
-        projectId,
+        projectId: project.id,
         deletedBy: userId
       });
       res.status(204).send();
@@ -860,15 +1020,20 @@ export async function registerRoutes(
   app.get("/api/projects/:id/tasks", authMiddleware, async (req, res) => {
     try {
       const userId = getUserId(req);
-      const projectId = req.params.id as string;
+      const projectIdOrSlug = req.params.id as string;
+
+      const project = await resolveProject(projectIdOrSlug);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
 
       // Authorization check
-      const hasAccess = await storage.isUserInProject(userId, projectId);
+      const hasAccess = await storage.isUserInProject(userId, project.id);
       if (!hasAccess) {
         return res.status(403).json({ message: "Access denied" });
       }
 
-      const tasks = await storage.getTasksByProject(projectId);
+      const tasks = await storage.getTasksByProject(project.id);
       res.json(tasks);
     } catch (error) {
       console.error("Error fetching project tasks:", error);
@@ -888,18 +1053,19 @@ export async function registerRoutes(
       }
 
       // Get all members from all user's organizations
-      const orgIds = organizations.map(org => org.id);
+      const orgIds = organizations.map((org: { id: string }) => org.id);
       const allMembers: any[] = [];
 
       for (const orgId of orgIds) {
-        const members = await storage.getOrganizationMembers(orgId);
-        const userIds = members.map(m => m.userId);
+        const orgMembers = await storage.getOrganizationMembers(orgId);
+        const orgMemberMap = new Map(orgMembers.map((m: { userId: string; role: string }) => [m.userId, m.role]));
+        const userIds = orgMembers.map((m: { userId: string }) => m.userId);
         const users = await storage.getUsersByIds(userIds);
 
-        members.forEach(member => {
-          const user = users.find(u => u.id === member.userId);
+        orgMembers.forEach((member: { userId: string; role: string }) => {
+          const user = users.find((u: any) => u.id === member.userId);
           if (user) {
-            const { password, ...userWithoutPassword } = user as any;
+            const { password: _, ...userWithoutPassword } = user as any;
             allMembers.push({
               userId: member.userId,
               role: member.role,
@@ -911,7 +1077,7 @@ export async function registerRoutes(
 
       // Remove duplicates based on userId
       const uniqueMembers = Array.from(
-        new Map(allMembers.map(m => [m.userId, m])).values()
+        new Map(allMembers.map((m: { userId: string }) => [m.userId, m])).values()
       );
 
       res.json(uniqueMembers);
@@ -936,13 +1102,13 @@ export async function registerRoutes(
         return res.json([]);
       }
 
-      const userIds = members.map(m => m.userId);
+      const userIds = members.map((m: { userId: string }) => m.userId);
       const users = await storage.getUsersByIds(userIds);
 
-      const result = members.map(member => {
-        const user = users.find(u => u.id === member.userId);
+      const result = members.map((member: { userId: string; role: string }) => {
+        const user = users.find((u: any) => u.id === member.userId);
         if (user) {
-          const { password, ...userWithoutPassword } = user as any;
+          const { password: _, ...userWithoutPassword } = user as any;
           return {
             userId: member.userId,
             role: member.role,
@@ -954,7 +1120,7 @@ export async function registerRoutes(
 
       // Unique by userId
       const uniqueResult = Array.from(
-        new Map(result.map(m => [m!.userId, m])).values()
+        new Map(result.filter(m => m !== null).map((m: any) => [m.userId, m])).values()
       );
 
       res.json(uniqueResult);
@@ -967,15 +1133,20 @@ export async function registerRoutes(
   app.get("/api/projects/:id/members", isAuthenticated, async (req, res) => {
     try {
       const userId = getUserId(req);
-      const projectId = req.params.id as string;
+      const projectIdOrSlug = req.params.id as string;
+
+      const project = await resolveProject(projectIdOrSlug);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
 
       // Authorization check
-      const hasAccess = await storage.isUserInProject(userId, projectId);
+      const hasAccess = await storage.isUserInProject(userId, project.id);
       if (!hasAccess) {
         return res.status(403).json({ message: "Access denied" });
       }
 
-      const members = await storage.getProjectMembers(projectId);
+      const members = await storage.getProjectMembers(project.id);
       res.json(members);
     } catch (error) {
       console.error("Error fetching project members:", error);
@@ -987,14 +1158,19 @@ export async function registerRoutes(
   app.get("/api/projects/:projectId/milestones", isAuthenticated, async (req, res) => {
     try {
       const userId = getUserId(req);
-      const projectId = req.params.projectId as string;
+      const projectIdOrSlug = req.params.projectId as string;
 
-      const hasAccess = await storage.isUserInProject(userId, projectId);
+      const project = await resolveProject(projectIdOrSlug);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      const hasAccess = await storage.isUserInProject(userId, project.id);
       if (!hasAccess) {
         return res.status(403).json({ message: "Access denied" });
       }
 
-      const milestones = await storage.getMilestones(projectId);
+      const milestones = await storage.getMilestones(project.id);
       res.json(milestones);
     } catch (error) {
       console.error("Error fetching milestones:", error);
@@ -1005,16 +1181,21 @@ export async function registerRoutes(
   app.post("/api/projects/:projectId/milestones", isAuthenticated, async (req, res) => {
     try {
       const userId = getUserId(req);
-      const projectId = req.params.projectId as string;
+      const projectIdOrSlug = req.params.projectId as string;
 
-      const hasAccess = await storage.isUserInProject(userId, projectId);
+      const project = await resolveProject(projectIdOrSlug);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      const hasAccess = await storage.isUserInProject(userId, project.id);
       if (!hasAccess) {
         return res.status(403).json({ message: "Access denied" });
       }
 
       const data = insertMilestoneSchema.parse({
         ...req.body,
-        projectId,
+        projectId: project.id,
       });
 
       const milestone = await storage.createMilestone(data);
@@ -1055,25 +1236,22 @@ export async function registerRoutes(
   app.post("/api/projects/:id/members", isAuthenticated, async (req, res) => {
     try {
       const userId = getUserId(req);
-      const projectId = req.params.id as string;
+      const projectIdOrSlug = req.params.id as string;
       const { userId: memberUserId, role } = req.body;
-
-
 
       if (!memberUserId) {
         return res.status(400).json({ message: "User ID is required" });
       }
 
-      // Check if requester has access to the project
-      const hasAccess = await storage.isUserInProject(userId, projectId);
-      if (!hasAccess) {
-        return res.status(403).json({ message: "Access denied" });
-      }
-
-      // Check if the user being added is in the same organization
-      const project = await storage.getProject(projectId);
+      const project = await resolveProject(projectIdOrSlug);
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
+      }
+
+      // Check if requester has access to the project
+      const hasAccess = await storage.isUserInProject(userId, project.id);
+      if (!hasAccess) {
+        return res.status(403).json({ message: "Access denied" });
       }
 
       const isInOrg = await storage.isUserInOrganization(memberUserId, project.organizationId);
@@ -1082,7 +1260,7 @@ export async function registerRoutes(
       }
 
       // Check if user is already a project member
-      const existingMembers = await storage.getProjectMembers(projectId);
+      const existingMembers = await storage.getProjectMembers(project.id);
       if (existingMembers.some(m => m.userId === memberUserId)) {
         return res.status(400).json({ message: "User is already a project member" });
       }
@@ -1090,7 +1268,7 @@ export async function registerRoutes(
       // Add the member
       const memberRole = (role === "admin" || role === "team_lead") ? role : "member";
       await storage.addProjectMember({
-        projectId,
+        projectId: project.id,
         userId: memberUserId,
         role: memberRole,
       });
@@ -1101,7 +1279,7 @@ export async function registerRoutes(
         type: "added_to_project",
         title: "Added to project",
         message: `You have been added to ${project.name}`,
-        relatedProjectId: projectId,
+        relatedProjectId: project.id,
       });
 
       res.json({ message: "Member added successfully" });
@@ -1114,7 +1292,7 @@ export async function registerRoutes(
   app.post("/api/projects/:id/invite", isAuthenticated, async (req, res) => {
     try {
       const userId = getUserId(req);
-      const projectId = req.params.id as string;
+      const projectIdOrSlug = req.params.id as string;
       const { email, role } = req.body;
       const memberRole = (role === "admin" || role === "team_lead") ? role : "member";
 
@@ -1122,52 +1300,59 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Valid email is required" });
       }
 
-      const hasAccess = await storage.isUserInProject(userId, projectId);
-      if (!hasAccess) {
-        return res.status(403).json({ message: "Access denied" });
-      }
-
-      const project = await storage.getProject(projectId);
+      const project = await resolveProject(projectIdOrSlug);
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
       }
 
+      // Check access
+      const hasAccess = await storage.isUserInProject(userId, project.id);
+      if (!hasAccess) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      const inOrg = await storage.isUserInOrganization(userId, project.organizationId);
+      if (!inOrg) {
+        // Double check they were specifically added to this project
+        const projectMemberRecs = await storage.getProjectMembersForUser(userId);
+        const isSelectedProjectMember = projectMemberRecs.some((pm: { projectId: string }) => pm.projectId === projectIdOrSlug);
+        if (!isSelectedProjectMember) {
+          return res.status(403).json({ message: "Forbidden: You are not a member of this project" });
+        }
+      }
       const normalizedEmail = email.trim().toLowerCase();
 
       const existingUser = await storage.getUserByEmail(normalizedEmail);
-      if (existingUser) {
-        const alreadyProjectMember = await storage.isUserProjectMember(existingUser.id, projectId);
-        if (alreadyProjectMember) {
-          return res.status(400).json({ message: "This user is already a member of this project" });
-        }
-
-        const alreadyInOrg = await storage.isUserInOrganization(existingUser.id, project.organizationId);
-        if (!alreadyInOrg) {
-          await storage.addOrganizationMember({
-            organizationId: project.organizationId,
-            userId: existingUser.id,
-            role: "member",
-          });
-        }
-
+      if (existingUser && existingUser.id) {
+        // User exists, just add them directly to project
         await storage.addProjectMember({
-          projectId,
+          projectId: project.id,
           userId: existingUser.id,
           role: memberRole,
         });
+
+        // Add them to org if not already
+        const inOrg = await storage.isUserInOrganization(existingUser.id, project.organizationId);
+        if (!inOrg) {
+          await storage.addOrganizationMember({
+            organizationId: project.organizationId,
+            userId: existingUser.id,
+            role: "member"
+          });
+        }
 
         await storage.createNotification({
           userId: existingUser.id,
           type: "added_to_project",
           title: "Added to project",
           message: `You have been added to the project "${project.name}"`,
-          relatedProjectId: projectId,
+          relatedProjectId: project.id,
         });
 
         res.json({ status: "added", user: { id: existingUser.id, email: existingUser.email, firstName: existingUser.firstName, lastName: existingUser.lastName } });
       } else {
-        const existingInvites = await storage.getProjectInvitations(projectId);
-        if (existingInvites.some(i => i.email === normalizedEmail)) {
+        const existingInvites = await storage.getProjectInvitations(project.id);
+        const pendingInvites = existingInvites.filter((i: { status: string }) => i.status === "pending");
+        if (pendingInvites.some(i => i.email === normalizedEmail)) {
           return res.status(400).json({ message: "Invitation already sent to this email" });
         }
 
@@ -1191,7 +1376,7 @@ export async function registerRoutes(
         }
 
         await storage.createProjectInvitation({
-          projectId,
+          projectId: project.id,
           organizationId: project.organizationId,
           email: normalizedEmail,
           role: memberRole,
@@ -1755,6 +1940,22 @@ export async function registerRoutes(
     }
   });
 
+  // POST endpoints for features
+  app.post("/api/time-logs", isAuthenticated, async (req, res) => {
+    try {
+      const logData = req.body;
+      const userObj = req.user as any;
+      const newLog = await storage.createTimeLog({
+        ...logData,
+        userId: userObj.id
+      });
+      res.status(201).json(newLog);
+    } catch (error) {
+      console.error("Error creating time log:", error);
+      res.status(500).json({ message: "Failed to create time log" });
+    }
+  });
+
   // === Time Logs ===
   app.get("/api/timelogs", isAuthenticated, async (req, res) => {
     try {
@@ -1811,13 +2012,14 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Timer already running for this task" });
       }
 
-      const log = await storage.createTimeLog({
+      const newLog = await storage.createTimeLog({
         taskId,
         userId,
         startTime: new Date(),
+        approved: false
       });
 
-      res.status(201).json(log);
+      res.status(201).json(newLog);
     } catch (error) {
       console.error("Error starting time log:", error);
       res.status(500).json({ message: "Failed to start timer" });

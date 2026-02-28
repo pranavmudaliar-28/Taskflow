@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, Kanban, CheckCircle2, Eye, EyeOff, ArrowRight } from "lucide-react";
+import { motion } from "framer-motion";
 
 export default function Login() {
   const [, setLocation] = useLocation();
@@ -23,7 +24,12 @@ export default function Login() {
       return res.json();
     },
     onSuccess: (data) => {
-      // data is { user, token }
+      // data is { user, token, pendingInviteToken }
+      console.log("[Login] Success data:", {
+        hasUser: !!data.user,
+        hasToken: !!data.token,
+        pendingInviteToken: data.pendingInviteToken
+      });
       queryClient.setQueryData(["/api/auth/user"], data.user);
 
       // Clear the logout flag from URL to allow AppRouter to recognize the new session
@@ -31,6 +37,23 @@ export default function Login() {
         const newUrl = window.location.pathname + window.location.search.replace(/[?&]logout=1/, "").replace(/^&/, "?");
         window.history.replaceState({}, "", newUrl);
       }
+
+      // Priority 1: explicit redirect param (e.g. from invitation email link)
+      if (redirect) {
+        console.log("[Login] Redirecting to param:", redirect);
+        setLocation(redirect);
+        return;
+      }
+
+      // Priority 2: server detected a pending invite for this email
+      if (data.pendingInviteToken) {
+        console.log("[Login] Redirecting to pending invite:", data.pendingInviteToken);
+        setLocation(`/accept-invitation?token=${data.pendingInviteToken}`);
+        return;
+      }
+
+      // Priority 3: normal user — App.tsx routes based on onboardingStep
+      console.log("[Login] No redirect needed, letting AppRouter handle it.");
     },
     onError: (error: any) => {
       toast({
@@ -49,9 +72,14 @@ export default function Login() {
   ];
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex hover:overflow-hidden">
       {/* ── Left: dark brand panel ── */}
-      <div className="hidden lg:flex lg:w-5/12 xl:w-1/2 flex-col bg-[#0F172A] relative overflow-hidden">
+      <motion.div
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+        className="hidden lg:flex lg:w-5/12 xl:w-1/2 flex-col bg-[#0F172A] relative overflow-hidden"
+      >
         {/* Background decorations */}
         <div className="absolute inset-0">
           <div className="absolute top-0 left-0 w-full h-full opacity-30"
@@ -65,12 +93,14 @@ export default function Login() {
 
         <div className="relative z-10 flex flex-col h-full px-10 py-12">
           {/* Logo */}
-          <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-lg bg-violet-600 flex items-center justify-center">
-              <Kanban className="h-5 w-5 text-white" />
+          <Link href="/" className="inline-block hover:opacity-90 transition-opacity cursor-pointer">
+            <div className="flex items-center gap-3">
+              <div className="h-9 w-9 rounded-lg bg-violet-600 flex items-center justify-center">
+                <Kanban className="h-5 w-5 text-white" />
+              </div>
+              <span className="text-white font-bold text-lg">TaskFlow</span>
             </div>
-            <span className="text-white font-bold text-lg">TaskFlow</span>
-          </div>
+          </Link>
 
           {/* Middle content */}
           <div className="flex-1 flex flex-col justify-center">
@@ -115,18 +145,25 @@ export default function Login() {
             </div>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* ── Right: form panel ── */}
-      <div className="flex-1 flex flex-col bg-background">
+      <motion.div
+        initial={{ opacity: 0, x: 20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.6, ease: "easeOut", delay: 0.1 }}
+        className="flex-1 flex flex-col bg-background"
+      >
         <div className="flex-1 flex flex-col justify-center px-8 sm:px-12 xl:px-16 py-12 max-w-md w-full mx-auto">
           {/* Mobile logo */}
-          <div className="flex items-center gap-2 mb-10 lg:hidden">
-            <div className="h-8 w-8 rounded-lg bg-violet-600 flex items-center justify-center">
-              <Kanban className="h-4 w-4 text-white" />
+          <Link href="/" className="inline-block hover:opacity-80 transition-opacity cursor-pointer mb-10 lg:hidden">
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 rounded-lg bg-violet-600 flex items-center justify-center">
+                <Kanban className="h-4 w-4 text-white" />
+              </div>
+              <span className="font-bold text-foreground">TaskFlow</span>
             </div>
-            <span className="font-bold text-foreground">TaskFlow</span>
-          </div>
+          </Link>
 
           <div className="mb-8">
             <h2 className="text-2xl font-bold text-foreground mb-1">Welcome back</h2>
@@ -151,12 +188,7 @@ export default function Login() {
             </div>
 
             <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password" className="text-sm font-medium text-foreground/80">Password</Label>
-                <button type="button" className="text-xs text-violet-600 hover:text-violet-700 font-medium">
-                  Forgot password?
-                </button>
-              </div>
+              <Label htmlFor="password" className="text-sm font-medium text-foreground/80">Password</Label>
               <div className="relative">
                 <Input
                   id="password"
@@ -174,6 +206,16 @@ export default function Login() {
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
+              </div>
+              <div className="flex justify-end pt-0.5">
+                <Link href="/forgot-password">
+                  <button
+                    type="button"
+                    className="text-xs text-violet-600 hover:text-violet-700 font-medium"
+                  >
+                    Forgot password?
+                  </button>
+                </Link>
               </div>
             </div>
 
@@ -206,7 +248,7 @@ export default function Login() {
             <button className="underline hover:text-foreground">Privacy Policy</button>
           </p>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

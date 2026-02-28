@@ -1,38 +1,35 @@
 import { lazy, ComponentType } from 'react';
 
 /**
- * A wrapper for React.lazy that automatically reloads the page 
- * if a dynamic import fails due to a chunk load error.
+ * A wrapper for React.lazy that propagates dynamic import failures to the
+ * nearest ErrorBoundary instead of triggering silent reloads or returning a
+ * null component (which produced blank screens).
+ *
+ * Previously this function called window.location.reload() and returned
+ * { default: () => null } on chunk-load errors, causing either an infinite
+ * reload loop or a guaranteed blank page. Now we always let the error bubble
+ * to ErrorBoundary so the user sees a recoverable error card.
  */
 export function lazyRetry<T extends ComponentType<any>>(
     factory: () => Promise<{ default: T }>
 ) {
-    return lazy(() =>
-        factory().catch((error) => {
-            const errorMessage = (error?.message || String(error) || '').toLowerCase();
+    // Add debugging context to track the factory creation
+    const factoryString = factory.toString();
+    const componentNameMatch = factoryString.match(/import\(['"]([^'"]+)['"]\)/);
+    const componentName = componentNameMatch ? componentNameMatch[1] : 'unknown';
 
-            const isChunkLoadError =
-                errorMessage.includes('failed to fetch dynamically imported module') ||
-                errorMessage.includes('css_chunk_load_failed') ||
-                errorMessage.includes('loading chunk') ||
-                errorMessage.includes('module not found') ||
-                errorMessage.includes('script error');
+    return lazy(() => {
+        console.log(`[lazyRetry] Starting import for: ${componentName}`);
+        const promise = factory();
 
-            if (isChunkLoadError) {
-                const RELOAD_KEY = 'last_chunk_load_reload';
-                const now = Date.now();
-                const lastReload = sessionStorage.getItem(RELOAD_KEY);
-
-                // Only reload if we haven't reloaded in the last 10 seconds
-                if (!lastReload || (now - parseInt(lastReload) > 10000)) {
-                    sessionStorage.setItem(RELOAD_KEY, now.toString());
-                    window.location.reload();
-                    // Return a placeholder that won't be rendered anyway due to reload
-                    return { default: (() => null) as unknown as T };
-                }
-            }
-
+        promise.then(() => {
+            console.log(`[lazyRetry] Successfully loaded: ${componentName}`);
+        }).catch((error) => {
+            console.error(`[lazyRetry] Failed to load: ${componentName}`, error);
+            // Always re-throw so ErrorBoundary can catch and display the error.
             throw error;
-        })
-    );
+        });
+
+        return promise;
+    });
 }

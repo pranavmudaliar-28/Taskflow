@@ -1,26 +1,33 @@
-import { IStorage, ProjectMemberWithUser } from "./storage";
 import {
     UserMongo, OrganizationMongo, ProjectMongo, TaskMongo,
     CommentMongo, AttachmentMongo, MilestoneMongo, TimeLogMongo,
     NotificationMongo, OrganizationMemberMongo, ProjectMemberMongo,
-    InvitationMongo
+    InvitationMongo, PasswordResetTokenMongo
 } from "../shared/mongodb-schema";
 import { generateSlug } from "./slug-utils";
 import mongoose from "mongoose";
 import {
-    type User, type Organization, type Project, type Task,
-    type Comment, type Attachment, type Milestone, type TimeLog,
-    type Notification, type OrganizationMember, type ProjectMember,
-    type ProjectInvitation, type OrganizationInvitation,
-    type InsertOrganization, type InsertOrganizationMember,
-    type InsertProject, type InsertProjectMember,
-    type InsertTask, type InsertTimeLog, type InsertComment,
-    type InsertAttachment, type InsertNotification,
-    type InsertProjectInvitation, type InsertOrganizationInvitation,
-    type InsertMilestone
+    type User, type UpsertUser,
+    type Project, type InsertProject,
+    type ProjectMember, type InsertProjectMember,
+    type Task, type InsertTask,
+    type Milestone, type InsertMilestone,
+    type Attachment, type InsertAttachment,
+    type Comment, type InsertComment,
+    type ProjectInvitation, type InsertProjectInvitation,
+    type Organization, type InsertOrganization,
+    type OrganizationMember, type InsertOrganizationMember,
+    type OrganizationInvitation, type InsertOrganizationInvitation,
+    type TimeLog, type InsertTimeLog,
+    type Role, type TaskStatus, type TaskPriority,
+    type FeatureFlags, type WorkspaceSettings, type UserSettings,
+    type NotificationPreferences, type ViewPreferences, type AutomationRule,
+    type PasswordResetToken
 } from "@shared/schema";
 
-export class MongoStorage implements IStorage {
+export type ProjectMemberWithUser = ProjectMember & { user?: any };
+
+export class MongoStorage {
     // Helper to convert Mongoose doc to the expected shape
     private transform<T>(doc: any): T | undefined {
         if (!doc) return undefined;
@@ -114,6 +121,10 @@ export class MongoStorage implements IStorage {
         return this.transformArray<OrganizationMember>(members);
     }
 
+    async removeOrganizationMember(id: string): Promise<void> {
+        await OrganizationMemberMongo.findByIdAndDelete(id);
+    }
+
     // Projects
     async createProject(project: InsertProject): Promise<Project> {
         let slug = generateSlug(project.name);
@@ -168,6 +179,16 @@ export class MongoStorage implements IStorage {
         if (existing) return this.transform<ProjectMember>(existing)!;
         const created = await ProjectMemberMongo.create(member);
         return this.transform<ProjectMember>(created)!;
+    }
+
+    async getProjectMembersForUser(userId: string): Promise<ProjectMember[]> {
+        const members = await ProjectMemberMongo.find({ userId });
+        return this.transformArray<ProjectMember>(members);
+    }
+
+    async removeProjectMember(id: string): Promise<boolean> {
+        const result = await ProjectMemberMongo.findByIdAndDelete(id);
+        return !!result;
     }
 
     async getProjectMembers(projectId: string): Promise<ProjectMemberWithUser[]> {
@@ -409,14 +430,27 @@ export class MongoStorage implements IStorage {
     }
 
     // Comments
+    async getCommentsByTask(taskId: string): Promise<Comment[]> {
+        const comments = await CommentMongo.find({ taskId }).sort({ createdAt: 1 });
+        return this.transformArray<Comment>(comments);
+    }
+
     async createComment(comment: InsertComment): Promise<Comment> {
         const created = await CommentMongo.create(comment);
         return this.transform<Comment>(created)!;
     }
 
-    async getCommentsByTask(taskId: string): Promise<Comment[]> {
-        const comments = await CommentMongo.find({ taskId }).sort({ createdAt: 1 });
-        return this.transformArray<Comment>(comments);
+    async updateComment(id: string, content: string): Promise<Comment | undefined> {
+        const updated = await CommentMongo.findByIdAndUpdate(
+            id,
+            { content, updatedAt: new Date() },
+            { new: true }
+        );
+        return this.transform<Comment>(updated);
+    }
+
+    async deleteComment(id: string): Promise<void> {
+        await CommentMongo.findByIdAndDelete(id);
     }
 
     async toggleCommentReaction(commentId: string, userId: string, emoji: string): Promise<Comment | undefined> {
@@ -457,7 +491,7 @@ export class MongoStorage implements IStorage {
     }
 
     // Notifications
-    async createNotification(notification: InsertNotification): Promise<Notification> {
+    async createNotification(notification: any): Promise<Notification> {
         const created = await NotificationMongo.create(notification);
         return this.transform<Notification>(created)!;
     }
@@ -651,5 +685,37 @@ export class MongoStorage implements IStorage {
     async getMembershipsByUserId(userId: string): Promise<OrganizationMember[]> {
         const memberships = await OrganizationMemberMongo.find({ userId });
         return this.transformArray<OrganizationMember>(memberships);
+    }
+
+    // Stubs for missing methods
+    async getWorkspaceSettings(orgId: string): Promise<WorkspaceSettings | undefined> { return undefined; }
+    async updateWorkspaceSettings(orgId: string, updates: Partial<WorkspaceSettings>): Promise<WorkspaceSettings | undefined> { return undefined; }
+    async getFeatureFlags(orgId: string): Promise<FeatureFlags | undefined> { return undefined; }
+    async updateFeatureFlags(orgId: string, updates: Partial<FeatureFlags>): Promise<FeatureFlags | undefined> { return undefined; }
+    async getUserSettings(userId: string): Promise<UserSettings | undefined> { return undefined; }
+    async updateUserSettings(userId: string, updates: Partial<UserSettings>): Promise<UserSettings | undefined> { return undefined; }
+    async getNotificationPreferences(userId: string): Promise<NotificationPreferences[]> { return []; }
+    async updateNotificationPreference(userId: string, channel: string, updates: Partial<NotificationPreferences>): Promise<NotificationPreferences | undefined> { return undefined; }
+    async getViewPreferences(userId: string, projectId?: string): Promise<ViewPreferences[]> { return []; }
+    async saveViewPreference(pref: any): Promise<ViewPreferences> { throw new Error("Not implemented"); }
+    async deleteViewPreference(id: string, userId: string): Promise<void> { }
+    async getAutomationRules(orgId: string, projectId?: string): Promise<AutomationRule[]> { return []; }
+    async saveAutomationRule(rule: any): Promise<AutomationRule> { throw new Error("Not implemented"); }
+    async deleteAutomationRule(id: string, orgId: string): Promise<void> { }
+
+    // Password Reset Tokens
+    async createPasswordResetToken(email: string, token: string, expiresAt: Date): Promise<PasswordResetToken> {
+        // Delete any existing tokens for this email first to prevent clutter
+        await PasswordResetTokenMongo.deleteMany({ email });
+        const created = await PasswordResetTokenMongo.create({ email, token, expiresAt });
+        return this.transform<PasswordResetToken>(created)!;
+    }
+
+    async getPasswordResetToken(token: string): Promise<PasswordResetToken | undefined> {
+        return this.transform<PasswordResetToken>(await PasswordResetTokenMongo.findOne({ token }));
+    }
+
+    async deletePasswordResetToken(token: string): Promise<void> {
+        await PasswordResetTokenMongo.deleteOne({ token });
     }
 }

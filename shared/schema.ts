@@ -1,304 +1,283 @@
-import { sql, relations } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, boolean, integer, pgEnum, AnyPgColumn } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-
-// Import users table from auth models for references
-import { users } from "./models/auth";
 
 // Re-export auth models
 export * from "./models/auth";
 
-// Enums
-export const roleEnum = pgEnum("role", ["admin", "team_lead", "member"]);
-export const taskStatusEnum = pgEnum("task_status", ["todo", "in_progress", "in_review", "testing", "done"]);
-export const taskPriorityEnum = pgEnum("task_priority", ["low", "medium", "high", "urgent"]);
-export const notificationTypeEnum = pgEnum("notification_type", ["task_assigned", "status_changed", "mentioned", "due_reminder", "added_to_project"]);
+// Common Enums used in validation
+export const RoleEnum = z.enum(["admin", "team_lead", "member"]);
+export const TaskStatusEnum = z.enum(["todo", "in_progress", "in_review", "testing", "done"]);
+export const TaskPriorityEnum = z.enum(["low", "medium", "high", "urgent"]);
+export const NotificationTypeEnum = z.enum(["task_assigned", "status_changed", "mentioned", "due_reminder", "added_to_project"]);
 
 // Organizations
-export const organizations = pgTable("organizations", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  name: text("name").notNull(),
-  email: text("email"),
-  address: text("address"),
-  ownerId: varchar("owner_id").notNull(),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+export const organizationSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string().min(1, "Organization name is required"),
+  email: z.string().email().optional().nullable(),
+  ownerId: z.string().uuid(),
+  accentColor: z.string().optional().nullable(),
+  createdAt: z.date().optional(),
+  updatedAt: z.date().optional(),
 });
+export const insertOrganizationSchema = organizationSchema.omit({ id: true, createdAt: true, updatedAt: true });
 
-export const organizationsRelations = relations(organizations, ({ many }) => ({
-  members: many(organizationMembers),
-  projects: many(projects),
-}));
-
-// Organization Members (many-to-many with roles)
-export const organizationMembers = pgTable("organization_members", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  organizationId: varchar("organization_id").notNull(),
-  userId: varchar("user_id").notNull(),
-  role: roleEnum("role").notNull().default("member"),
-  joinedAt: timestamp("joined_at").defaultNow(),
+// Organization Members
+export const organizationMemberSchema = z.object({
+  id: z.string().uuid(),
+  organizationId: z.string().uuid(),
+  userId: z.string().uuid(),
+  role: RoleEnum.default("member"),
+  joinedAt: z.date().optional(),
 });
-
-export const organizationMembersRelations = relations(organizationMembers, ({ one }) => ({
-  organization: one(organizations, {
-    fields: [organizationMembers.organizationId],
-    references: [organizations.id],
-  }),
-}));
+export const insertOrganizationMemberSchema = organizationMemberSchema.omit({ id: true, joinedAt: true });
 
 // Projects
-export const projects = pgTable("projects", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  name: text("name").notNull(),
-  slug: text("slug").unique(),
-  description: text("description"),
-  organizationId: varchar("organization_id").notNull(),
-  isPrivate: boolean("is_private").default(true),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+export const projectSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string().min(1, "Project name is required"),
+  slug: z.string().optional().nullable(),
+  description: z.string().optional().nullable(),
+  organizationId: z.string().uuid(),
+  isPrivate: z.boolean().default(true),
+  createdAt: z.date().optional(),
+  updatedAt: z.date().optional(),
 });
-
-export const projectsRelations = relations(projects, ({ one, many }) => ({
-  organization: one(organizations, {
-    fields: [projects.organizationId],
-    references: [organizations.id],
-  }),
-  members: many(projectMembers),
-  tasks: many(tasks),
-}));
+export const insertProjectSchema = projectSchema.omit({ id: true, createdAt: true, updatedAt: true });
 
 // Project Members
-export const projectMembers = pgTable("project_members", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  projectId: varchar("project_id").notNull(),
-  userId: varchar("user_id").notNull(),
-  role: roleEnum("role").notNull().default("member"),
-  addedAt: timestamp("added_at").defaultNow(),
+export const projectMemberSchema = z.object({
+  id: z.string().uuid(),
+  projectId: z.string().uuid(),
+  userId: z.string().uuid(),
+  role: RoleEnum.default("member"),
+  addedAt: z.date().optional(),
 });
-
-export const projectMembersRelations = relations(projectMembers, ({ one }) => ({
-  project: one(projects, {
-    fields: [projectMembers.projectId],
-    references: [projects.id],
-  }),
-}));
+export const insertProjectMemberSchema = projectMemberSchema.omit({ id: true, addedAt: true });
 
 // Tasks
-export const tasks = pgTable("tasks", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  title: text("title").notNull(),
-  description: text("description"),
-  projectId: varchar("project_id").notNull(),
-  status: taskStatusEnum("status").notNull().default("todo"),
-  priority: taskPriorityEnum("priority").notNull().default("medium"),
-  assigneeId: varchar("assignee_id"),
-  reviewerId: varchar("reviewer_id"),
-  testerId: varchar("tester_id"),
-  dueDate: timestamp("due_date"),
-  startDate: timestamp("start_date"),
-  deliveryRole: text("delivery_role"), // e.g. "Frontend", "Backend", "Fullstack", "Design", "QA", "Product", "DevOps"
-  milestone: text("milestone"), // Keep for legacy/migration, prefer milestoneId
-  milestoneId: varchar("milestone_id"),
-  slug: text("slug").unique(),
-  order: integer("order").default(0),
-  parentId: varchar("parent_id").references((): AnyPgColumn => tasks.id), // Recursive self-reference for subtasks
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+export const taskSchema = z.object({
+  id: z.string().uuid(),
+  title: z.string().min(1, "Task title is required"),
+  description: z.string().optional().nullable(),
+  projectId: z.string().uuid(),
+  status: TaskStatusEnum.default("todo"),
+  priority: TaskPriorityEnum.default("medium"),
+  assigneeId: z.string().uuid().optional().nullable(),
+  reviewerId: z.string().uuid().optional().nullable(),
+  testerId: z.string().uuid().optional().nullable(),
+  dueDate: z.coerce.date().optional().nullable(),
+  startDate: z.coerce.date().optional().nullable(),
+  deliveryRole: z.string().optional().nullable(),
+  milestone: z.string().optional().nullable(),
+  milestoneId: z.string().uuid().optional().nullable(),
+  slug: z.string().optional().nullable(),
+  order: z.number().default(0),
+  parentId: z.string().uuid().optional().nullable(),
+  createdAt: z.date().optional(),
+  updatedAt: z.date().optional(),
 });
-
-
-
-// Milestones
-export const milestones = pgTable("milestones", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  projectId: varchar("project_id").notNull(),
-  title: text("title").notNull(),
-  description: text("description"),
-  status: text("status").notNull().default("open"), // open, closed
-  dueDate: timestamp("due_date"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-export const milestonesRelations = relations(milestones, ({ one, many }) => ({
-  project: one(projects, {
-    fields: [milestones.projectId],
-    references: [projects.id],
-  }),
-  tasks: many(tasks),
-}));
-
-// Time Logs
-export const timeLogs = pgTable("time_logs", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  taskId: varchar("task_id").notNull(),
-  userId: varchar("user_id").notNull(),
-  startTime: timestamp("start_time").notNull(),
-  endTime: timestamp("end_time"),
-  duration: integer("duration"), // in seconds
-  approved: boolean("approved").default(false),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-export const timeLogsRelations = relations(timeLogs, ({ one }) => ({
-  task: one(tasks, {
-    fields: [timeLogs.taskId],
-    references: [tasks.id],
-  }),
-}));
-
-// Comments
-export const comments = pgTable("comments", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  taskId: varchar("task_id").notNull(),
-  authorId: varchar("author_id").notNull(),
-  content: text("content").notNull(),
-  parentId: varchar("parent_id").references((): AnyPgColumn => comments.id),
-  reactions: text("reactions").array().default(sql`ARRAY[]::text[]`), // Array of emoji:userId strings
-  mentions: text("mentions").array(),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-export const commentsRelations = relations(comments, ({ one }) => ({
-  task: one(tasks, {
-    fields: [comments.taskId],
-    references: [tasks.id],
-  }),
-}));
-
-// Attachments
-export const attachments = pgTable("attachments", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  taskId: varchar("task_id").notNull(),
-  name: text("name").notNull(),
-  url: text("url").notNull(),
-  size: integer("size"),
-  type: text("type"),
-  uploadedBy: varchar("uploaded_by").notNull(),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-export const attachmentsRelations = relations(attachments, ({ one }) => ({
-  task: one(tasks, {
-    fields: [attachments.taskId],
-    references: [tasks.id],
-  }),
-  uploader: one(users, {
-    fields: [attachments.uploadedBy],
-    references: [users.id],
-  }),
-}));
-
-export const tasksRelations = relations(tasks, ({ one, many }) => ({
-  project: one(projects, {
-    fields: [tasks.projectId],
-    references: [projects.id],
-  }),
-  milestone: one(milestones, {
-    fields: [tasks.milestoneId],
-    references: [milestones.id],
-  }),
-  timeLogs: many(timeLogs),
-  comments: many(comments),
-  attachments: many(attachments),
-}));
-
-// Notifications
-export const notifications = pgTable("notifications", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull(),
-  type: notificationTypeEnum("type").notNull(),
-  title: text("title").notNull(),
-  message: text("message").notNull(),
-  read: boolean("read").default(false),
-  relatedTaskId: varchar("related_task_id"),
-  relatedProjectId: varchar("related_project_id"),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-// Project Invitations (pending invites for unregistered users)
-export const projectInvitations = pgTable("project_invitations", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  projectId: varchar("project_id").notNull(),
-  organizationId: varchar("organization_id").notNull(),
-  email: text("email").notNull(),
-  role: roleEnum("role").notNull().default("member"),
-  invitedBy: varchar("invited_by").notNull(),
-  status: text("status").notNull().default("pending"),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-// Organization Invitations (invite users to organization first)
-export const organizationInvitations = pgTable("organization_invitations", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  organizationId: varchar("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
-  email: text("email").notNull(),
-  role: roleEnum("role").notNull().default("member"),
-  invitedBy: varchar("invited_by").notNull().references(() => users.id),
-  token: text("token").notNull().unique(),
-  status: text("status").notNull().default("pending"), // 'pending', 'accepted', 'expired'
-  createdAt: timestamp("created_at").defaultNow(),
-  expiresAt: timestamp("expires_at").notNull(),
-});
-
-// Insert schemas
-export const insertOrganizationSchema = createInsertSchema(organizations).omit({ id: true, createdAt: true, updatedAt: true });
-export const insertProjectSchema = createInsertSchema(projects).omit({ id: true, createdAt: true, updatedAt: true });
-export const insertTaskSchema = createInsertSchema(tasks).omit({
+export const insertTaskSchema = taskSchema.omit({
   id: true,
   createdAt: true,
   updatedAt: true
-}).extend({
-  dueDate: z.coerce.date().optional(), // Ensure date handling
-  startDate: z.coerce.date().optional(),
-  parentId: z.string().nullable().optional(),
 });
-export const insertTimeLogSchema = createInsertSchema(timeLogs).omit({ id: true, createdAt: true });
-export const insertCommentSchema = createInsertSchema(comments).omit({ id: true, createdAt: true, updatedAt: true }).extend({
-  parentId: z.string().nullable().optional(),
+
+// Milestones
+export const milestoneSchema = z.object({
+  id: z.string().uuid(),
+  projectId: z.string().uuid(),
+  title: z.string().min(1, "Milestone title is required"),
+  description: z.string().optional().nullable(),
+  status: z.string().default("open"),
+  dueDate: z.coerce.date().optional().nullable(),
+  createdAt: z.date().optional(),
+  updatedAt: z.date().optional(),
+});
+export const insertMilestoneSchema = milestoneSchema.omit({ id: true, createdAt: true, updatedAt: true });
+
+// Time Logs
+export const timeLogSchema = z.object({
+  id: z.string().uuid(),
+  taskId: z.string().uuid(),
+  userId: z.string().uuid(),
+  startTime: z.coerce.date(),
+  endTime: z.coerce.date().optional().nullable(),
+  duration: z.number().optional().nullable(),
+  approved: z.boolean().default(false),
+  createdAt: z.date().optional(),
+});
+export const insertTimeLogSchema = timeLogSchema.omit({ id: true, createdAt: true });
+
+// Comments
+export const commentSchema = z.object({
+  id: z.string().uuid(),
+  taskId: z.string().uuid(),
+  authorId: z.string().uuid(),
+  content: z.string().min(1, "Comment content cannot be empty"),
+  parentId: z.string().uuid().optional().nullable(),
   reactions: z.array(z.string()).optional(),
+  mentions: z.array(z.string()).optional(),
+  createdAt: z.date().optional(),
+  updatedAt: z.date().optional(),
 });
-export const insertNotificationSchema = createInsertSchema(notifications).omit({ id: true, createdAt: true });
-export const insertOrganizationMemberSchema = createInsertSchema(organizationMembers).omit({ id: true, joinedAt: true });
-export const insertProjectMemberSchema = createInsertSchema(projectMembers).omit({ id: true, addedAt: true });
-export const insertProjectInvitationSchema = createInsertSchema(projectInvitations).omit({ id: true, createdAt: true });
-export const insertOrganizationInvitationSchema = createInsertSchema(organizationInvitations).omit({ id: true, createdAt: true });
-export const insertAttachmentSchema = createInsertSchema(attachments).omit({ id: true, createdAt: true });
+export const insertCommentSchema = commentSchema.omit({ id: true, createdAt: true, updatedAt: true });
 
-export const insertMilestoneSchema = createInsertSchema(milestones, {
-  dueDate: z.coerce.date().optional(),
-}).omit({ id: true, createdAt: true, updatedAt: true });
+// Attachments
+export const attachmentSchema = z.object({
+  id: z.string().uuid(),
+  taskId: z.string().uuid(),
+  name: z.string(),
+  url: z.string().url(),
+  size: z.number().optional().nullable(),
+  type: z.string().optional().nullable(),
+  uploadedBy: z.string().uuid(),
+  createdAt: z.date().optional(),
+});
+export const insertAttachmentSchema = attachmentSchema.omit({ id: true, createdAt: true });
 
-export type Attachment = typeof attachments.$inferSelect;
+// Notifications
+export const notificationSchema = z.object({
+  id: z.string().uuid(),
+  userId: z.string().uuid(),
+  type: NotificationTypeEnum,
+  title: z.string(),
+  message: z.string(),
+  read: z.boolean().default(false),
+  relatedTaskId: z.string().uuid().optional().nullable(),
+  relatedProjectId: z.string().uuid().optional().nullable(),
+  createdAt: z.date().optional(),
+});
+export const insertNotificationSchema = notificationSchema.omit({ id: true, createdAt: true });
+
+// Project Invitations
+export const projectInvitationSchema = z.object({
+  id: z.string().uuid(),
+  projectId: z.string().uuid(),
+  organizationId: z.string().uuid(),
+  email: z.string().email(),
+  role: RoleEnum.default("member"),
+  invitedBy: z.string().uuid(),
+  status: z.string().default("pending"),
+  createdAt: z.date().optional(),
+});
+export const insertProjectInvitationSchema = projectInvitationSchema.omit({ id: true, createdAt: true });
+
+// Organization Invitations
+export const organizationInvitationSchema = z.object({
+  id: z.string().uuid(),
+  organizationId: z.string().uuid(),
+  email: z.string().email(),
+  role: RoleEnum.default("member"),
+  invitedBy: z.string().uuid(),
+  token: z.string(),
+  status: z.string().default("pending"),
+  createdAt: z.date().optional(),
+  expiresAt: z.coerce.date(),
+});
+export const insertOrganizationInvitationSchema = organizationInvitationSchema.omit({ id: true, createdAt: true });
+
+// Types Base
+export type Role = z.infer<typeof RoleEnum>;
+export type TaskStatus = z.infer<typeof TaskStatusEnum>;
+export type TaskPriority = z.infer<typeof TaskPriorityEnum>;
+
+export type Organization = z.infer<typeof organizationSchema>;
+export type InsertOrganization = z.infer<typeof insertOrganizationSchema>;
+export type Project = z.infer<typeof projectSchema>;
+export type InsertProject = z.infer<typeof insertProjectSchema>;
+export type Task = z.infer<typeof taskSchema>;
+export type InsertTask = z.infer<typeof insertTaskSchema>;
+export type TimeLog = z.infer<typeof timeLogSchema>;
+export type InsertTimeLog = z.infer<typeof insertTimeLogSchema>;
+export type Comment = z.infer<typeof commentSchema>;
+export type InsertComment = z.infer<typeof insertCommentSchema>;
+export type Notification = z.infer<typeof notificationSchema>;
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+export type OrganizationMember = z.infer<typeof organizationMemberSchema>;
+export type InsertOrganizationMember = z.infer<typeof insertOrganizationMemberSchema>;
+export type ProjectMember = z.infer<typeof projectMemberSchema>;
+export type InsertProjectMember = z.infer<typeof insertProjectMemberSchema>;
+export type ProjectInvitation = z.infer<typeof projectInvitationSchema>;
+export type InsertProjectInvitation = z.infer<typeof insertProjectInvitationSchema>;
+export type OrganizationInvitation = z.infer<typeof organizationInvitationSchema>;
+export type InsertOrganizationInvitation = z.infer<typeof insertOrganizationInvitationSchema>;
+export type Milestone = z.infer<typeof milestoneSchema>;
+export type InsertMilestone = z.infer<typeof insertMilestoneSchema>;
+export type Attachment = z.infer<typeof attachmentSchema>;
 export type InsertAttachment = z.infer<typeof insertAttachmentSchema>;
 
-// Types
-export type Organization = typeof organizations.$inferSelect;
-export type InsertOrganization = z.infer<typeof insertOrganizationSchema>;
-export type Project = typeof projects.$inferSelect;
-export type InsertProject = z.infer<typeof insertProjectSchema>;
-export type Task = typeof tasks.$inferSelect;
-export type InsertTask = z.infer<typeof insertTaskSchema>;
-export type TimeLog = typeof timeLogs.$inferSelect;
-export type InsertTimeLog = z.infer<typeof insertTimeLogSchema>;
-export type Comment = typeof comments.$inferSelect;
-export type InsertComment = z.infer<typeof insertCommentSchema>;
-export type Notification = typeof notifications.$inferSelect;
-export type InsertNotification = z.infer<typeof insertNotificationSchema>;
-export type OrganizationMember = typeof organizationMembers.$inferSelect;
-export type InsertOrganizationMember = z.infer<typeof insertOrganizationMemberSchema>;
-export type ProjectMember = typeof projectMembers.$inferSelect;
-export type InsertProjectMember = z.infer<typeof insertProjectMemberSchema>;
-export type ProjectInvitation = typeof projectInvitations.$inferSelect;
-export type InsertProjectInvitation = z.infer<typeof insertProjectInvitationSchema>;
-export type OrganizationInvitation = typeof organizationInvitations.$inferSelect;
-export type InsertOrganizationInvitation = z.infer<typeof insertOrganizationInvitationSchema>;
-export type Milestone = typeof milestones.$inferSelect;
-export type InsertMilestone = z.infer<typeof insertMilestoneSchema>;
+export interface FeatureFlags {
+  timeTracking: boolean;
+  priority: boolean;
+  taskPriorities?: boolean;
+  milestones: boolean;
+  tags: boolean;
+  customFields: boolean;
+  reminders: boolean;
+  automations: boolean;
+  reporting: boolean;
+  multipleAssignees?: boolean;
+  sprintPoints?: boolean;
+  nestedSubtasks?: boolean;
+  dependencies?: boolean;
+}
 
-// Role type
-export type Role = "admin" | "team_lead" | "member";
-export type TaskStatus = "todo" | "in_progress" | "in_review" | "testing" | "done";
-export type TaskPriority = "low" | "medium" | "high" | "urgent";
+export interface WorkspaceSettings {
+  name: string;
+  logoUrl?: string;
+  primaryColor?: string;
+  theme: "light" | "dark" | "system";
+  allowPublicProjects: boolean;
+  defaultMemberRole: Role;
+  defaultTaskStatuses?: string[];
+}
+
+export interface UserSettings {
+  language: string;
+  timezone: string;
+  dateFormat: string;
+  timeFormat: "12h" | "24h";
+  weekStart: 0 | 1 | 6; // Sun, Mon, Sat
+}
+
+export interface NotificationPreferences {
+  channel: "email" | "in_app" | "push";
+  enabled?: boolean;
+  taskAssigned: boolean;
+  statusChanged: boolean;
+  mentioned: boolean;
+  dueReminder: boolean;
+  dailyDigest: boolean;
+}
+
+export interface ViewPreferences {
+  id: string;
+  userId: string;
+  projectId?: string;
+  viewType: "list" | "board" | "calendar" | "gantt";
+  filters: any;
+  sortBy: string;
+  sortOrder: "asc" | "desc";
+  hiddenColumns: string[];
+}
+
+export interface AutomationRule {
+  id: string;
+  organizationId: string;
+  projectId?: string;
+  name: string;
+  trigger: any;
+  action: any;
+  enabled: boolean;
+}
+
+export interface PasswordResetToken {
+  id: string;
+  email: string;
+  token: string;
+  expiresAt: Date;
+  createdAt?: Date;
+}
+
+export interface InsertViewPreferences extends Omit<ViewPreferences, "id"> { }
+export interface InsertAutomationRule extends Omit<AutomationRule, "id"> { }

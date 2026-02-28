@@ -206,11 +206,6 @@ export default function BillingPage() {
             {/* ── Header ──────────────────────────────────────────────────────────── */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
-                    <Link href="/settings">
-                        <Button variant="ghost" size="sm" className="h-8 w-8 sm:w-auto sm:px-3 gap-1.5 text-xs">
-                            <ArrowLeft className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Settings</span>
-                        </Button>
-                    </Link>
                     <div>
                         <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight">Billing & Plans</h1>
                         <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">

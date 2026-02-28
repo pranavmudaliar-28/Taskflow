@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useRoute, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -29,7 +29,7 @@ import {
     Flag
 } from "lucide-react";
 import { format } from "date-fns";
-import { cn } from "@/lib/utils";
+import { cn, ensureArray, ensureObject } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
@@ -102,10 +102,16 @@ export default function TaskView() {
     const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
 
     // Fetch Task
-    const { data: task, isLoading: taskLoading } = useQuery<Task>({
+    const { data: task, isLoading: taskLoading, isError: taskError, error: taskErrorObj } = useQuery<Task>({
         queryKey: [`/api/tasks/${taskId}`],
         enabled: !!taskId,
     });
+
+    useEffect(() => {
+        if (task) {
+            console.info(`[TaskView] Loaded task: ${task.title} (${task.id}) in project ${task.projectId}`);
+        }
+    }, [task?.id, task?.title]);
 
     // Fetch Project
     const { data: project } = useQuery<any>({
@@ -155,8 +161,8 @@ export default function TaskView() {
 
     const usersMap = useMemo(() => {
         const map = new Map<string, any>();
-        orgMembers?.forEach(m => map.set(m.userId, m.user));
-        members?.forEach(m => { if (!map.has(m.userId)) map.set(m.userId, m.user); });
+        ensureArray(orgMembers).forEach(m => { if (m.user) map.set(m.userId, m.user); });
+        ensureArray(members).forEach(m => { if (!map.has(m.userId) && m.user) map.set(m.userId, m.user); });
         return map;
     }, [orgMembers, members]);
 
@@ -235,7 +241,8 @@ export default function TaskView() {
         const mentions: string[] = [];
         mentionMatches.forEach(match => {
             const name = match.substring(1);
-            const member = (orgMembers || members)?.find(m => `${m.user.firstName} ${m.user.lastName}` === name);
+            // Guard m.user before accessing .firstName to avoid crash on deleted-user members
+            const member = (orgMembers || members)?.find(m => m.user && `${m.user.firstName} ${m.user.lastName}` === name);
             if (member) mentions.push(member.userId);
         });
         createCommentMutation.mutate({ content: comment, mentions, parentId: parentId || replyTo });
@@ -265,7 +272,7 @@ export default function TaskView() {
     };
 
     const filteredMentions = (orgMembers || members)?.filter(m =>
-        `${m.user.firstName} ${m.user.lastName}`.toLowerCase().includes(mentionQuery)
+        m.user && `${m.user.firstName || ''} ${m.user.lastName || ''}`.toLowerCase().includes(mentionQuery)
     ) || [];
 
     const deleteTaskMutation = useMutation({
@@ -293,7 +300,30 @@ export default function TaskView() {
             </div>
         </div>
     );
-    if (!task) return <div className="p-8 text-center font-bold">Task not found</div>;
+    if (taskError) return (
+        <div className="flex flex-col items-center justify-center h-full p-12 gap-4 text-center bg-background">
+            <div className="h-16 w-16 rounded-2xl bg-destructive/10 flex items-center justify-center">
+                <AlertCircle className="h-8 w-8 text-destructive" />
+            </div>
+            <h2 className="text-2xl font-bold text-foreground">Failed to load task</h2>
+            <p className="text-muted-foreground max-w-sm">{taskErrorObj instanceof Error ? taskErrorObj.message : "An unexpected error occurred while fetching task details."}</p>
+            <div className="flex gap-3">
+                <Button onClick={() => window.location.reload()} variant="default">Try Again</Button>
+                <Button onClick={() => window.history.back()} variant="outline">Go Back</Button>
+            </div>
+        </div>
+    );
+
+    if (!task) return (
+        <div className="flex flex-col items-center justify-center h-full p-12 gap-4 text-center bg-background">
+            <div className="h-16 w-16 rounded-2xl bg-destructive/10 flex items-center justify-center">
+                <AlertCircle className="h-8 w-8 text-destructive" />
+            </div>
+            <h2 className="text-2xl font-bold text-foreground">Task not found</h2>
+            <p className="text-muted-foreground max-w-sm">This task may have been deleted or you don't have access to it.</p>
+            <Button onClick={() => window.history.back()} variant="outline">Go Back</Button>
+        </div>
+    );
 
     const initials = (u: any) => u ? ((u.firstName?.[0] || "") + (u.lastName?.[0] || "")).toUpperCase() : "?";
 
@@ -679,7 +709,7 @@ export default function TaskView() {
                                     </SelectTrigger>
                                     <SelectContent className="rounded-xl border-border shadow-elevation">
                                         <SelectItem value="unassigned" className="text-muted-foreground font-bold text-xs">Unassigned</SelectItem>
-                                        {members?.map(m => <SelectItem key={m.user.id} value={String(m.user.id)} className="font-bold text-xs text-foreground/80">{m.user.firstName} {m.user.lastName}</SelectItem>)}
+                                        {members?.filter(m => m.user).map(m => <SelectItem key={m.user.id} value={String(m.user.id)} className="font-bold text-xs text-foreground/80">{m.user.firstName} {m.user.lastName}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -695,7 +725,7 @@ export default function TaskView() {
                                     </SelectTrigger>
                                     <SelectContent className="rounded-xl border-border shadow-elevation">
                                         <SelectItem value="unassigned" className="font-bold text-xs text-muted-foreground">None</SelectItem>
-                                        {members?.map(m => <SelectItem key={m.user.id} value={String(m.user.id)} className="font-bold text-xs text-foreground/80">{m.user.firstName} {m.user.lastName}</SelectItem>)}
+                                        {members?.filter(m => m.user).map(m => <SelectItem key={m.user.id} value={String(m.user.id)} className="font-bold text-xs text-foreground/80">{m.user.firstName} {m.user.lastName}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -711,7 +741,7 @@ export default function TaskView() {
                                     </SelectTrigger>
                                     <SelectContent className="rounded-xl border-border shadow-elevation">
                                         <SelectItem value="unassigned" className="font-bold text-xs text-muted-foreground">None</SelectItem>
-                                        {members?.map(m => <SelectItem key={m.user.id} value={String(m.user.id)} className="font-bold text-xs text-foreground/80">{m.user.firstName} {m.user.lastName}</SelectItem>)}
+                                        {members?.filter(m => m.user).map(m => <SelectItem key={m.user.id} value={String(m.user.id)} className="font-bold text-xs text-foreground/80">{m.user.firstName} {m.user.lastName}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -755,7 +785,7 @@ export default function TaskView() {
                 </aside>
             </div>
 
-            <CreateTaskDialog open={showCreateSubtask} onClose={() => setShowCreateSubtask(false)} projectId={task.projectId} parentId={task.id} onSuccess={() => { queryClient.invalidateQueries({ queryKey: ["/api/tasks/search"] }); setShowCreateSubtask(false); }} projects={[project]} members={members?.map(m => m.user).filter(Boolean)} />
+            <CreateTaskDialog open={showCreateSubtask} onClose={() => setShowCreateSubtask(false)} projectId={task.projectId} parentId={task.id} onSuccess={() => { queryClient.invalidateQueries({ queryKey: ["/api/tasks/search"] }); setShowCreateSubtask(false); }} projects={project ? [project] : []} members={members?.map(m => m.user).filter(Boolean)} />
         </div>
     );
 }

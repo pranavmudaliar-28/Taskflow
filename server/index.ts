@@ -1,5 +1,5 @@
 import "dotenv/config";
-import express, { type Request, Response, NextFunction } from "express";
+import express from "express";
 import helmet from "helmet";
 import path from "path";
 import { registerRoutes } from "./routes";
@@ -11,6 +11,15 @@ import { logger } from "./utils/logger";
 
 const app = express();
 const httpServer = createServer(app);
+
+// Startup marker for debugging
+import fs from 'fs';
+try {
+  const startMsg = `Server starting at ${new Date().toISOString()}\n`;
+  if (!fs.existsSync(path.join(process.cwd(), 'logs'))) fs.mkdirSync(path.join(process.cwd(), 'logs'));
+  fs.appendFileSync(path.join(process.cwd(), 'logs', 'server_start.txt'), startMsg);
+  console.log('[Startup] Marker written to logs/server_start.txt');
+} catch (e) { }
 
 declare module "http" {
   interface IncomingMessage {
@@ -32,7 +41,7 @@ app.use(helmet({
       objectSrc: ["'none'"],
       mediaSrc: ["'self'"],
       frameSrc: ["'self'", "https://js.stripe.com"],
-      upgradeInsecureRequests: [], // Always try to upgrade if possible, or omit if strictly dev-local
+      upgradeInsecureRequests: [],
     },
   },
   crossOriginEmbedderPolicy: false,
@@ -81,24 +90,20 @@ app.use((req, res, next) => {
   next();
 });
 
-// Add API version header to all API responses
+// Add API version header
 app.use('/api', (req, res, next) => {
   res.setHeader('X-API-Version', 'v1');
   next();
 });
 
-
 import { connectMongo } from "./db";
 
 (async () => {
   try {
-    // Initialize MongoDB connection
     await connectMongo();
 
     log(`NODE_ENV: ${process.env.NODE_ENV}`);
-    log(`FRONTEND_URL: ${process.env.FRONTEND_URL?.replace(/\/$/, '')}`);
-    log(`DATABASE_URL: ${!!process.env.DATABASE_URL ? 'configured' : 'not configured'}`);
-    log(`MONGODB_URI: ${!!process.env.MONGODB_URI ? 'configured' : 'not configured'}`);
+    log(`PORT: ${process.env.PORT}`);
 
     // Health check endpoint
     app.get("/api/health", (_req, res) => {

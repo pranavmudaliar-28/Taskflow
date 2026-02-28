@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { TaskTable } from "@/components/task-table";
 import type { ExpandedState } from "@tanstack/react-table";
@@ -16,13 +16,14 @@ import type { Task, Project } from "@shared/schema";
 import type { User } from "@shared/models/auth";
 import {
     Search, Filter, X, Trash2, CheckCircle2,
-    ListTodo, Plus, LayoutGrid, List, SlidersHorizontal, Flag,
+    ListTodo, Plus, LayoutGrid, List, SlidersHorizontal, Flag, AlertCircle,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { CreateTaskDialog } from "@/components/create-task-dialog";
 import { useDebounce } from "@/hooks/use-debounce";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { ensureArray, ensureObject } from "@/lib/utils";
 import type { Milestone } from "@shared/schema";
 import {
     DropdownMenu,
@@ -106,7 +107,7 @@ export default function TasksPage() {
     queryParams.append("sortOrder", sortBy === "order" ? "asc" : "desc");
     queryParams.append("limit", "100");
 
-    const { data: searchResult, isLoading } = useQuery<{ tasks: Task[], total: number }>({
+    const { data: searchResult, isLoading, isError, error: queryError } = useQuery<{ tasks: Task[], total: number }>({
         queryKey: ["/api/tasks/search", debouncedSearch, status, priority, sortBy],
         queryFn: async () => {
             const res = await fetch(`/api/tasks/search?${queryParams.toString()}`);
@@ -115,10 +116,14 @@ export default function TasksPage() {
         }
     });
 
-    const { data: projects } = useQuery<Project[]>({ queryKey: ["/api/projects"] });
+    const { data: projects = [] } = useQuery<Project[]>({ queryKey: ["/api/projects"] });
 
-    const tasks = searchResult?.tasks || [];
-    const organizationId = projects?.[0]?.organizationId;
+    const tasks = ensureArray(searchResult?.tasks);
+    const organizationId = projects[0]?.organizationId;
+
+    useEffect(() => {
+        console.info(`[TasksPage] Initialized with ${tasks.length} tasks matching filters.`);
+    }, [tasks.length]);
 
     const { data: members } = useQuery<any[]>({
         queryKey: [`/api/organizations/${organizationId}/members`],
@@ -384,7 +389,18 @@ export default function TasksPage() {
 
             {/* ── Task list ── */}
             <div className="flex-1 overflow-auto">
-                {isLoading ? (
+                {isError ? (
+                    <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
+                        <div className="h-16 w-16 rounded-2xl bg-destructive/10 flex items-center justify-center mb-5">
+                            <AlertCircle className="h-8 w-8 text-destructive" />
+                        </div>
+                        <h3 className="text-base font-bold text-foreground mb-2">Failed to load tasks</h3>
+                        <p className="text-sm text-muted-foreground max-w-xs mb-6">
+                            {queryError instanceof Error ? queryError.message : "An unexpected error occurred while fetching your tasks."}
+                        </p>
+                        <Button variant="default" onClick={() => window.location.reload()}>Try Again</Button>
+                    </div>
+                ) : isLoading ? (
                     <div className="bg-card rounded-xl border border-border mx-4 mt-4 overflow-hidden shadow-sm">
                         {Array.from({ length: 8 }).map((_, i) => <TasksSkeletonRow key={i} />)}
                     </div>

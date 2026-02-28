@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { useEffect, useState, useRef, useCallback } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import {
     ArrowRight, CheckCircle2, Zap, Users, BarChart3, Bell, Star,
     Play, Twitter, Github, Linkedin, ChevronDown, ListTodo,

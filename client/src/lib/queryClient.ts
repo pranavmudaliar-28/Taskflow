@@ -1,4 +1,5 @@
-import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { QueryClient, QueryFunction, QueryCache, MutationCache } from "@tanstack/react-query";
+import { toast } from "@/hooks/use-toast";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -54,6 +55,27 @@ export const getQueryFn: <T>(options: {
     };
 
 export const queryClient = new QueryClient({
+  queryCache: new QueryCache({
+    onError: (error, query) => {
+      // Don't toast for authorization checks since we handle redirects in the fetcher
+      if (query.meta?.silentError) return;
+
+      console.error(`[Query Error] ${query.queryKey.join("/")}:`, error);
+
+      // We don't toast for all queries to avoid spamming, 
+      // but mutations should always toast.
+    },
+  }),
+  mutationCache: new MutationCache({
+    onError: (error) => {
+      console.error("[Mutation Error]", error);
+      toast({
+        title: "Action failed",
+        description: error instanceof Error ? error.message : "An unexpected error occurred",
+        variant: "destructive",
+      });
+    },
+  }),
   defaultOptions: {
     queries: {
       queryFn: getQueryFn({ on401: "throw" }),

@@ -72,7 +72,7 @@ function MilestoneColumn({
                                         >
                                             <TaskCard
                                                 task={task}
-                                                assignee={task.assigneeId ? users.get(task.assigneeId) || undefined : undefined}
+                                                assignee={task.assigneeId ? (users.get(task.assigneeId) as any) : undefined}
                                                 onClick={() => onTaskClick(task)}
                                                 isTracking={activeTaskId === task.id}
                                                 onToggleTimer={onToggleTimer ? () => onToggleTimer(task.id) : undefined}

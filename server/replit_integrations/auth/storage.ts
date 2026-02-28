@@ -1,6 +1,4 @@
-import { users, type User, type UpsertUser } from "@shared/models/auth";
-import { db } from "../../db";
-import { eq } from "drizzle-orm";
+import { type User, type UpsertUser } from "@shared/models/auth";
 import { UserMongo } from "../../../shared/mongodb-schema";
 import mongoose from "mongoose";
 
@@ -9,30 +7,6 @@ import mongoose from "mongoose";
 export interface IAuthStorage {
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
-}
-
-class DatabaseAuthStorage implements IAuthStorage {
-  async getUser(id: string): Promise<User | undefined> {
-    if (!db) return undefined;
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user;
-  }
-
-  async upsertUser(userData: UpsertUser): Promise<User> {
-    if (!db) throw new Error("Database not initialized");
-    const [user] = await db
-      .insert(users)
-      .values(userData)
-      .onConflictDoUpdate({
-        target: users.id,
-        set: {
-          ...userData,
-          updatedAt: new Date(),
-        },
-      })
-      .returning();
-    return user;
-  }
 }
 
 class MongoAuthStorage implements IAuthStorage {
@@ -53,4 +27,4 @@ class MongoAuthStorage implements IAuthStorage {
   }
 }
 
-export const authStorage = process.env.MONGODB_URI ? new MongoAuthStorage() : new DatabaseAuthStorage();
+export const authStorage = new MongoAuthStorage();

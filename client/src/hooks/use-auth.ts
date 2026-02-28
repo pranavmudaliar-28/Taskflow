@@ -59,10 +59,10 @@ async function logout(): Promise<void> {
 
 export function useAuth() {
   const queryClient = useQueryClient();
-  const { data: user, isLoading } = useQuery<User | null>({
+  const { data: user, isLoading, isError, isRefetching } = useQuery<User | null>({
     queryKey: ["/api/auth/user"],
     queryFn: fetchUser,
-    retry: false,
+    retry: 1, // Allow one retry for transient hiccups
     staleTime: 0, // Force fresh check on mount to catch logout state
     refetchOnWindowFocus: true,
   });
@@ -77,6 +77,8 @@ export function useAuth() {
   return {
     user,
     isLoading,
+    isError,
+    isRefetching,
     isAuthenticated: !!user,
     logout: logoutMutation.mutate,
     isLoggingOut: logoutMutation.isPending,

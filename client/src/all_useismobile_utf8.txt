@@ -1,7 +1,0 @@
-﻿C:\Slasheasy Client Project Detail\slasheasy Ai project\Taskflow\client\src\components\app-sidebar.tsx:38: import { useIsMobile } from "@/hooks/use-mobile";
-C:\Slasheasy Client Project Detail\slasheasy Ai project\Taskflow\client\src\components\app-sidebar.tsx:73: const isMobile = useIsMobile();
-C:\Slasheasy Client Project Detail\slasheasy Ai project\Taskflow\client\src\components\task-table.tsx:65: import { useIsMobile } from "@/hooks/use-mobile";
-C:\Slasheasy Client Project Detail\slasheasy Ai project\Taskflow\client\src\components\task-table.tsx:154: const isMobile = useIsMobile();
-C:\Slasheasy Client Project Detail\slasheasy Ai project\Taskflow\client\src\components\ui\sidebar.tsx:8: import { useIsMobile } from "@/hooks/use-mobile"
-C:\Slasheasy Client Project Detail\slasheasy Ai project\Taskflow\client\src\components\ui\sidebar.tsx:69: const isMobile = useIsMobile()
-C:\Slasheasy Client Project Detail\slasheasy Ai project\Taskflow\client\src\hooks\use-mobile.tsx:5: export function useIsMobile() {

@@ -116,10 +116,10 @@ export function BulkEditDialog({
                                 <SelectItem value="none">No change</SelectItem>
                                 <SelectItem value="unassigned">Unassigned</SelectItem>
                                 {usersList.map((u) => (
-                                    <SelectItem key={u.id} value={u.id}>
+                                    <SelectItem key={u.id} value={u.id!}>
                                         <div className="flex items-center gap-2">
                                             <Avatar className="h-5 w-5">
-                                                <AvatarImage src={u.profileImageUrl || undefined} />
+                                                <AvatarImage src={u.profileImageUrl || ""} />
                                                 <AvatarFallback className="text-[8px]">
                                                     {u.firstName?.[0]}{u.lastName?.[0]}
                                                 </AvatarFallback>
@@ -144,6 +144,6 @@ export function BulkEditDialog({
                     </Button>
                 </DialogFooter>
             </DialogContent>
-        </Dialog>
+        </Dialog >
     );
 }

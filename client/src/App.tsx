@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Switch, Route, useLocation, Link, Redirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider, useQuery } from "@tanstack/react-query";
@@ -8,8 +8,10 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { CreateProjectDialog } from "@/components/create-project-dialog";
 import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
 import { Bell, User, LogOut, Settings, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -41,9 +43,8 @@ const OrganizationSettings = lazyRetry(() => import("@/pages/organization-settin
 const AcceptInvitation = lazyRetry(() => import("@/pages/accept-invitation"));
 const Onboarding = lazyRetry(() => import("@/pages/onboarding"));
 const BillingPage = lazyRetry(() => import("@/pages/billing"));
+const ForgotPassword = lazyRetry(() => import("@/pages/forgot-password"));
 const NotFound = lazyRetry(() => import("@/pages/not-found"));
-
-
 
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
@@ -178,87 +179,225 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
 }
 
 function AppRouter() {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, isError } = useAuth();
+  const { toast } = useToast();
+  const [location] = useLocation();
+
+  useEffect(() => {
+    console.info(`[Router] Transitioning to: ${location}`);
+    // We intentionally removed queryClient.cancelQueries() here, because it
+    // aborts the initial useAuth query on mount, leading to an infinite loader.
+  }, [location]);
+
+  // Global Offline Status
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  useEffect(() => {
+    const handleOnline = () => {
+      console.info("[Network] App is back online");
+      setIsOffline(false);
+      toast({ title: "Back online", description: "Connectivity restored." });
+      queryClient.invalidateQueries(); // Refresh everything
+    };
+    const handleOffline = () => {
+      console.warn("[Network] App is offline");
+      setIsOffline(true);
+      toast({ title: "You are offline", description: "Some features may be limited.", variant: "destructive" });
+    };
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
   const params = new URLSearchParams(window.location.search);
   // Honor the logout flag to force login view even if user state is still lingering
   const isLoggingOut = params.get("logout") === "1";
 
-  if (isLoading) {
+  // ⚠️ IMPORTANT: This hook MUST stay here (before any early returns) to comply with React's Rules of Hooks.
+  // The `enabled` flag prevents actual fetching when the user is null/onboarded.
+  const { data: pendingInvites, isLoading: inviteLoading } = useQuery<any[]>({
+    queryKey: ["/api/invitations/pending"],
+    enabled: !!user && user.onboardingStep !== "completed",
+    staleTime: 30_000,
+  });
+
+  // Transient Error Handling: If we hit a network error or 500, we don't want to 
+  // immediately redirect to login. We stay in the "loading" state so focus-refetch
+  // can fix it when the user clicks back into the tab.
+  if (isLoading || (isError && !user)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="space-y-4 text-center">
           <Skeleton className="h-10 w-10 rounded-full mx-auto" />
           <Skeleton className="h-4 w-32 mx-auto" />
+          {isError && <p className="text-[10px] text-muted-foreground animate-pulse">Reconnecting to server...</p>}
         </div>
       </div>
     );
   }
 
-  // If user is logged out, OR if we are in the middle of a hard logout failsafe redirect
-  if (!user || isLoggingOut) {
+  // If user is explicitly null (401 Unauthorized), OR if we are in the middle of a hard logout failsafe redirect
+  if (user === null || isLoggingOut) {
     if (isLoggingOut && user) {
       console.log("[Router] Logout flag detected, ignoring user session to break loop");
     }
     return (
-      <Switch>
-        <Route path="/" component={Landing} />
-        <Route path="/login" component={Login} />
-        <Route path="/signup" component={Signup} />
-        <Route path="/accept-invitation" component={AcceptInvitation} />
-        <Route>
-          <Redirect to={`/login${window.location.search}`} />
-        </Route>
-      </Switch>
+      <div className="relative min-h-screen flex flex-col">
+        {isOffline && (
+          <div className="bg-destructive text-destructive-foreground py-1 text-center text-[10px] font-bold uppercase tracking-widest z-50 animate-in fade-in slide-in-from-top-1">
+            Offline Mode · Features may be limited
+          </div>
+        )}
+        <Switch>
+          <Route path="/" component={Landing} />
+          <Route path="/login" component={Login} />
+          <Route path="/signup" component={Signup} />
+          <Route path="/accept-invitation" component={AcceptInvitation} />
+          <Route path="/forgot-password" component={ForgotPassword} />
+          <Route>
+            <Redirect to={`/login${window.location.search}`} />
+          </Route>
+        </Switch>
+      </div>
     );
   }
 
   // If user is logged in, handle onboarding and dashboard routing
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="space-y-4 text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mx-auto" />
+          <p className="text-[10px] text-muted-foreground animate-pulse">Initializing session...</p>
+        </div>
+      </div>
+    );
+  }
+
   const isOnboarded = user.onboardingStep === "completed";
+
+  // Debug logs for redirection logic
+  console.log("[AppRouter] State:", {
+    userId: user.id,
+    email: user.email,
+    onboardingStep: user.onboardingStep,
+    isOnboarded,
+    inviteLoading,
+    pendingInvitesCount: pendingInvites?.length
+  });
+
+  // Only consider an invite confirmed once the query has finished loading
+  const hasPendingInvite = !inviteLoading && !!(pendingInvites && pendingInvites.length > 0);
+  const pendingInviteToken = hasPendingInvite ? pendingInvites![0].token : null;
+
+  if (hasPendingInvite) {
+    console.log("[AppRouter] Found pending invite:", pendingInviteToken);
+  }
 
   return (
     <Switch>
-      {/* Onboarding pages */}
+      {/* Accept invitation — always accessible when logged in (before or after onboarding) */}
+      <Route path="/accept-invitation" component={AcceptInvitation} />
+
+      {/* Onboarding — show immediately; onboarding.tsx useEffect handles invite redirect internally */}
       <Route path="/onboarding">
-        {isOnboarded ? <Redirect to="/dashboard" /> : <Onboarding />}
+        {isOnboarded
+          ? <Redirect to="/dashboard" />
+          : hasPendingInvite
+            ? <Redirect to={`/accept-invitation?token=${pendingInviteToken}`} />
+            : <Onboarding />}
       </Route>
 
       {/* Billing is special (allowed during onboarding for Stripe returns) */}
       <Route path="/billing">
-        {user.isAdmin ? <BillingPage /> : (isOnboarded ? <Redirect to="/dashboard" /> : <Redirect to="/onboarding" />)}
+        {user.isAdmin ? (
+          <AuthenticatedLayout>
+            <BillingPage />
+          </AuthenticatedLayout>
+        ) : (isOnboarded ? <Redirect to="/dashboard" /> : <Redirect to="/onboarding" />)}
       </Route>
 
-      {/* Auth pages -> Dashboard (user is logged in) */}
+      {/* Auth pages → route based on completion status */}
       <Route path="/login">
-        <Redirect to={isOnboarded ? "/dashboard" : "/onboarding"} />
+        {() => {
+          const params = new URLSearchParams(window.location.search);
+          const redirect = params.get("redirect") ||
+            (isOnboarded ? "/dashboard" : hasPendingInvite ? `/accept-invitation?token=${pendingInviteToken}` : "/onboarding");
+          return <Redirect to={redirect} />;
+        }}
       </Route>
       <Route path="/signup">
-        <Redirect to={isOnboarded ? "/dashboard" : "/onboarding"} />
+        {() => {
+          const params = new URLSearchParams(window.location.search);
+          const redirect = params.get("redirect") ||
+            (isOnboarded ? "/dashboard" : hasPendingInvite ? `/accept-invitation?token=${pendingInviteToken}` : "/onboarding");
+          return <Redirect to={redirect} />;
+        }}
       </Route>
 
       {/* Main App Routes (AuthenticatedLayout) */}
-      <Route path="/:rest*">
-        {!isOnboarded ? (
-          <Redirect to="/onboarding" />
-        ) : (
-          <AuthenticatedLayout>
-            <Switch>
-              <Route path="/" component={Dashboard} />
-              <Route path="/dashboard" component={Dashboard} />
-              <Route path="/tasks" component={TasksPage} />
-              <Route path="/tasks/:id" component={TaskView} />
-              <Route path="/projects/:projectId/:taskId" component={TaskView} />
-              <Route path="/projects/:projectId/:parentTaskId/:taskId" component={TaskView} />
-              <Route path="/projects/:id" component={ProjectPage} />
-              <Route path="/time-tracking" component={TimeTracking} />
-              <Route path="/analytics" component={Analytics} />
-              <Route path="/notifications" component={Notifications} />
-              <Route path="/settings" component={SettingsPage} />
-              <Route path="/organization-settings" component={OrganizationSettings} />
-              <Route path="/accept-invitation" component={AcceptInvitation} />
-              <Route component={NotFound} />
-            </Switch>
-          </AuthenticatedLayout>
-        )}
+      <Route>
+        {() => {
+          console.log("[AppRouter] Catch-all route evaluation:", {
+            isOnboarded,
+            inviteLoading,
+            hasPendingInvite,
+            pendingInviteToken
+          });
+
+          // Wait for invite check before deciding where to send the user
+          if (inviteLoading) {
+            return (
+              <div className="flex items-center justify-center min-h-screen">
+                <Loader2 className="h-8 w-8 animate-spin text-violet-600" />
+              </div>
+            );
+          }
+
+          // Invited user with pending invite — send to accept-invitation
+          if (!isOnboarded && hasPendingInvite) {
+            console.log("[AppRouter] Redirecting invited user to /accept-invitation");
+            return <Redirect to={`/accept-invitation?token=${pendingInviteToken}`} />;
+          }
+
+          // Normal non-onboarded user — send to onboarding
+          if (!isOnboarded) {
+            console.log("[AppRouter] Redirecting non-onboarded user to /onboarding");
+            return <Redirect to="/onboarding" />;
+          }
+
+          console.log("[AppRouter] All checks passed. Rendering AuthenticatedLayout");
+          return (
+            <AuthenticatedLayout>
+              <Switch>
+                <Route path="/">
+                  {() => { console.log("[AppRouter] Matched /"); return <Dashboard />; }}
+                </Route>
+                <Route path="/dashboard" component={Dashboard} />
+                <Route path="/tasks" component={TasksPage} />
+                <Route path="/tasks/:id">
+                  {(params) => { console.log("[AppRouter] Matched /tasks/:id", params); return <TaskView />; }}
+                </Route>
+                <Route path="/projects/:projectId/:taskId" component={TaskView} />
+                <Route path="/projects/:projectId/:parentTaskId/:taskId" component={TaskView} />
+                <Route path="/projects/:id">
+                  {(params) => { console.log("[AppRouter] Matched /projects/:id", params); return <ProjectPage />; }}
+                </Route>
+                <Route path="/time-tracking" component={TimeTracking} />
+                <Route path="/analytics" component={Analytics} />
+                <Route path="/notifications" component={Notifications} />
+                <Route path="/settings" component={SettingsPage} />
+                <Route path="/organization-settings" component={OrganizationSettings} />
+                <Route path="/accept-invitation" component={AcceptInvitation} />
+                <Route>
+                  {() => { console.log("[AppRouter] Matched NotFound"); return <NotFound />; }}
+                </Route>
+              </Switch>
+            </AuthenticatedLayout>
+          );
+        }}
       </Route>
     </Switch>
   );
@@ -274,7 +413,9 @@ function App() {
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
           }>
-            <AppRouter />
+            <ErrorBoundary>
+              <AppRouter />
+            </ErrorBoundary>
           </Suspense>
           <Toaster />
         </TooltipProvider>

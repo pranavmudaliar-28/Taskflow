@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, Kanban, CheckCircle2, Eye, EyeOff, ArrowRight, Users, Zap, Shield } from "lucide-react";
+import { motion } from "framer-motion";
 
 export default function Signup() {
   const [, setLocation] = useLocation();
@@ -26,6 +27,20 @@ export default function Signup() {
     },
     onSuccess: (data) => {
       queryClient.setQueryData(["/api/auth/user"], data.user);
+
+      // Priority 1: explicit redirect param (e.g. from invitation email link)
+      if (redirect) {
+        setLocation(redirect);
+        return;
+      }
+
+      // Priority 2: server detected a pending invite for this email
+      if (data.pendingInviteToken) {
+        setLocation(`/accept-invitation?token=${data.pendingInviteToken}`);
+        return;
+      }
+
+      // Priority 3: normal user — App.tsx routes to /onboarding
     },
     onError: (error: any) => {
       toast({
@@ -43,17 +58,24 @@ export default function Signup() {
   ];
 
   return (
-    <div className="min-h-screen flex text-foreground">
+    <div className="min-h-screen flex text-foreground overflow-x-hidden">
       {/* ── Left: form panel ── */}
-      <div className="flex-1 flex flex-col bg-background">
+      <motion.div
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.6, ease: "easeOut", delay: 0.1 }}
+        className="flex-1 flex flex-col bg-background"
+      >
         <div className="flex-1 flex flex-col justify-center px-8 sm:px-12 xl:px-16 py-12 max-w-md w-full mx-auto">
           {/* Mobile logo */}
-          <div className="flex items-center gap-2 mb-8 lg:hidden">
-            <div className="h-8 w-8 rounded-lg bg-violet-600 flex items-center justify-center">
-              <Kanban className="h-4 w-4 text-white" />
+          <Link href="/" className="inline-block hover:opacity-80 transition-opacity cursor-pointer mb-8 lg:hidden">
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 rounded-lg bg-violet-600 flex items-center justify-center">
+                <Kanban className="h-4 w-4 text-white" />
+              </div>
+              <span className="font-bold text-foreground">TaskFlow</span>
             </div>
-            <span className="font-bold text-foreground">TaskFlow</span>
-          </div>
+          </Link>
 
           <div className="mb-7">
             <h2 className="text-2xl font-bold text-foreground mb-1">Create your account</h2>
@@ -148,10 +170,15 @@ export default function Signup() {
             <button className="underline hover:text-foreground">Privacy Policy</button>
           </p>
         </div>
-      </div>
+      </motion.div>
 
       {/* ── Right: dark brand panel ── */}
-      <div className="hidden lg:flex lg:w-5/12 xl:w-1/2 flex-col bg-[#0F172A] relative overflow-hidden">
+      <motion.div
+        initial={{ opacity: 0, x: 20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+        className="hidden lg:flex lg:w-5/12 xl:w-1/2 flex-col bg-[#0F172A] relative overflow-hidden"
+      >
         <div className="absolute inset-0">
           <div className="absolute top-0 right-0 w-full h-full opacity-30"
             style={{ background: "radial-gradient(ellipse 80% 60% at 80% 10%, #6366F1 0%, transparent 60%)" }} />
@@ -162,12 +189,14 @@ export default function Signup() {
         </div>
 
         <div className="relative z-10 flex flex-col h-full px-10 py-12">
-          <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-lg bg-violet-600 flex items-center justify-center">
-              <Kanban className="h-5 w-5 text-white" />
+          <Link href="/" className="inline-block hover:opacity-90 transition-opacity cursor-pointer">
+            <div className="flex items-center gap-3">
+              <div className="h-9 w-9 rounded-lg bg-violet-600 flex items-center justify-center">
+                <Kanban className="h-5 w-5 text-white" />
+              </div>
+              <span className="text-white font-bold text-lg">TaskFlow</span>
             </div>
-            <span className="text-white font-bold text-lg">TaskFlow</span>
-          </div>
+          </Link>
 
           <div className="flex-1 flex flex-col justify-center">
             <h1 className="text-3xl xl:text-4xl font-bold text-white leading-tight mb-4">
@@ -207,7 +236,7 @@ export default function Signup() {
             ))}
           </div>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

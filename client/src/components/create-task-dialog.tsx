@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -258,10 +258,10 @@ export function CreateTaskDialog({ open, onClose, projectId, initialStatus = "to
                       </div>
                     </SelectItem>
                     {members.map((member) => (
-                      <SelectItem key={member.id} value={member.id}>
+                      <SelectItem key={member.id} value={member.id!}>
                         <div className="flex items-center gap-2">
                           <Avatar className="h-5 w-5">
-                            <AvatarImage src={member.profileImageUrl || undefined} />
+                            <AvatarImage src={member.profileImageUrl || ""} />
                             <AvatarFallback className="text-[10px]">{getInitials(member)}</AvatarFallback>
                           </Avatar>
                           {getMemberName(member)}
@@ -286,10 +286,10 @@ export function CreateTaskDialog({ open, onClose, projectId, initialStatus = "to
                       </div>
                     </SelectItem>
                     {members.map((member) => (
-                      <SelectItem key={member.id} value={member.id}>
+                      <SelectItem key={member.id} value={member.id!}>
                         <div className="flex items-center gap-2">
                           <Avatar className="h-5 w-5">
-                            <AvatarImage src={member.profileImageUrl || undefined} />
+                            <AvatarImage src={member.profileImageUrl || ""} />
                             <AvatarFallback className="text-[10px]">{getInitials(member)}</AvatarFallback>
                           </Avatar>
                           {getMemberName(member)}
@@ -314,10 +314,10 @@ export function CreateTaskDialog({ open, onClose, projectId, initialStatus = "to
                       </div>
                     </SelectItem>
                     {members.map((member) => (
-                      <SelectItem key={member.id} value={member.id}>
+                      <SelectItem key={member.id} value={member.id!}>
                         <div className="flex items-center gap-2">
                           <Avatar className="h-5 w-5">
-                            <AvatarImage src={member.profileImageUrl || undefined} />
+                            <AvatarImage src={member.profileImageUrl || ""} />
                             <AvatarFallback className="text-[10px]">{getInitials(member)}</AvatarFallback>
                           </Avatar>
                           {getMemberName(member)}

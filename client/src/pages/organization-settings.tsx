@@ -1,3 +1,4 @@
+import React, { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Organization, OrganizationInvitation, OrganizationMember, User, Project } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -10,10 +11,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import {
-    UserPlus, Mail, Shield, User as UserIcon, X, Loader2,
+    UserPlus, Mail, Shield, User as UserIcon, X, Loader2, AlertCircle,
     Clock, FolderPlus, Building2, Users, ChevronRight,
 } from "lucide-react";
-import { useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -51,6 +51,25 @@ function MemberSkeleton() {
     );
 }
 
+function PageSkeleton() {
+    return (
+        <div className="max-w-[1200px] mx-auto p-4 sm:p-6 lg:p-8 space-y-8">
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-6 border-b">
+                <div className="space-y-3">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-10 w-64" />
+                    <Skeleton className="h-4 w-96" />
+                </div>
+                <Skeleton className="h-10 w-32" />
+            </div>
+            <Skeleton className="h-10 w-48 rounded-xl" />
+            <div className="bg-card rounded-2xl border shadow-sm overflow-hidden h-[400px]">
+                {Array(5).fill(0).map((_, i) => <MemberSkeleton key={i} />)}
+            </div>
+        </div>
+    );
+}
+
 /* ── tabs ─────────────────────────────────────────────────── */
 const TABS = [
     { id: "members", label: "Members", icon: Users },
@@ -69,22 +88,22 @@ export default function OrganizationSettings() {
     const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
     const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
 
-    const { data: organizations, isLoading: isLoadingOrgs } = useQuery<Organization[]>({ queryKey: ["/api/organizations"] });
+    const { data: organizations, isLoading: isLoadingOrgs, isError: orgsError, error: orgsErrorObj } = useQuery<Organization[]>({ queryKey: ["/api/organizations"] });
     const activeOrg = organizations?.[0];
 
     const { data: members, isLoading: isLoadingMembers } = useQuery<OrganizationMemberWithUser[]>({
         queryKey: [`/api/organizations/${activeOrg?.id}/members`],
-        enabled: !!activeOrg,
+        enabled: !!activeOrg?.id,
     });
 
     const { data: invitations, isLoading: isLoadingInvites } = useQuery<OrganizationInvitation[]>({
         queryKey: [`/api/organizations/${activeOrg?.id}/invitations`],
-        enabled: !!activeOrg,
+        enabled: !!activeOrg?.id,
     });
 
     const { data: projects } = useQuery<Project[]>({
         queryKey: [`/api/organizations/${activeOrg?.id}/projects`],
-        enabled: !!activeOrg,
+        enabled: !!activeOrg?.id,
     });
 
     const inviteMutation = useMutation({
@@ -97,295 +116,293 @@ export default function OrganizationSettings() {
             toast({ title: "Invitation sent", description: `Invite sent to ${inviteEmail}` });
             setInviteEmail(""); setIsInviteOpen(false);
         },
-        onError: (e: any) => toast({ title: "Failed to send invite", description: e.message, variant: "destructive" }),
+        onError: (err: any) => toast({ title: "Invite failed", description: err.message, variant: "destructive" }),
     });
 
-    const cancelInviteMutation = useMutation({
-        mutationFn: async (id: string) =>
-            apiRequest("DELETE", `/api/organizations/${activeOrg?.id}/invitations/${id}`),
+    const assignMutation = useMutation({
+        mutationFn: async (data: { userId: string; projectIds: string[] }) => {
+            const res = await apiRequest("POST", `/api/organizations/${activeOrg?.id}/members/${data.userId}/assign-projects`, { projectIds: data.projectIds });
+            return res.json();
+        },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: [`/api/organizations/${activeOrg?.id}/invitations`] });
-            toast({ title: "Invitation cancelled" });
+            toast({ title: "Projects assigned", description: "Member access updated successfully" });
+            setIsAssignOpen(false); setSelectedMemberId(null); setSelectedProjectIds([]);
+        },
+        onError: (err: any) => toast({ title: "Assignment failed", description: err.message, variant: "destructive" }),
+    });
+
+    const revokeMemberMutation = useMutation({
+        mutationFn: async (memberId: string) => {
+            await apiRequest("DELETE", `/api/organizations/${activeOrg?.id}/members/${memberId}`);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: [`/api/organizations/${activeOrg?.id}/members`] });
+            toast({ title: "Member removed", description: "Access revoked successfully" });
         },
     });
 
-    const assignProjectsMutation = useMutation({
-        mutationFn: async ({ userId, projectIds }: { userId: string; projectIds: string[] }) =>
-            apiRequest("POST", `/api/organizations/${activeOrg?.id}/members/${userId}/assign-projects`, { projectIds }),
-        onSuccess: () => {
-            toast({ title: "Projects assigned" });
-            setIsAssignOpen(false);
-        },
-    });
+    if (isLoadingOrgs) return <PageSkeleton />;
 
-    /* loading & empty states */
-    if (isLoadingOrgs) {
-        return (
-            <div className="flex items-center justify-center min-h-[400px]">
-                <Loader2 className="h-7 w-7 animate-spin text-muted-foreground" />
+    if (orgsError) return (
+        <div className="flex flex-col items-center justify-center min-h-[400px] p-12 gap-5 text-center">
+            <div className="h-16 w-16 rounded-2xl bg-destructive/10 flex items-center justify-center">
+                <AlertCircle className="h-8 w-8 text-destructive" />
             </div>
-        );
-    }
-
-    if (!activeOrg) {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-[400px] text-center px-6">
-                <div className="h-14 w-14 bg-muted rounded-2xl flex items-center justify-center mb-4">
-                    <Building2 className="h-7 w-7 text-muted-foreground" />
-                </div>
-                <h2 className="text-base font-bold text-foreground mb-1">No Organization Found</h2>
-                <p className="text-sm text-muted-foreground">You're not part of any organization yet.</p>
+            <div className="space-y-2">
+                <h2 className="text-2xl font-bold text-foreground">Failed to load workspace</h2>
+                <p className="text-muted-foreground max-w-sm">{orgsErrorObj instanceof Error ? orgsErrorObj.message : "An unexpected error occurred while fetching workspace data."}</p>
             </div>
-        );
-    }
+            <div className="flex gap-3">
+                <Button onClick={() => window.location.reload()} variant="default">Try Again</Button>
+                <Button onClick={() => window.history.back()} variant="outline">Go Back</Button>
+            </div>
+        </div>
+    );
 
-    const handleInvite = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!inviteEmail) return;
-        inviteMutation.mutate({ email: inviteEmail, role: inviteRole });
-    };
-
-    const currentMember = members?.find(m => m.userId === user?.id);
-    const canInvite = currentMember?.role === "admin" || currentMember?.role === "team_lead";
-    const pendingCount = invitations?.length || 0;
+    if (!activeOrg) return (
+        <div className="flex flex-col items-center justify-center min-h-[400px] p-12 gap-5 text-center">
+            <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center">
+                <Building2 className="h-8 w-8 text-primary" />
+            </div>
+            <div className="space-y-2">
+                <h2 className="text-2xl font-bold text-foreground">No active workspace found</h2>
+                <p className="text-muted-foreground max-w-sm">Every user needs a workspace to manage projects and team members. Please contact support if you believe this is an error.</p>
+            </div>
+            <Button onClick={() => window.history.back()} variant="outline">Go Back</Button>
+        </div>
+    );
 
     return (
-        <div className="min-h-full bg-background/50 p-6">
-            <div className="max-w-4xl mx-auto">
-
-                {/* ── Page header ── */}
-                <div className="flex items-center justify-between mb-6">
-                    <div>
-                        <div className="flex items-center gap-2 mb-1">
-                            <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
-                                <Building2 className="h-4 w-4 text-primary-foreground" />
-                            </div>
-                            <h1 className="text-xl font-bold text-foreground tracking-tight">{activeOrg.name}</h1>
-                        </div>
-                        <p className="text-sm text-muted-foreground">Manage your organization members and invitations</p>
+        <div className="max-w-[1200px] mx-auto p-4 sm:p-6 lg:p-8 space-y-8 animate-in fade-in duration-500">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-6 border-b">
+                <div className="space-y-1.5">
+                    <div className="flex items-center gap-2.5 text-muted-foreground">
+                        <Building2 className="h-4.5 w-4.5" />
+                        <span className="text-sm font-medium uppercase tracking-wider">Workspace settings</span>
                     </div>
-
-                    {canInvite && (
-                        <Dialog open={isInviteOpen} onOpenChange={setIsInviteOpen}>
-                            <DialogTrigger asChild>
-                                <Button className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2 font-semibold">
-                                    <UserPlus className="h-4 w-4" /> Invite member
-                                </Button>
-                            </DialogTrigger>
-                            <DialogContent className="sm:max-w-md">
-                                <DialogHeader>
-                                    <DialogTitle>Invite to {activeOrg.name}</DialogTitle>
-                                    <DialogDescription>
-                                        Send an invitation email to join this organization.
-                                    </DialogDescription>
-                                </DialogHeader>
-                                <form onSubmit={handleInvite} className="space-y-4 py-2">
-                                    <div className="space-y-1.5">
-                                        <Label htmlFor="inv-email" className="text-sm font-semibold text-foreground/90">Email address</Label>
-                                        <div className="relative">
-                                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                            <Input id="inv-email" type="email" placeholder="name@example.com"
-                                                value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)}
-                                                className="pl-9 h-10 border-border focus:border-primary focus:ring-2 focus:ring-primary/20"
-                                                required />
-                                        </div>
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <Label htmlFor="inv-role" className="text-sm font-semibold text-foreground/90">Role</Label>
-                                        <Select value={inviteRole} onValueChange={(v: any) => setInviteRole(v)}>
-                                            <SelectTrigger className="h-10 border-border focus:border-primary">
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="member">Member</SelectItem>
-                                                <SelectItem value="team_lead">Team Lead</SelectItem>
-                                                <SelectItem value="admin">Administrator</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <DialogFooter className="pt-2">
-                                        <Button variant="outline" type="button" onClick={() => setIsInviteOpen(false)}>Cancel</Button>
-                                        <Button type="submit" className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                                            disabled={inviteMutation.isPending || !inviteEmail}>
-                                            {inviteMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                                            Send invite
-                                        </Button>
-                                    </DialogFooter>
-                                </form>
-                            </DialogContent>
-                        </Dialog>
-                    )}
+                    <h1 className="text-3xl font-bold tracking-tight">{activeOrg.name}</h1>
+                    <p className="text-muted-foreground">Manage your team members, roles, and workspace invitations</p>
                 </div>
 
-                {/* ── Tab nav ── */}
-                <div className="flex items-center gap-1 bg-card rounded-xl border border-border p-1.5 shadow-sm w-fit mb-5">
-                    {TABS.map(({ id, label, icon: Icon }) => (
-                        <button key={id} onClick={() => setTab(id)}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === id ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                                }`}>
-                            <Icon className={`h-4 w-4 ${tab === id ? "text-primary" : "text-muted-foreground"}`} />
-                            {label}
-                            {id === "invitations" && pendingCount > 0 && (
-                                <span className="ml-1 h-5 min-w-[20px] px-1.5 bg-primary text-primary-foreground rounded-full text-xs font-bold flex items-center justify-center">
-                                    {pendingCount}
-                                </span>
-                            )}
-                        </button>
-                    ))}
-                </div>
-
-                {/* ── Members tab ── */}
-                {tab === "members" && (
-                    <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
-                        <div className="px-5 py-4 border-b border-border flex items-center justify-between">
-                            <div>
-                                <h2 className="text-sm font-bold text-foreground">Organization Members</h2>
-                                <p className="text-xs text-muted-foreground mt-0.5">
-                                    {members?.length ?? 0} member{members?.length !== 1 ? "s" : ""} with access
-                                </p>
+                <div className="flex items-center gap-3">
+                    <Dialog open={isInviteOpen} onOpenChange={setIsInviteOpen}>
+                        <DialogTrigger asChild>
+                            <Button className="h-10 px-4 gap-2 shadow-sm">
+                                <UserPlus className="h-4 w-4" />
+                                <span>Invite Member</span>
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-md">
+                            <DialogHeader>
+                                <DialogTitle>Invite to {activeOrg.name}</DialogTitle>
+                                <DialogDescription>Send an email invitation to join your workspace</DialogDescription>
+                            </DialogHeader>
+                            <div className="space-y-4 py-4">
+                                <div className="space-y-2">
+                                    <Label>Email Address</Label>
+                                    <Input
+                                        placeholder="colleague@company.com"
+                                        value={inviteEmail}
+                                        onChange={(e) => setInviteEmail(e.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Workspace Role</Label>
+                                    <Select value={inviteRole} onValueChange={(v: any) => setInviteRole(v)}>
+                                        <SelectTrigger>
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="member">Member</SelectItem>
+                                            <SelectItem value="team_lead">Team Lead</SelectItem>
+                                            <SelectItem value="admin">Admin</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                             </div>
-                        </div>
+                            <DialogFooter>
+                                <Button variant="ghost" onClick={() => setIsInviteOpen(false)}>Cancel</Button>
+                                <Button
+                                    disabled={!inviteEmail || inviteMutation.isPending}
+                                    onClick={() => inviteMutation.mutate({ email: inviteEmail, role: inviteRole })}
+                                >
+                                    {inviteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Send Invitation"}
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+                </div>
+            </div>
 
+            {/* Navigation Tabs */}
+            <div className="flex items-center gap-1 p-1 bg-muted/40 rounded-xl w-fit">
+                {TABS.map((t) => (
+                    <button
+                        key={t.id}
+                        onClick={() => setTab(t.id)}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${tab === t.id
+                            ? "bg-background text-foreground shadow-sm ring-1 ring-border/50"
+                            : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                            }`}
+                    >
+                        <t.icon className="h-4 w-4" />
+                        {t.label}
+                    </button>
+                ))}
+            </div>
+
+            <div className="bg-card rounded-2xl border shadow-sm overflow-hidden">
+                {tab === "members" ? (
+                    <div className="divide-y divide-border/50">
                         {isLoadingMembers ? (
-                            Array.from({ length: 4 }).map((_, i) => <MemberSkeleton key={i} />)
+                            Array(5).fill(0).map((_, i) => <MemberSkeleton key={i} />)
                         ) : members?.length === 0 ? (
-                            <div className="py-16 text-center">
-                                <Users className="h-10 w-10 text-muted/20 mx-auto mb-3" />
-                                <p className="text-sm text-muted-foreground">No members yet</p>
+                            <div className="p-12 text-center">
+                                <Users className="h-12 w-12 mx-auto text-muted/30 mb-4" />
+                                <h3 className="font-semibold text-lg text-foreground mb-1">No members yet</h3>
+                                <p className="text-muted-foreground max-w-sm mx-auto">Invite your team to start collaborating on projects and tasks</p>
                             </div>
                         ) : (
-                            <div className="divide-y divide-border/50">
-                                {members?.map((member) => {
-                                    const name = member.user.firstName && member.user.lastName
-                                        ? `${member.user.firstName} ${member.user.lastName}`
-                                        : member.user.email || "Unknown";
-                                    const initials = member.user.firstName && member.user.lastName
-                                        ? `${member.user.firstName[0]}${member.user.lastName[0]}`.toUpperCase()
-                                        : (member.user.email?.[0]?.toUpperCase() || "?");
-
-                                    return (
-                                        <div key={member.id} className="flex items-center gap-4 px-5 py-3.5 hover:bg-muted/50 transition-colors">
-                                            <Avatar className="h-9 w-9 shrink-0">
-                                                <AvatarImage src={member.user.profileImageUrl || undefined} />
-                                                <AvatarFallback className="text-sm font-bold bg-primary/10 text-primary">
-                                                    {initials}
-                                                </AvatarFallback>
-                                            </Avatar>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-sm font-semibold text-foreground truncate">{name}</p>
-                                                <p className="text-xs text-muted-foreground truncate">{member.user.email}</p>
-                                            </div>
-                                            <div className="flex items-center gap-3 shrink-0">
-                                                <RoleBadge role={member.role} />
-                                                {canInvite && (
-                                                    <Button variant="ghost" size="sm"
-                                                        className="h-8 text-xs text-muted-foreground hover:text-foreground gap-1.5"
-                                                        onClick={() => {
-                                                            setSelectedMemberId(member.userId);
-                                                            setSelectedProjectIds([]);
-                                                            setIsAssignOpen(true);
-                                                        }}>
-                                                        <FolderPlus className="h-3.5 w-3.5" />
-                                                        Assign
-                                                    </Button>
+                            members?.map((m) => (
+                                <div key={m.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 hover:bg-muted/30 transition-colors group">
+                                    <div className="flex items-center gap-4">
+                                        <Avatar className="h-10 w-10 ring-2 ring-background">
+                                            <AvatarImage src={m.user.profileImageUrl || undefined} />
+                                            <AvatarFallback className="bg-primary/5 text-primary">
+                                                {m.user.firstName?.[0]}{m.user.lastName?.[0]}
+                                            </AvatarFallback>
+                                        </Avatar>
+                                        <div>
+                                            <div className="flex items-center gap-2">
+                                                <h4 className="font-semibold text-foreground tracking-tight">
+                                                    {m.user.firstName} {m.user.lastName}
+                                                </h4>
+                                                {m.user.id === user?.id && (
+                                                    <span className="text-[10px] px-1.5 py-0.5 bg-muted rounded font-bold text-muted-foreground uppercase tracking-widest">You</span>
                                                 )}
                                             </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
-                    </div>
-                )}
-
-                {/* ── Invitations tab ── */}
-                {tab === "invitations" && (
-                    <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
-                        <div className="px-5 py-4 border-b border-border">
-                            <h2 className="text-sm font-bold text-foreground">Pending Invitations</h2>
-                            <p className="text-xs text-muted-foreground mt-0.5">Links expire after 7 days</p>
-                        </div>
-
-                        {isLoadingInvites ? (
-                            Array.from({ length: 3 }).map((_, i) => <MemberSkeleton key={i} />)
-                        ) : !invitations || invitations.length === 0 ? (
-                            <div className="py-16 text-center">
-                                <Mail className="h-10 w-10 text-muted/20 mx-auto mb-3" />
-                                <p className="text-sm font-semibold text-muted-foreground mb-1">No pending invitations</p>
-                                <p className="text-xs text-muted-foreground">Invite a teammate to get started</p>
-                            </div>
-                        ) : (
-                            <div className="divide-y divide-border/50">
-                                {invitations.map((invite) => (
-                                    <div key={invite.id} className="flex items-center gap-4 px-5 py-3.5 hover:bg-muted/50">
-                                        <div className="h-9 w-9 bg-warning/10 rounded-full flex items-center justify-center shrink-0">
-                                            <Mail className="h-4 w-4 text-warning" />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-semibold text-foreground truncate">{invite.email}</p>
-                                            <p className="text-xs text-muted-foreground">
-                                                Invited as <span className="capitalize">{invite.role.replace("_", " ")}</span>
-                                                {" · "}{new Date(invite.createdAt!).toLocaleDateString()}
-                                            </p>
-                                        </div>
-                                        <div className="flex items-center gap-2 shrink-0">
-                                            <span className="text-xs font-medium text-warning bg-warning/10 border border-warning/20 px-2.5 py-1 rounded-full">
-                                                Pending
-                                            </span>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                                                onClick={() => cancelInviteMutation.mutate(invite.id)}
-                                                disabled={cancelInviteMutation.isPending}
-                                                aria-label="Cancel invitation">
-                                                <X className="h-4 w-4" />
-                                            </Button>
+                                            <p className="text-sm text-muted-foreground">{m.user.email}</p>
                                         </div>
                                     </div>
-                                ))}
+
+                                    <div className="flex items-center justify-between sm:justify-end gap-6 pl-14 sm:pl-0">
+                                        <div className="flex flex-col items-start sm:items-end gap-1">
+                                            <RoleBadge role={m.role} />
+                                            <p className="text-[11px] text-muted-foreground/60 font-medium">Joined {m.joinedAt ? new Date(m.joinedAt).toLocaleDateString() : "Recently"}</p>
+                                        </div>
+
+                                        <div className="flex items-center gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-9 px-3 text-muted-foreground hover:text-foreground"
+                                                onClick={() => {
+                                                    setSelectedMemberId(m.userId);
+                                                    setIsAssignOpen(true);
+                                                }}
+                                            >
+                                                Assign Projects
+                                            </Button>
+
+                                            {m.user.id !== user?.id && (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-9 w-9 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                                    onClick={() => {
+                                                        if (confirm(`Remove ${m.user.firstName} from the organization?`)) {
+                                                            revokeMemberMutation.mutate(m.id);
+                                                        }
+                                                    }}
+                                                >
+                                                    <X className="h-4 w-4" />
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                ) : (
+                    <div className="divide-y divide-border/50">
+                        {isLoadingInvites ? (
+                            Array(3).fill(0).map((_, i) => <MemberSkeleton key={i} />)
+                        ) : invitations?.length === 0 ? (
+                            <div className="p-12 text-center text-muted-foreground">
+                                <Mail className="h-10 w-10 mx-auto opacity-20 mb-3" />
+                                <p>No pending invitations</p>
                             </div>
+                        ) : (
+                            invitations?.map((inv) => (
+                                <div key={inv.id} className="flex items-center justify-between p-5 hover:bg-muted/30 transition-colors">
+                                    <div className="flex items-center gap-4">
+                                        <div className="h-10 w-10 rounded-full bg-muted/60 flex items-center justify-center">
+                                            <Mail className="h-5 w-5 text-muted-foreground" />
+                                        </div>
+                                        <div>
+                                            <p className="font-semibold text-foreground">{inv.email}</p>
+                                            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                                                <span className="capitalize">{inv.role}</span>
+                                                <span className="h-1 w-1 bg-border rounded-full" />
+                                                <span>Sent {inv.createdAt ? new Date(inv.createdAt).toLocaleDateString() : "Recently"}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-9 text-muted-foreground hover:text-destructive"
+                                        onClick={async () => {
+                                            await apiRequest("DELETE", `/api/organizations/${activeOrg.id}/invitations/${inv.id}`);
+                                            queryClient.invalidateQueries({ queryKey: [`/api/organizations/${activeOrg.id}/invitations`] });
+                                            toast({ title: "Invitation cancelled" });
+                                        }}
+                                    >
+                                        Cancel
+                                    </Button>
+                                </div>
+                            ))
                         )}
                     </div>
                 )}
             </div>
 
-            {/* ── Assign Projects Dialog ── */}
+            {/* Project Assignment Dialog */}
             <Dialog open={isAssignOpen} onOpenChange={setIsAssignOpen}>
                 <DialogContent className="sm:max-w-md">
                     <DialogHeader>
                         <DialogTitle>Assign Projects</DialogTitle>
-                        <DialogDescription>Select the projects this member should have access to.</DialogDescription>
+                        <DialogDescription>Control which projects this member has access to</DialogDescription>
                     </DialogHeader>
-                    <div className="max-h-72 overflow-y-auto py-2 space-y-1">
-                        {projects && projects.length > 0 ? (
-                            projects.map((project) => (
-                                <label key={project.id}
-                                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors">
-                                    <Checkbox
-                                        id={`proj-${project.id}`}
-                                        checked={selectedProjectIds.includes(project.id)}
-                                        onCheckedChange={(checked) => {
-                                            setSelectedProjectIds(prev =>
-                                                checked ? [...prev, project.id] : prev.filter(id => id !== project.id)
-                                            );
-                                        }}
-                                    />
-                                    <span className="text-sm text-foreground/90 font-medium">{project.name}</span>
-                                </label>
-                            ))
-                        ) : (
-                            <p className="text-center text-sm text-muted-foreground py-6">No projects available</p>
-                        )}
+                    <div className="max-h-[300px] overflow-y-auto space-y-3 py-4 pr-2">
+                        {projects?.map((p) => (
+                            <div key={p.id} className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-muted/30 transition-colors">
+                                <Checkbox
+                                    id={p.id}
+                                    checked={selectedProjectIds.includes(p.id)}
+                                    onCheckedChange={(checked) => {
+                                        if (checked) setSelectedProjectIds([...selectedProjectIds, p.id]);
+                                        else setSelectedProjectIds(selectedProjectIds.filter(id => id !== p.id));
+                                    }}
+                                />
+                                <div className="flex-1">
+                                    <label htmlFor={p.id} className="text-sm font-semibold leading-none cursor-pointer">
+                                        {p.name}
+                                    </label>
+                                    <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{p.description || "No description provided"}</p>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsAssignOpen(false)}>Cancel</Button>
-                        <Button className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                            onClick={() => {
-                                if (selectedMemberId) {
-                                    assignProjectsMutation.mutate({ userId: selectedMemberId, projectIds: selectedProjectIds });
-                                }
-                            }}
-                            disabled={assignProjectsMutation.isPending || !selectedMemberId}>
-                            {assignProjectsMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                            Save
+                        <Button variant="ghost" onClick={() => setIsAssignOpen(false)}>Cancel</Button>
+                        <Button
+                            disabled={assignMutation.isPending}
+                            onClick={() => assignMutation.mutate({ userId: selectedMemberId!, projectIds: selectedProjectIds })}
+                        >
+                            {assignMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save Changes"}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

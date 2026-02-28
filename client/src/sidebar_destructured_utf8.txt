@@ -1,3 +1,0 @@
-﻿C:\Slasheasy Client Project Detail\slasheasy Ai project\Taskflow\client\src\App.tsx:9: import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
-C:\Slasheasy Client Project Detail\slasheasy Ai project\Taskflow\client\src\App.tsx:10: import { AppSidebar } from "@/components/app-sidebar";
-C:\Slasheasy Client Project Detail\slasheasy Ai project\Taskflow\client\src\components\task-table.tsx:64: import { useSidebar } from "@/components/ui/sidebar";
