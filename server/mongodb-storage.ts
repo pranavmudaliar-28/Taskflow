@@ -147,11 +147,17 @@ export class MongoStorage {
 
         if (!doc) {
             // Bypass Mongoose type-casting to search for manual string IDs directly in the raw collection
-            doc = await mongoose.connection.db?.collection('projects').findOne({ _id: id });
+            doc = await ProjectMongo.collection.findOne({ _id: id });
 
             // If still not found and it's a UUID, check for string casting
             if (!doc && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
-                doc = await mongoose.connection.db?.collection('projects').findOne({ _id: id });
+                doc = await ProjectMongo.collection.findOne({ _id: id });
+            }
+
+            if (doc) {
+                // Since this bypassed Mongoose, toJSON is missing. Map the id natively
+                doc.id = doc._id.toString();
+                delete doc._id;
             }
         }
 
