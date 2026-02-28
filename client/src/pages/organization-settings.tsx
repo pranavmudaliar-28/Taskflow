@@ -84,9 +84,6 @@ export default function OrganizationSettings() {
     const [inviteEmail, setInviteEmail] = useState("");
     const [inviteRole, setInviteRole] = useState<"admin" | "team_lead" | "member">("member");
     const [isInviteOpen, setIsInviteOpen] = useState(false);
-    const [isAssignOpen, setIsAssignOpen] = useState(false);
-    const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
-    const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
 
     const { data: organizations, isLoading: isLoadingOrgs, isError: orgsError, error: orgsErrorObj } = useQuery<Organization[]>({ queryKey: ["/api/organizations"] });
     const activeOrg = organizations?.[0];
@@ -101,11 +98,6 @@ export default function OrganizationSettings() {
         enabled: !!activeOrg?.id,
     });
 
-    const { data: projects } = useQuery<Project[]>({
-        queryKey: [`/api/organizations/${activeOrg?.id}/projects`],
-        enabled: !!activeOrg?.id,
-    });
-
     const inviteMutation = useMutation({
         mutationFn: async (data: { email: string; role: string }) => {
             const res = await apiRequest("POST", `/api/organizations/${activeOrg?.id}/invite`, data);
@@ -117,18 +109,6 @@ export default function OrganizationSettings() {
             setInviteEmail(""); setIsInviteOpen(false);
         },
         onError: (err: any) => toast({ title: "Invite failed", description: err.message, variant: "destructive" }),
-    });
-
-    const assignMutation = useMutation({
-        mutationFn: async (data: { userId: string; projectIds: string[] }) => {
-            const res = await apiRequest("POST", `/api/organizations/${activeOrg?.id}/members/${data.userId}/assign-projects`, { projectIds: data.projectIds });
-            return res.json();
-        },
-        onSuccess: () => {
-            toast({ title: "Projects assigned", description: "Member access updated successfully" });
-            setIsAssignOpen(false); setSelectedMemberId(null); setSelectedProjectIds([]);
-        },
-        onError: (err: any) => toast({ title: "Assignment failed", description: err.message, variant: "destructive" }),
     });
 
     const revokeMemberMutation = useMutation({
@@ -293,18 +273,6 @@ export default function OrganizationSettings() {
                                         </div>
 
                                         <div className="flex items-center gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className="h-9 px-3 text-muted-foreground hover:text-foreground"
-                                                onClick={() => {
-                                                    setSelectedMemberId(m.userId);
-                                                    setIsAssignOpen(true);
-                                                }}
-                                            >
-                                                Assign Projects
-                                            </Button>
-
                                             {m.user.id !== user?.id && (
                                                 <Button
                                                     variant="ghost"
@@ -368,45 +336,6 @@ export default function OrganizationSettings() {
                     </div>
                 )}
             </div>
-
-            {/* Project Assignment Dialog */}
-            <Dialog open={isAssignOpen} onOpenChange={setIsAssignOpen}>
-                <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                        <DialogTitle>Assign Projects</DialogTitle>
-                        <DialogDescription>Control which projects this member has access to</DialogDescription>
-                    </DialogHeader>
-                    <div className="max-h-[300px] overflow-y-auto space-y-3 py-4 pr-2">
-                        {projects?.map((p) => (
-                            <div key={p.id} className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-muted/30 transition-colors">
-                                <Checkbox
-                                    id={p.id}
-                                    checked={selectedProjectIds.includes(p.id)}
-                                    onCheckedChange={(checked) => {
-                                        if (checked) setSelectedProjectIds([...selectedProjectIds, p.id]);
-                                        else setSelectedProjectIds(selectedProjectIds.filter(id => id !== p.id));
-                                    }}
-                                />
-                                <div className="flex-1">
-                                    <label htmlFor={p.id} className="text-sm font-semibold leading-none cursor-pointer">
-                                        {p.name}
-                                    </label>
-                                    <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{p.description || "No description provided"}</p>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                    <DialogFooter>
-                        <Button variant="ghost" onClick={() => setIsAssignOpen(false)}>Cancel</Button>
-                        <Button
-                            disabled={assignMutation.isPending}
-                            onClick={() => assignMutation.mutate({ userId: selectedMemberId!, projectIds: selectedProjectIds })}
-                        >
-                            {assignMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save Changes"}
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
         </div>
     );
 }
