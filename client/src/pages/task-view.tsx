@@ -745,11 +745,43 @@ export default function TaskView() {
                                     </SelectContent>
                                 </Select>
                             </div>
+
+                            <div className="flex flex-col gap-2">
+                                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider px-1">Role</label>
+                                <Select value={task?.deliveryRole || "unassigned"} onValueChange={(v) => updateTaskMutation.mutate({ deliveryRole: v === "unassigned" ? null : v as any })}>
+                                    <SelectTrigger className="h-10 border-border bg-muted/50 hover:bg-muted rounded-xl transition-colors ring-offset-0 focus:ring-4 focus:ring-primary/10">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs font-bold text-foreground/80">{task?.deliveryRole || "None"}</span>
+                                        </div>
+                                    </SelectTrigger>
+                                    <SelectContent className="rounded-xl border-border shadow-elevation">
+                                        <SelectItem value="unassigned" className="font-bold text-xs text-muted-foreground">None</SelectItem>
+                                        {["Frontend", "Backend", "Fullstack", "Design", "QA", "Product", "DevOps"].map(r => (
+                                            <SelectItem key={r} value={r} className="font-bold text-xs text-foreground/80">{r}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
 
                         <div className="h-px bg-border/50" />
 
                         <div className="space-y-4">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider px-1">Start Date</label>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="ghost" className="w-full justify-start h-10 font-bold text-xs text-foreground/80 bg-muted/50 hover:bg-muted rounded-xl px-3 transition-colors">
+                                            <CalendarIcon className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
+                                            {task?.startDate ? format(new Date(task.startDate), "MMM d, yyyy") : <span className="text-muted-foreground">Set start date</span>}
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0 border-border rounded-2xl shadow-elevation" align="start">
+                                        <Calendar mode="single" selected={task?.startDate ? new Date(task.startDate) : undefined} onSelect={(d) => updateTaskMutation.mutate({ startDate: (d ? d.toISOString() : null) as any })} initialFocus />
+                                    </PopoverContent>
+                                </Popover>
+                            </div>
+
                             <div className="space-y-2">
                                 <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider px-1">Due Date</label>
                                 <Popover>

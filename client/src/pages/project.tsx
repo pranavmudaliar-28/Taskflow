@@ -198,9 +198,34 @@ export default function ProjectPage() {
 
   const updateTaskMutation = useMutation({
     mutationFn: async ({ taskId, updates }: { taskId: string; updates: Partial<Task> }) => {
+      // For optimistic update success simulate, fetch is not awaited if we don't return it immediately, but returning the promise is standard.
       return apiRequest("PATCH", `/api/tasks/${taskId}`, updates);
     },
-    onSuccess: () => {
+    onMutate: async ({ taskId, updates }) => {
+      await queryClient.cancelQueries({ queryKey: ["/api/tasks/search"] });
+      const previousQueries = queryClient.getQueriesData({ queryKey: ["/api/tasks/search"] });
+
+      queryClient.setQueriesData({ queryKey: ["/api/tasks/search"] }, (old: any) => {
+        if (!old || !old.tasks) return old;
+        return {
+          ...old,
+          tasks: old.tasks.map((t: Task) =>
+            t.id === taskId ? { ...t, ...updates } : t
+          ),
+        };
+      });
+
+      return { previousQueries };
+    },
+    onError: (err, newTodo, context: any) => {
+      if (context?.previousQueries) {
+        context.previousQueries.forEach(([queryKey, queryData]: any) => {
+          queryClient.setQueryData(queryKey, queryData);
+        });
+      }
+      toast({ title: "Failed to update task", variant: "destructive", description: err.message });
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks/search"] });
     },
   });

@@ -207,10 +207,10 @@ export function TaskTable({ tasks, users, milestones, onTaskClick, getTaskUrl, o
         }
     };
 
-    // Only allow drag if not sorting and onReorder is provided
-    const enableDnd = !!onReorder && sorting.length === 0;
+    // Only allow drag if onReorder is provided
+    const enableDnd = !!onReorder;
 
-    const columns: ColumnDef<TaskWithChildren, any>[] = [
+    const columns: ColumnDef<TaskWithChildren, any>[] = useMemo(() => [
         // Drag Handle Column
         {
             id: "drag",
@@ -772,7 +772,7 @@ export function TaskTable({ tasks, users, milestones, onTaskClick, getTaskUrl, o
             ),
             size: 40,
         }),
-    ];
+    ], [users, milestones, onTaskUpdate, onTaskClick, getTaskUrl, onCreateSubtask, isLargeScreen, setRowSelection]);
 
     const table = useReactTable({
         data: tasks,
