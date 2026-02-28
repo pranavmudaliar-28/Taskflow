@@ -27,12 +27,17 @@ import { logger } from "./utils/logger";
 export async function registerRoutes(httpServer: Server, app: Express): Promise<Server> {
   // Helper to resolve project ID or Slug
   const resolveProject = async (idOrSlug: string): Promise<any | undefined> => {
+    console.log(`[resolveProject] Attempting to resolve project with idOrSlug: "${idOrSlug}"`);
+
     // Attempt lookup by ID first 
     const byId = await storage.getProject(idOrSlug);
+    console.log(`[resolveProject] Result of storage.getProject("${idOrSlug}"):`, byId ? `Found (${byId.name})` : 'Not Found');
     if (byId) return byId;
 
     // Fallback to searching by slug
-    return storage.getProjectBySlug(idOrSlug);
+    const bySlug = await storage.getProjectBySlug(idOrSlug);
+    console.log(`[resolveProject] Result of storage.getProjectBySlug("${idOrSlug}"):`, bySlug ? `Found (${bySlug.name})` : 'Not Found');
+    return bySlug;
   };
 
   console.log("[Routes] Starting route registration...");

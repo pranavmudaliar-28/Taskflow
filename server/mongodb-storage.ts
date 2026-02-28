@@ -140,8 +140,22 @@ export class MongoStorage {
     }
 
     async getProject(id: string): Promise<Project | undefined> {
-        if (!mongoose.Types.ObjectId.isValid(id)) return undefined;
-        return this.transform<Project>(await ProjectMongo.findById(id));
+        let doc: any = null;
+        if (mongoose.Types.ObjectId.isValid(id)) {
+            doc = await ProjectMongo.findById(id);
+        }
+
+        if (!doc) {
+            // Bypass Mongoose type-casting to search for manual string IDs directly in the raw collection
+            doc = await mongoose.connection.db?.collection('projects').findOne({ _id: id });
+
+            // If still not found and it's a UUID, check for string casting
+            if (!doc && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+                doc = await mongoose.connection.db?.collection('projects').findOne({ _id: id });
+            }
+        }
+
+        return doc ? this.transform<Project>(doc) : undefined;
     }
 
     async getProjectBySlug(slug: string): Promise<Project | undefined> {
