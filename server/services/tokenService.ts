@@ -43,7 +43,11 @@ export class TokenService {
         const decoded = this.decodeToken(token);
         if (decoded && decoded.exp) {
             const expiresAt = new Date(decoded.exp * 1000);
-            await storage.revokeToken(token, expiresAt);
+            try {
+                await storage.revokeToken(token, expiresAt);
+            } catch (err) {
+                logger.error(`[TokenService] Error revoking token in DB:`, err);
+            }
         }
     }
 

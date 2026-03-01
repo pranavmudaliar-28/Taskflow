@@ -167,6 +167,15 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
         logger.info('User registered and logged in', { userId: user.id, email: user.email });
 
+        const cookieOptions = {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: 'lax' as const,
+          maxAge: 24 * 60 * 60 * 1000, // 24 hours
+          path: '/',
+        };
+        res.cookie('token', token, cookieOptions);
+
         res.json({
           user: Serializer.user(user),
           token,
@@ -220,6 +229,15 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         console.log(`[Auth] Session initialized successfully for user: ${user.id}`);
         logger.info('User logged in with session', { userId: user.id });
 
+        const cookieOptions = {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: 'lax' as const,
+          maxAge: 24 * 60 * 60 * 1000, // 24 hours
+          path: '/',
+        };
+        res.cookie('token', token, cookieOptions);
+
         res.json({
           user: Serializer.user(user),
           token,
@@ -242,8 +260,15 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
     // Extract and blacklist token
     const authHeader = req.headers.authorization;
+    let token = undefined;
     if (authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.split(' ')[1];
+      token = authHeader.split(' ')[1];
+    } else if (req.headers.cookie) {
+      const match = req.headers.cookie.match(/(?:^|;\s*)token=([^;]*)/);
+      if (match) token = match[1];
+    }
+
+    if (token) {
       await TokenService.invalidateToken(token);
     }
 
