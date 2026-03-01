@@ -11,10 +11,10 @@ export const NotificationTypeEnum = z.enum(["task_assigned", "status_changed", "
 
 // Organizations
 export const organizationSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   name: z.string().min(1, "Organization name is required"),
   email: z.string().email().optional().nullable(),
-  ownerId: z.string().uuid(),
+  ownerId: z.string(),
   accentColor: z.string().optional().nullable(),
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
@@ -23,9 +23,9 @@ export const insertOrganizationSchema = organizationSchema.omit({ id: true, crea
 
 // Organization Members
 export const organizationMemberSchema = z.object({
-  id: z.string().uuid(),
-  organizationId: z.string().uuid(),
-  userId: z.string().uuid(),
+  id: z.string(),
+  organizationId: z.string(),
+  userId: z.string(),
   role: RoleEnum.default("member"),
   joinedAt: z.date().optional(),
 });
@@ -33,11 +33,11 @@ export const insertOrganizationMemberSchema = organizationMemberSchema.omit({ id
 
 // Projects
 export const projectSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   name: z.string().min(1, "Project name is required"),
   slug: z.string().optional().nullable(),
   description: z.string().optional().nullable(),
-  organizationId: z.string().uuid(),
+  organizationId: z.string(),
   isPrivate: z.boolean().default(true),
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
@@ -46,9 +46,9 @@ export const insertProjectSchema = projectSchema.omit({ id: true, createdAt: tru
 
 // Project Members
 export const projectMemberSchema = z.object({
-  id: z.string().uuid(),
-  projectId: z.string().uuid(),
-  userId: z.string().uuid(),
+  id: z.string(),
+  projectId: z.string(),
+  userId: z.string(),
   role: RoleEnum.default("member"),
   addedAt: z.date().optional(),
 });
@@ -56,23 +56,23 @@ export const insertProjectMemberSchema = projectMemberSchema.omit({ id: true, ad
 
 // Tasks
 export const taskSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   title: z.string().min(1, "Task title is required"),
   description: z.string().optional().nullable(),
-  projectId: z.string().uuid(),
+  projectId: z.string(),
   status: TaskStatusEnum.default("todo"),
   priority: TaskPriorityEnum.default("medium"),
-  assigneeId: z.string().uuid().optional().nullable(),
-  reviewerId: z.string().uuid().optional().nullable(),
-  testerId: z.string().uuid().optional().nullable(),
+  assigneeId: z.string().optional().nullable(),
+  reviewerId: z.string().optional().nullable(),
+  testerId: z.string().optional().nullable(),
   dueDate: z.coerce.date().optional().nullable(),
   startDate: z.coerce.date().optional().nullable(),
   deliveryRole: z.string().optional().nullable(),
   milestone: z.string().optional().nullable(),
-  milestoneId: z.string().uuid().optional().nullable(),
+  milestoneId: z.string().optional().nullable(),
   slug: z.string().optional().nullable(),
   order: z.number().default(0),
-  parentId: z.string().uuid().optional().nullable(),
+  parentId: z.string().optional().nullable(),
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
 });
@@ -84,8 +84,8 @@ export const insertTaskSchema = taskSchema.omit({
 
 // Milestones
 export const milestoneSchema = z.object({
-  id: z.string().uuid(),
-  projectId: z.string().uuid(),
+  id: z.string(),
+  projectId: z.string(),
   title: z.string().min(1, "Milestone title is required"),
   description: z.string().optional().nullable(),
   status: z.string().default("open"),
@@ -97,9 +97,9 @@ export const insertMilestoneSchema = milestoneSchema.omit({ id: true, createdAt:
 
 // Time Logs
 export const timeLogSchema = z.object({
-  id: z.string().uuid(),
-  taskId: z.string().uuid(),
-  userId: z.string().uuid(),
+  id: z.string(),
+  taskId: z.string(),
+  userId: z.string(),
   startTime: z.coerce.date(),
   endTime: z.coerce.date().optional().nullable(),
   duration: z.number().optional().nullable(),
@@ -110,11 +110,11 @@ export const insertTimeLogSchema = timeLogSchema.omit({ id: true, createdAt: tru
 
 // Comments
 export const commentSchema = z.object({
-  id: z.string().uuid(),
-  taskId: z.string().uuid(),
-  authorId: z.string().uuid(),
+  id: z.string(),
+  taskId: z.string(),
+  authorId: z.string(),
   content: z.string().min(1, "Comment content cannot be empty"),
-  parentId: z.string().uuid().optional().nullable(),
+  parentId: z.string().optional().nullable(),
   reactions: z.array(z.string()).optional(),
   mentions: z.array(z.string()).optional(),
   createdAt: z.date().optional(),
@@ -124,39 +124,39 @@ export const insertCommentSchema = commentSchema.omit({ id: true, createdAt: tru
 
 // Attachments
 export const attachmentSchema = z.object({
-  id: z.string().uuid(),
-  taskId: z.string().uuid(),
+  id: z.string(),
+  taskId: z.string(),
   name: z.string(),
   url: z.string().url(),
   size: z.number().optional().nullable(),
   type: z.string().optional().nullable(),
-  uploadedBy: z.string().uuid(),
+  uploadedBy: z.string(),
   createdAt: z.date().optional(),
 });
 export const insertAttachmentSchema = attachmentSchema.omit({ id: true, createdAt: true });
 
 // Notifications
 export const notificationSchema = z.object({
-  id: z.string().uuid(),
-  userId: z.string().uuid(),
+  id: z.string(),
+  userId: z.string(),
   type: NotificationTypeEnum,
   title: z.string(),
   message: z.string(),
   read: z.boolean().default(false),
-  relatedTaskId: z.string().uuid().optional().nullable(),
-  relatedProjectId: z.string().uuid().optional().nullable(),
+  relatedTaskId: z.string().optional().nullable(),
+  relatedProjectId: z.string().optional().nullable(),
   createdAt: z.date().optional(),
 });
 export const insertNotificationSchema = notificationSchema.omit({ id: true, createdAt: true });
 
 // Project Invitations
 export const projectInvitationSchema = z.object({
-  id: z.string().uuid(),
-  projectId: z.string().uuid(),
-  organizationId: z.string().uuid(),
+  id: z.string(),
+  projectId: z.string(),
+  organizationId: z.string(),
   email: z.string().email(),
   role: RoleEnum.default("member"),
-  invitedBy: z.string().uuid(),
+  invitedBy: z.string(),
   status: z.string().default("pending"),
   createdAt: z.date().optional(),
 });
@@ -164,11 +164,11 @@ export const insertProjectInvitationSchema = projectInvitationSchema.omit({ id: 
 
 // Organization Invitations
 export const organizationInvitationSchema = z.object({
-  id: z.string().uuid(),
-  organizationId: z.string().uuid(),
+  id: z.string(),
+  organizationId: z.string(),
   email: z.string().email(),
   role: RoleEnum.default("member"),
-  invitedBy: z.string().uuid(),
+  invitedBy: z.string(),
   token: z.string(),
   status: z.string().default("pending"),
   createdAt: z.date().optional(),

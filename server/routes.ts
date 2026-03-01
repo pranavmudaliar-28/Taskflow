@@ -17,7 +17,7 @@ import fs from "fs";
 import path from "path";
 import express from "express";
 import { authMiddleware } from "./middleware/authMiddleware";
-import { authorize } from "./middleware/roleMiddleware";
+import { authorize, authorizeOrg } from "./middleware/roleMiddleware";
 import { validateRequest } from "./middleware/validateRequest";
 import { TokenService } from "./services/tokenService";
 import { Serializer } from "./utils/serializers";
@@ -236,9 +236,16 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
-  app.post("/api/auth/logout", (req, res) => {
+  app.post("/api/auth/logout", async (req, res) => {
     const userId = (req as any).user?.id;
     console.log(`[Logout] Starting aggressive logout for user: ${userId}`);
+
+    // Extract and blacklist token
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.split(' ')[1];
+      await TokenService.invalidateToken(token);
+    }
 
     // 1. Manually unset req.user if present
     if ((req as any).user) {
@@ -505,22 +512,20 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const organizations = await storage.getOrganizationsByUser(userId);
 
       // Enhance organizations with user's role
-      const userObj = (req.user as any) || {};
-      const orgIds = userObj.role === "admin"
-        ? organizations.map((o: { id: string }) => o.id)
-        : organizations.filter((o: { id: string }) => userObj.organizationIds?.includes(o.id)).map((o: { id: string }) => o.id);
-
+      const orgIds = organizations.map((o: { id: string }) => o.id);
       const memberships = await storage.getOrganizationMembersForUser(userId, orgIds);
 
       const roleMap: Record<string, string> = {};
-      memberships.forEach((m: { organizationId: string; role: string; }) => {
-        roleMap[m.organizationId] = m.role;
+      memberships.forEach((m: any) => {
+        if (m.organizationId) {
+          roleMap[m.organizationId.toString()] = m.role;
+        }
       });
 
-      const enhancedOrgs = organizations.map((org: { id: string }) => {
+      const enhancedOrgs = organizations.map((org: any) => {
         return {
           ...org,
-          role: roleMap[org.id] || "member"
+          role: org.id ? (roleMap[org.id.toString()] || "member") : "member"
         };
       });
 
@@ -569,18 +574,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
-  app.delete("/api/organizations/:id/members/:memberId", authMiddleware, async (req, res) => {
+  app.delete("/api/organizations/:id/members/:memberId", authMiddleware, authorizeOrg(["admin", "team_lead"]), async (req, res) => {
     try {
       const userId = getUserId(req);
       const orgId = req.params.id as string;
       const memberId = req.params.memberId as string;
 
       const members = await storage.getOrganizationMembers(orgId);
-      const inviterMember = members.find((m: { userId: string, role: string }) => m.userId === userId);
-      if (!inviterMember || (inviterMember.role !== "admin" && inviterMember.role !== "team_lead")) {
-        return res.status(403).json({ message: "Only organization leads can remove members" });
-      }
-
       const targetMember = members.find((m: { id: string, userId: string }) => m.id === memberId);
       if (!targetMember) {
         return res.status(404).json({ message: "Member not found" });
@@ -635,7 +635,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
-  app.post("/api/organizations/:id/invite", authMiddleware, async (req, res) => {
+  app.post("/api/organizations/:id/invite", authMiddleware, authorizeOrg(["admin", "team_lead"]), async (req, res) => {
     try {
       const inviterId = getUserId(req);
       const orgId = req.params.id as string;
@@ -664,13 +664,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       // Additional safety check for role
       if (!["admin", "team_lead", "member"].includes(role)) {
         return res.status(400).json({ message: "Invalid role selected" });
-      }
-
-      // Check if inviter is admin/lead in organization
-      const members = await storage.getOrganizationMembers(orgId);
-      const inviterMember = members.find(m => m.userId === inviterId);
-      if (!inviterMember || (inviterMember.role !== "admin" && inviterMember.role !== "team_lead")) {
-        return res.status(403).json({ message: "Only organization leads can invite members" });
       }
 
       const token = crypto.randomUUID();
@@ -743,17 +736,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
-  app.delete("/api/organizations/:id/invitations/:inviteId", authMiddleware, async (req, res) => {
+  app.delete("/api/organizations/:id/invitations/:inviteId", authMiddleware, authorizeOrg(["admin", "team_lead"]), async (req, res) => {
     try {
       const userId = getUserId(req);
       const orgId = req.params.id as string;
       const inviteId = req.params.inviteId as string;
-
-      const members = await storage.getOrganizationMembers(orgId);
-      const inviterMember = members.find(m => m.userId === userId);
-      if (!inviterMember || (inviterMember.role !== "admin" && inviterMember.role !== "team_lead")) {
-        return res.status(403).json({ message: "Only organization leads can cancel invitations" });
-      }
 
       await storage.deleteOrganizationInvitation(inviteId);
       logger.info('Organization invitation cancelled', {

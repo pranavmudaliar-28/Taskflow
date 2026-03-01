@@ -2122,7 +2122,7 @@ body {
   }
 
   /* Hero headline */
-  h1 {
+  .lp5-hero-section h1 {
     font-size: clamp(36px, 10vw, 72px) !important;
   }
 

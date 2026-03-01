@@ -84,7 +84,7 @@ export default function TimeTracking() {
 
       <div className="p-6 space-y-5">
         {/* Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {[
             { label: "Today", value: fmtShort(totalToday + totalActive), icon: Calendar, iconBg: "bg-blue-500/10", iconColor: "text-blue-500", testId: "text-time-today" },
             { label: "This Week", value: fmtShort(totalWeek + totalActive), icon: BarChart3, iconBg: "bg-violet-500/10", iconColor: "text-violet-500", testId: "text-time-week" },

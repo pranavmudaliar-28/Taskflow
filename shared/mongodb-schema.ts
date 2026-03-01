@@ -228,6 +228,19 @@ PasswordResetTokenSchema.set('toJSON', {
     }
 });
 
+const RevokedTokenSchema = new Schema({
+    token: { type: String, required: true, unique: true },
+    expiresAt: { type: Date, required: true },
+}, { timestamps: true });
+
+RevokedTokenSchema.set('toJSON', {
+    transform: (doc, ret: any) => {
+        ret.id = ret._id.toString();
+        delete ret._id;
+        delete ret.__v;
+    }
+});
+
 // Models
 export const UserMongo = mongoose.models.User || mongoose.model("User", UserSchema);
 export const OrganizationMongo = mongoose.models.Organization || mongoose.model("Organization", OrganizationSchema);
@@ -242,3 +255,4 @@ export const OrganizationMemberMongo = mongoose.models.OrganizationMember || mon
 export const ProjectMemberMongo = mongoose.models.ProjectMember || mongoose.model("ProjectMember", ProjectMemberSchema);
 export const InvitationMongo = mongoose.models.Invitation || mongoose.model("Invitation", InvitationSchema);
 export const PasswordResetTokenMongo = mongoose.models.PasswordResetToken || mongoose.model("PasswordResetToken", PasswordResetTokenSchema);
+export const RevokedTokenMongo = mongoose.models.RevokedToken || mongoose.model("RevokedToken", RevokedTokenSchema);

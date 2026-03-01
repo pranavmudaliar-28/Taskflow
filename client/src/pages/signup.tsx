@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Logo } from "@/components/ui/logo";
 import { Link, useLocation } from "wouter";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -69,12 +70,7 @@ export default function Signup() {
         <div className="flex-1 flex flex-col justify-center px-8 sm:px-12 xl:px-16 py-12 max-w-md w-full mx-auto">
           {/* Mobile logo */}
           <Link href="/" className="inline-block hover:opacity-80 transition-opacity cursor-pointer mb-8 lg:hidden">
-            <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg bg-violet-600 flex items-center justify-center">
-                <Kanban className="h-4 w-4 text-white" />
-              </div>
-              <span className="font-bold text-foreground">TaskFlow</span>
-            </div>
+            <Logo className="text-foreground lg:hidden" iconSize={32} textSize="text-xl" />
           </Link>
 
           <div className="mb-7">
@@ -190,12 +186,7 @@ export default function Signup() {
 
         <div className="relative z-10 flex flex-col h-full px-10 py-12">
           <Link href="/" className="inline-block hover:opacity-90 transition-opacity cursor-pointer">
-            <div className="flex items-center gap-3">
-              <div className="h-9 w-9 rounded-lg bg-violet-600 flex items-center justify-center">
-                <Kanban className="h-5 w-5 text-white" />
-              </div>
-              <span className="text-white font-bold text-lg">TaskFlow</span>
-            </div>
+            <Logo className="text-white" iconSize={36} textSize="text-xl" />
           </Link>
 
           <div className="flex-1 flex flex-col justify-center">

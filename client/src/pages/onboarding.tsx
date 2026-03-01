@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { Logo } from "@/components/ui/logo";
 import { useLocation, useSearch } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
@@ -285,12 +286,7 @@ export default function Onboarding() {
                 </div>
 
                 <div className="relative z-10 flex flex-col h-full px-10 py-12">
-                    <div className="flex items-center gap-3">
-                        <div className="h-9 w-9 rounded-lg bg-violet-600 flex items-center justify-center">
-                            <Kanban className="h-5 w-5 text-white" />
-                        </div>
-                        <span className="text-white font-bold text-lg">TaskFlow</span>
-                    </div>
+                    <Logo className="text-white" iconSize={36} textSize="text-xl" />
 
                     <div className="flex-1 flex flex-col justify-center">
                         <h1 className="text-3xl xl:text-4xl font-bold text-white leading-tight mb-4">
@@ -324,11 +320,8 @@ export default function Onboarding() {
             >
                 <div className="flex-1 flex flex-col justify-center px-4 sm:px-8 xl:px-12 py-12 max-w-4xl w-full mx-auto">
                     {/* Mobile logo */}
-                    <div className="flex items-center gap-2 mb-8 lg:hidden">
-                        <div className="h-8 w-8 rounded-lg bg-violet-600 flex items-center justify-center">
-                            <Kanban className="h-4 w-4 text-white" />
-                        </div>
-                        <span className="font-bold text-foreground">TaskFlow</span>
+                    <div className="mb-8 lg:hidden">
+                        <Logo className="text-foreground" iconSize={32} textSize="text-xl" />
                     </div>
 
                     {/* Step indicator */}

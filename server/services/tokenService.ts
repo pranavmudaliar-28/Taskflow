@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { logger } from '../utils/logger';
+import { storage } from '../storage';
 
 const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET || 'fallback_secret_for_development_only';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '24h';
@@ -35,6 +36,19 @@ export class TokenService {
             logger.warn('JWT Verification Failed', { error });
             throw new Error('Invalid token');
         }
+    }
+
+    static async invalidateToken(token: string) {
+        if (!token) return;
+        const decoded = this.decodeToken(token);
+        if (decoded && decoded.exp) {
+            const expiresAt = new Date(decoded.exp * 1000);
+            await storage.revokeToken(token, expiresAt);
+        }
+    }
+
+    static async isTokenBlacklisted(token: string): Promise<boolean> {
+        return await storage.isTokenRevoked(token);
     }
 
     static decodeToken(token: string): TokenPayload | null {

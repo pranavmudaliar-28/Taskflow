@@ -24,7 +24,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { UserPlus, Loader2, Shield, ShieldCheck, User as UserIcon, Check, ChevronsUpDown, Mail, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { User } from "@shared/models/auth";
-import type { ProjectInvitation, Role } from "@shared/schema";
+import type { Project, ProjectInvitation, Role } from "@shared/schema";
 
 type ProjectMemberWithUser = {
   id: string;
@@ -55,6 +55,7 @@ const ROLE_ICONS: Record<Role, typeof Shield> = {
 };
 
 export function ProjectMembersDialog({ open, onClose, project, memberData }: Omit<ProjectMembersDialogProps, 'projectId'> & { project: Project }) {
+  const { toast } = useToast();
   const projectId = project?.id;
   const { user: currentUser } = useAuth();
   const [openCombobox, setOpenCombobox] = useState(false);

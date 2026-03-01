@@ -161,7 +161,7 @@ export default function OrganizationSettings() {
                         <Building2 className="h-4.5 w-4.5" />
                         <span className="text-sm font-medium uppercase tracking-wider">Workspace settings</span>
                     </div>
-                    <h1 className="text-3xl font-bold tracking-tight">{activeOrg.name}</h1>
+                    <h1 className="text-2xl sm:text-3xl font-bold tracking-tight truncate">{activeOrg.name}</h1>
                     <p className="text-muted-foreground">Manage your team members, roles, and workspace invitations</p>
                 </div>
 
@@ -216,12 +216,12 @@ export default function OrganizationSettings() {
             </div>
 
             {/* Navigation Tabs */}
-            <div className="flex items-center gap-1 p-1 bg-muted/40 rounded-xl w-fit">
+            <div className="flex items-center gap-1 p-1 bg-muted/40 rounded-xl w-full sm:w-fit overflow-x-auto">
                 {TABS.map((t) => (
                     <button
                         key={t.id}
                         onClick={() => setTab(t.id)}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${tab === t.id
+                        className={`shrink-0 flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${tab === t.id
                             ? "bg-background text-foreground shadow-sm ring-1 ring-border/50"
                             : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
                             }`}
@@ -304,24 +304,24 @@ export default function OrganizationSettings() {
                             </div>
                         ) : (
                             invitations?.map((inv) => (
-                                <div key={inv.id} className="flex items-center justify-between p-5 hover:bg-muted/30 transition-colors">
-                                    <div className="flex items-center gap-4">
-                                        <div className="h-10 w-10 rounded-full bg-muted/60 flex items-center justify-center">
+                                <div key={inv.id} className="flex flex-col sm:flex-row sm:items-center items-start justify-between gap-4 p-5 hover:bg-muted/30 transition-colors">
+                                    <div className="flex items-center gap-4 w-full sm:w-auto min-w-0">
+                                        <div className="h-10 w-10 rounded-full bg-muted/60 flex items-center justify-center shrink-0">
                                             <Mail className="h-5 w-5 text-muted-foreground" />
                                         </div>
-                                        <div>
-                                            <p className="font-semibold text-foreground">{inv.email}</p>
-                                            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-                                                <span className="capitalize">{inv.role}</span>
-                                                <span className="h-1 w-1 bg-border rounded-full" />
-                                                <span>Sent {inv.createdAt ? new Date(inv.createdAt).toLocaleDateString() : "Recently"}</span>
+                                        <div className="min-w-0">
+                                            <p className="font-semibold text-foreground truncate">{inv.email}</p>
+                                            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5 whitespace-nowrap overflow-hidden text-ellipsis">
+                                                <span className="capitalize shrink-0">{inv.role}</span>
+                                                <span className="h-1 w-1 bg-border rounded-full shrink-0" />
+                                                <span className="truncate">Sent {inv.createdAt ? new Date(inv.createdAt).toLocaleDateString() : "Recently"}</span>
                                             </div>
                                         </div>
                                     </div>
                                     <Button
                                         variant="ghost"
                                         size="sm"
-                                        className="h-9 text-muted-foreground hover:text-destructive"
+                                        className="w-full sm:w-auto h-9 text-muted-foreground hover:text-destructive shrink-0"
                                         onClick={async () => {
                                             await apiRequest("DELETE", `/api/organizations/${activeOrg.id}/invitations/${inv.id}`);
                                             queryClient.invalidateQueries({ queryKey: [`/api/organizations/${activeOrg.id}/invitations`] });

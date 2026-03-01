@@ -1,5 +1,6 @@
 import { useLocation, Link } from "wouter";
 import React, { useState, useEffect } from "react";
+import { Logo } from "@/components/ui/logo";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -120,20 +121,8 @@ export function AppSidebar({ projects, onCreateProject }: AppSidebarProps) {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild tooltip="TaskFlow">
-              <Link href="/dashboard">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-transparent shrink-0">
-                  <div className="h-2.5 w-2.5 rounded-full bg-violet-600" />
-                </div>
-                {!isCollapsed && (
-                  <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-extrabold text-sidebar-foreground">
-                      TaskFlow
-                    </span>
-                    <span className="text-[10px] text-sidebar-foreground/60 mt-0.5">
-                      Project Management
-                    </span>
-                  </div>
-                )}
+              <Link href="/dashboard" className="flex items-center gap-2">
+                <Logo iconSize={26} textSize="text-sm font-extrabold" showText={!isCollapsed} />
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -191,6 +180,7 @@ export function AppSidebar({ projects, onCreateProject }: AppSidebarProps) {
           <SidebarGroupLabel className="flex items-center justify-between group-data-[collapsible=icon]:hidden">
             <span>Spaces</span>
             <button
+              onClick={onCreateProject}
               className="h-5 w-5 rounded flex items-center justify-center hover:bg-sidebar-hover text-sidebar-foreground/40 hover:text-sidebar-foreground transition-colors"
             >
               <Plus className="h-3 w-3" />

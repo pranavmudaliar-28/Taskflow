@@ -10,7 +10,18 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
         // 1. Check for Bearer Token
         if (authHeader && authHeader.startsWith('Bearer ')) {
             const token = authHeader.split(' ')[1];
+
+            // 1. Verify token to ensure it isn't tampered with and hasn't expired
             const payload = TokenService.verifyToken(token);
+
+            // 2. Check if token was explicitly revoked
+            if (await TokenService.isTokenBlacklisted(token)) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'Token has been invalidated',
+                    code: 'LOGGED_OUT'
+                });
+            }
 
             // Verify user still exists in DB
             const user = await storage.getUser(payload.sub);

@@ -100,7 +100,7 @@ export default function Settings() {
 
   /* organizations */
   const { data: organizations = [] } = useQuery<any[]>({ queryKey: ["/api/organizations"] });
-  const isOrgAdmin = organizations.some(o => o.role === "admin");
+  const isOrgAdmin = (user as any)?.role === "admin" || (user as any)?.role === "owner" || organizations.some(o => o.role === "admin");
 
   /* mutations */
   const updateProfile = useMutation({
@@ -161,7 +161,7 @@ export default function Settings() {
           </div>
 
           {/* Avatar row */}
-          <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-xl border border-border">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 bg-muted/50 rounded-xl border border-border">
             <Avatar className="h-16 w-16">
               <AvatarImage src={user?.profileImageUrl || undefined} />
               <AvatarFallback className="text-lg font-bold bg-primary text-primary-foreground">{initials}</AvatarFallback>
@@ -172,7 +172,7 @@ export default function Settings() {
               <Badge variant="secondary" className="mt-1.5 capitalize text-xs">{user?.plan || "Free"} plan</Badge>
             </div>
             {!isEditing && (
-              <Button variant="outline" size="sm" className="ml-auto gap-2"
+              <Button variant="outline" size="sm" className="w-full sm:w-auto sm:ml-auto gap-2"
                 onClick={() => setIsEditing(true)} data-testid="button-edit-profile">
                 <Edit2 className="h-4 w-4" /> Edit
               </Button>
@@ -221,14 +221,14 @@ export default function Settings() {
           </div>
 
           {/* Change password row */}
-          <div className="bg-card rounded-xl border border-border p-5 flex items-center justify-between gap-4">
+          <div className="bg-card rounded-xl border border-border p-5 flex flex-col sm:flex-row sm:items-center items-start justify-between gap-4">
             <div>
               <p className="text-sm font-bold text-foreground">Password</p>
               <p className="text-xs text-muted-foreground mt-0.5">Last updated over 30 days ago</p>
             </div>
             <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2" data-testid="button-change-password">
+                <Button variant="outline" size="sm" className="w-full sm:w-auto gap-2" data-testid="button-change-password">
                   <Key className="h-4 w-4" /> Change password
                 </Button>
               </DialogTrigger>
@@ -266,13 +266,13 @@ export default function Settings() {
           </div>
 
           {/* Sign out */}
-          <div className="bg-card rounded-xl border border-border p-5 flex items-center justify-between gap-4">
+          <div className="bg-card rounded-xl border border-border p-5 flex flex-col sm:flex-row sm:items-center items-start justify-between gap-4">
             <div>
               <p className="text-sm font-bold text-foreground">Sign out</p>
               <p className="text-xs text-muted-foreground mt-0.5">Sign out of TaskFlow on this device</p>
             </div>
             <Button variant="outline" size="sm" onClick={() => logout()}
-              className="text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/20 gap-2"
+              className="w-full sm:w-auto text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/20 gap-2"
               data-testid="button-logout">
               <LogOut className="h-4 w-4" /> Sign out
             </Button>
@@ -352,7 +352,7 @@ export default function Settings() {
               <p className="text-sm text-amber-600">Only organization admins can manage billing. Contact your admin for changes.</p>
             </div>
           )}
-          <div className="bg-card rounded-xl border border-border p-5 flex items-center gap-4">
+          <div className="bg-card rounded-xl border border-border p-5 flex flex-col sm:flex-row sm:items-center items-start gap-4">
             <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
               <CreditCard className="h-6 w-6 text-primary" />
             </div>
@@ -367,7 +367,7 @@ export default function Settings() {
               </div>
             </div>
             {isOrgAdmin && (
-              <Button variant="outline" size="sm" className="gap-2 shrink-0"
+              <Button variant="outline" size="sm" className="w-full sm:w-auto sm:ml-auto gap-2 shrink-0"
                 onClick={async () => {
                   try {
                     const res = await apiRequest("POST", "/api/stripe/create-portal-session");
@@ -404,14 +404,14 @@ export default function Settings() {
         {/* Two-column layout */}
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Left nav */}
-          <nav className="w-full lg:w-52 shrink-0">
+          <nav className="w-full lg:w-52 shrink-0 min-w-0">
             <div className="bg-card rounded-xl border border-border overflow-x-auto lg:overflow-visible shadow-sm p-1.5 flex lg:flex-col gap-1">
               {TABS.map(({ id, label, icon: Icon }) => (
                 <button
                   key={id}
                   onClick={() => setTab(id)}
                   className={cn(
-                    "w-full lg:w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left whitespace-nowrap lg:whitespace-normal",
+                    "w-auto shrink-0 lg:w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left whitespace-nowrap lg:whitespace-normal",
                     tab === id
                       ? "bg-primary/10 text-primary"
                       : "text-muted-foreground hover:bg-muted hover:text-foreground"

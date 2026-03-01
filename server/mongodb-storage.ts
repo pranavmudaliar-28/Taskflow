@@ -2,7 +2,7 @@ import {
     UserMongo, OrganizationMongo, ProjectMongo, TaskMongo,
     CommentMongo, AttachmentMongo, MilestoneMongo, TimeLogMongo,
     NotificationMongo, OrganizationMemberMongo, ProjectMemberMongo,
-    InvitationMongo, PasswordResetTokenMongo
+    InvitationMongo, PasswordResetTokenMongo, RevokedTokenMongo
 } from "../shared/mongodb-schema";
 import { generateSlug } from "./slug-utils";
 import mongoose from "mongoose";
@@ -147,11 +147,11 @@ export class MongoStorage {
 
         if (!doc) {
             // Bypass Mongoose type-casting to search for manual string IDs directly in the raw collection
-            doc = await ProjectMongo.collection.findOne({ _id: id });
+            doc = await ProjectMongo.collection.findOne({ _id: id as any });
 
             // If still not found and it's a UUID, check for string casting
             if (!doc && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
-                doc = await ProjectMongo.collection.findOne({ _id: id });
+                doc = await ProjectMongo.collection.findOne({ _id: id as any });
             }
 
             if (doc) {
@@ -737,5 +737,22 @@ export class MongoStorage {
 
     async deletePasswordResetToken(token: string): Promise<void> {
         await PasswordResetTokenMongo.deleteOne({ token });
+    }
+
+    // Revoked Tokens
+    async revokeToken(token: string, expiresAt: Date): Promise<void> {
+        try {
+            await RevokedTokenMongo.create({ token, expiresAt });
+        } catch (error: any) {
+            // Ignore duplicate key errors if token is already revoked
+            if (error.code !== 11000) {
+                throw error;
+            }
+        }
+    }
+
+    async isTokenRevoked(token: string): Promise<boolean> {
+        const revoked = await RevokedTokenMongo.findOne({ token });
+        return !!revoked;
     }
 }
