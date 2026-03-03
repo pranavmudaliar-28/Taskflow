@@ -81,6 +81,7 @@ export function CreateTaskDialog({ open, onClose, projectId, initialStatus = "to
       });
     },
     onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });          // << instant update for time-tracking dropdown
       queryClient.invalidateQueries({ queryKey: ["/api/projects", selectedProjectId, "tasks"] });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks/recent"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });

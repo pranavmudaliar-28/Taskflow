@@ -2028,7 +2028,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.status(403).json({ message: "Access denied to task" });
       }
 
-      // Check if task is already running
+      // Only block if the exact same task is already being tracked
       const activeLogs = await storage.getActiveTimeLogs(userId);
       if (activeLogs.some(log => log.taskId === taskId)) {
         return res.status(400).json({ message: "Timer already running for this task" });

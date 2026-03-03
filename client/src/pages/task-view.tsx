@@ -1,22 +1,18 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useRoute, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
     Calendar as CalendarIcon,
     Clock,
-    CheckCircle2,
     AlertCircle,
-    User as UserIcon,
     Send,
-    Paperclip,
     MoreVertical,
     ChevronLeft,
     ChevronRight,
@@ -26,15 +22,19 @@ import {
     Copy,
     Trash,
     Plus,
-    Flag
+    Flag,
+    Play,
+    Square,
+    X,
+    SlidersHorizontal,
+    CheckCircle2,
 } from "lucide-react";
 import { format } from "date-fns";
-import { cn, ensureArray, ensureObject } from "@/lib/utils";
+import { cn, ensureArray } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import type { Task, Comment, TimeLog, Milestone } from "@shared/schema";
-import type { User } from "@shared/models/auth";
 import {
     Select,
     SelectContent,
@@ -48,7 +48,6 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
     DropdownMenuSeparator,
-    DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import {
     Popover,
@@ -59,78 +58,89 @@ import { Calendar } from "@/components/ui/calendar";
 import { TASK_STATUSES, TASK_PRIORITIES } from "@/lib/constants";
 import { TaskAttachments } from "@/components/task-attachments";
 import { CreateTaskDialog } from "@/components/create-task-dialog";
+import { formatDurationShort } from "@/lib/utils";
 
-const initials = (user: any) => {
-    if (!user) return "?";
-    return `${user.firstName?.charAt(0) || ""}${user.lastName?.charAt(0) || ""}`.toUpperCase() || user.username?.charAt(0).toUpperCase() || "?";
-};
+/* ─── micro helpers ─── */
+const getInitials = (u: any) =>
+    u
+        ? ((u.firstName?.[0] || "") + (u.lastName?.[0] || "")).toUpperCase() ||
+        u.username?.[0]?.toUpperCase() ||
+        "?"
+        : "?";
 
-const priorityIcon = (priority: string) => {
-    const p = TASK_PRIORITIES.find(p => p.id === priority);
-    if (!p) return null;
-    const Icon = (p as any).icon;
-    return <Icon className={cn("h-3.5 w-3.5", p.color)} />;
-};
+function ColorDot({ className }: { className?: string }) {
+    return <span className={cn("inline-block h-2 w-2 shrink-0 rounded-full", className)} />;
+}
 
-const statusIcon = (status: string) => {
-    const s = TASK_STATUSES.find(s => s.id === status);
-    if (!s) return null;
-    const Icon = s.icon;
-    return <Icon className={cn("h-3.5 w-3.5", s.color)} />;
-};
+function Divider() {
+    return <div className="h-px w-full bg-border/60" />;
+}
 
+function SectionHeader({ icon, label }: { icon: React.ReactNode; label: string }) {
+    return (
+        <h3 className="flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground">
+            {icon} {label}
+        </h3>
+    );
+}
+
+function FieldLabel({ children }: { children: React.ReactNode }) {
+    return (
+        <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+            {children}
+        </p>
+    );
+}
+
+/* ════════════════════════════════════════════════
+   TASK VIEW
+════════════════════════════════════════════════ */
 export default function TaskView() {
-    const [matchTask, paramsTask] = useRoute("/tasks/:id");
-    const [matchProjectTask, paramsProjectTask] = useRoute("/projects/:projectId/:taskId");
-    const [matchSubTask, paramsSubTask] = useRoute("/projects/:projectId/:parentTaskId/:taskId");
+    /* routing */
+    const [, paramsTask] = useRoute("/tasks/:id");
+    const [, paramsProjectTask] = useRoute("/projects/:projectId/:taskId");
+    const [, paramsSubTask] = useRoute("/projects/:projectId/:parentTaskId/:taskId");
     const taskId = paramsTask?.id || paramsProjectTask?.taskId || paramsSubTask?.taskId;
     const projectIdParam = paramsProjectTask?.projectId || paramsSubTask?.projectId;
     const [, setLocation] = useLocation();
     const { toast } = useToast();
-    const { user: currentUser } = useAuth();
+    const { user: me } = useAuth();
     const queryClient = useQueryClient();
 
+    /* local state */
     const [comment, setComment] = useState("");
     const [replyTo, setReplyTo] = useState<string | null>(null);
     const [isEditingTitle, setIsEditingTitle] = useState(false);
-    const [title, setTitle] = useState("");
+    const [editTitle, setEditTitle] = useState("");
     const [showCreateSubtask, setShowCreateSubtask] = useState(false);
-
-    // Mentions state
+    const [drawerOpen, setDrawerOpen] = useState(false);
     const [showMentions, setShowMentions] = useState(false);
     const [mentionQuery, setMentionQuery] = useState("");
-    const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
+    const [mentionIndex, setMentionIndex] = useState(0);
+    const commentRef = useRef<HTMLTextAreaElement>(null);
 
-    // Fetch Task
-    const { data: task, isLoading: taskLoading, isError: taskError, error: taskErrorObj } = useQuery<Task>({
-        queryKey: [`/api/tasks/${taskId}`],
-        enabled: !!taskId,
-    });
+    /* queries */
+    const {
+        data: task,
+        isLoading: taskLoading,
+        isError: taskError,
+        error: taskErrorObj,
+    } = useQuery<Task>({ queryKey: [`/api/tasks/${taskId}`], enabled: !!taskId });
 
-    useEffect(() => {
-        if (task) {
-            console.info(`[TaskView] Loaded task: ${task.title} (${task.id}) in project ${task.projectId}`);
-        }
-    }, [task?.id, task?.title]);
+    useEffect(() => { if (task) setEditTitle(task.title); }, [task?.id]);
 
-    // Fetch Project
     const { data: project } = useQuery<any>({
         queryKey: [`/api/projects/${task?.projectId || projectIdParam}`],
         enabled: !!(task?.projectId || projectIdParam),
     });
-
-    // Fetch Parent Task if this is a subtask
     const { data: parentTask } = useQuery<Task>({
         queryKey: [`/api/tasks/${task?.parentId}`],
         enabled: !!task?.parentId,
     });
-
     const { data: members } = useQuery<any[]>({
         queryKey: [`/api/projects/${task?.projectId || projectIdParam}/members`],
         enabled: !!(task?.projectId || projectIdParam),
     });
-
-    // Fetch Subtasks
     const { data: subtasks } = useQuery<{ tasks: Task[] }>({
         queryKey: ["/api/tasks/search", task?.projectId, { parentId: task?.id }],
         queryFn: async () => {
@@ -140,685 +150,996 @@ export default function TaskView() {
         },
         enabled: !!task?.id && !!task?.projectId,
     });
-
-    // Fetch Comments
     const { data: comments } = useQuery<Comment[]>({
         queryKey: [`/api/tasks/${task?.id}/comments`],
         enabled: !!task?.id,
     });
-
-    // Fetch organization members for mentions
+    const { data: timeLogs } = useQuery<TimeLog[]>({ queryKey: ["/api/timelogs"] });
+    const { data: activeLogs } = useQuery<TimeLog[]>({
+        queryKey: ["/api/timelogs/active"],
+        refetchInterval: 5000,
+    });
     const { data: orgMembers } = useQuery<any[]>({
         queryKey: [`/api/organizations/members`],
         enabled: !!project?.organizationId,
     });
-
-    // Fetch Milestones
     const { data: milestones } = useQuery<Milestone[]>({
         queryKey: [`/api/projects/${task?.projectId || projectIdParam}/milestones`],
         enabled: !!(task?.projectId || projectIdParam),
     });
 
+    /* derived */
     const usersMap = useMemo(() => {
         const map = new Map<string, any>();
-        ensureArray(orgMembers).forEach(m => { if (m.user) map.set(m.userId, m.user); });
-        ensureArray(members).forEach(m => { if (!map.has(m.userId) && m.user) map.set(m.userId, m.user); });
+        ensureArray(orgMembers).forEach((m) => { if (m.user) map.set(m.userId, m.user); });
+        ensureArray(members).forEach((m) => { if (!map.has(m.userId) && m.user) map.set(m.userId, m.user); });
         return map;
     }, [orgMembers, members]);
 
-    const status = useMemo(() => TASK_STATUSES.find(s => s.id === task?.status), [task?.status]);
-    const priority = useMemo(() => TASK_PRIORITIES.find(p => p.id === task?.priority), [task?.priority]);
-    const milestone = useMemo(() => milestones?.find(m => m.id === task?.milestoneId), [milestones, task?.milestoneId]);
+    const statusMeta = useMemo(() => TASK_STATUSES.find((s) => s.id === task?.status), [task?.status]);
+    const priorityMeta = useMemo(() => TASK_PRIORITIES.find((p) => p.id === task?.priority), [task?.priority]);
+    const milestoneMeta = useMemo(() => milestones?.find((m) => m.id === task?.milestoneId), [milestones, task?.milestoneId]);
 
-    useEffect(() => {
-        if (task) setTitle(task.title);
-    }, [task]);
+    const isTracking = useMemo(() => !!activeLogs?.some((l) => l.taskId === task?.id), [activeLogs, task?.id]);
+    const totalTracked = useMemo(
+        () => (timeLogs || []).filter((l) => l.taskId === task?.id).reduce((a, l) => a + (l.duration || 0), 0),
+        [timeLogs, task?.id]
+    );
 
-    // Mutations
-    const updateTaskMutation = useMutation({
+    const filteredMentions = useMemo(
+        () => (orgMembers || members || []).filter(
+            (m) => m.user && `${m.user.firstName || ""} ${m.user.lastName || ""}`.toLowerCase().includes(mentionQuery)
+        ),
+        [orgMembers, members, mentionQuery]
+    );
+
+    /* ════════════════════════════════
+       COMMENT TREE
+    ════════════════════════════════ */
+    const commentMap = useMemo(() => {
+        const map = new Map<string | null, Comment[]>();
+        comments?.forEach((c) => {
+            const pid = c.parentId || null;
+            if (!map.has(pid)) map.set(pid, []);
+            map.get(pid)!.push(c);
+        });
+        return map;
+    }, [comments]);
+
+    /* mutations */
+    const updateTask = useMutation({
         mutationFn: async (updates: Partial<Task>) => {
             const res = await apiRequest("PATCH", `/api/tasks/${taskId}`, updates);
-            if (!res.ok) {
-                const errorData = await res.json();
-                throw new Error(errorData.message || "Failed to update task");
-            }
+            if (!res.ok) { const e = await res.json(); throw new Error(e.message || "Failed"); }
             return res.json();
         },
-        onSuccess: (updatedTask: Task) => {
-            // Invalidate the current task query (by slug/param ID)
+        onSuccess: (updated: Task) => {
             queryClient.invalidateQueries({ queryKey: [`/api/tasks/${taskId}`] });
-
-            // Also invalidate by its actual ID to ensure any component using the ID stays in sync
-            if (updatedTask.id !== taskId) {
-                queryClient.invalidateQueries({ queryKey: [`/api/tasks/${updatedTask.id}`] });
-            }
-
-            // Invalidate relevant list queries
+            if (updated.id !== taskId) queryClient.invalidateQueries({ queryKey: [`/api/tasks/${updated.id}`] });
             queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
             queryClient.invalidateQueries({ queryKey: ["/api/tasks/recent"] });
-            if (updatedTask.projectId) {
-                queryClient.invalidateQueries({ queryKey: ["/api/tasks/search", updatedTask.projectId] });
-                queryClient.invalidateQueries({ queryKey: [`/api/projects/${updatedTask.projectId}/tasks`] });
+            if (updated.projectId) {
+                queryClient.invalidateQueries({ queryKey: ["/api/tasks/search", updated.projectId] });
+                queryClient.invalidateQueries({ queryKey: [`/api/projects/${updated.projectId}/tasks`] });
             }
-
             toast({ title: "Task updated" });
         },
-        onError: (error: Error) => {
-            toast({
-                title: "Update failed",
-                description: error.message,
-                variant: "destructive"
-            });
-        }
+        onError: (e: Error) => toast({ title: "Update failed", description: e.message, variant: "destructive" }),
     });
 
-    const createCommentMutation = useMutation({
+    const createComment = useMutation({
         mutationFn: async ({ content, mentions, parentId }: { content: string; mentions: string[]; parentId?: string | null }) => {
             const res = await apiRequest("POST", `/api/tasks/${task?.id}/comments`, { content, mentions, parentId });
             return res.json();
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: [`/api/tasks/${task?.id}/comments`] });
-            setComment("");
-            setReplyTo(null);
+            setComment(""); setReplyTo(null);
             toast({ title: "Comment added" });
         },
     });
 
-    const toggleReactionMutation = useMutation({
+    const toggleReaction = useMutation({
         mutationFn: async ({ commentId, emoji }: { commentId: string; emoji: string }) => {
             const res = await apiRequest("POST", `/api/comments/${commentId}/react`, { emoji });
             return res.json();
         },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: [`/api/tasks/${task?.id}/comments`] });
-        },
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: [`/api/tasks/${task?.id}/comments`] }),
     });
 
-    const handleSendComment = (parentId?: string | null) => {
-        if (!comment.trim() || !task) return;
-        const mentionMatches = comment.match(/@([a-zA-Z]+\s[a-zA-Z]+)/g) || [];
-        const mentions: string[] = [];
-        mentionMatches.forEach(match => {
-            const name = match.substring(1);
-            // Guard m.user before accessing .firstName to avoid crash on deleted-user members
-            const member = (orgMembers || members)?.find(m => m.user && `${m.user.firstName} ${m.user.lastName}` === name);
-            if (member) mentions.push(member.userId);
-        });
-        createCommentMutation.mutate({ content: comment, mentions, parentId: parentId || replyTo });
-    };
-
-    const handleCommentChange = (e: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
-        const val = e.target.value;
-        const target = e.target as HTMLTextAreaElement | HTMLInputElement;
-        const cursorPosition = target.selectionStart || 0;
-        const textBeforeCursor = val.slice(0, cursorPosition);
-        const mentionMatch = textBeforeCursor.match(/@(\w*)$/);
-        setComment(val);
-        if (mentionMatch) {
-            setShowMentions(true);
-            setMentionQuery(mentionMatch[1].toLowerCase());
-            setSelectedMentionIndex(0);
-        } else {
-            setShowMentions(false);
-        }
-    };
-
-    const handleSelectMention = (member: any) => {
-        const lastAtIndex = comment.lastIndexOf("@");
-        const newComment = comment.slice(0, lastAtIndex) + `@${member.user.firstName} ${member.user.lastName} ` + comment.slice(comment.length);
-        setComment(newComment);
-        setShowMentions(false);
-    };
-
-    const filteredMentions = (orgMembers || members)?.filter(m =>
-        m.user && `${m.user.firstName || ''} ${m.user.lastName || ''}`.toLowerCase().includes(mentionQuery)
-    ) || [];
-
-    const deleteTaskMutation = useMutation({
-        mutationFn: async () => {
-            await apiRequest("DELETE", `/api/tasks/${task?.id}`);
-        },
+    const deleteTask = useMutation({
+        mutationFn: async () => { await apiRequest("DELETE", `/api/tasks/${task?.id}`); },
         onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["/api/tasks"] }); // instant update for time-tracking dropdown
+            queryClient.invalidateQueries({ queryKey: ["/api/tasks/search"] });
             toast({ title: "Task deleted" });
             setLocation("/tasks");
         },
     });
 
+    const startTimer = useMutation({
+        mutationFn: async (id: string) => (await apiRequest("POST", "/api/timelogs/start", { taskId: id })).json(),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["/api/timelogs"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/timelogs/active"] });
+            toast({ title: "Timer started" });
+        },
+    });
+
+    const stopTimer = useMutation({
+        mutationFn: async (id: string) => (await apiRequest("POST", "/api/timelogs/stop", { taskId: id })).json(),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["/api/timelogs"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/timelogs/active"] });
+            toast({ title: "Timer stopped" });
+        },
+    });
+
+    /* handlers */
     const handleShare = () => {
         if (!task) return;
         navigator.clipboard.writeText(`${window.location.origin}/tasks/${task.slug || task.id}`);
-        toast({ title: "Link copied to clipboard" });
+        toast({ title: "Link copied!" });
     };
 
+    const handleSendComment = (parentId?: string | null) => {
+        if (!comment.trim() || !task) return;
+        const matches = comment.match(/@([a-zA-Z]+\s[a-zA-Z]+)/g) || [];
+        const mentions: string[] = [];
+        matches.forEach((m) => {
+            const name = m.slice(1);
+            const found = (orgMembers || members)?.find(
+                (mem) => mem.user && `${mem.user.firstName} ${mem.user.lastName}` === name
+            );
+            if (found) mentions.push(found.userId);
+        });
+        createComment.mutate({ content: comment, mentions, parentId: parentId ?? replyTo });
+    };
+
+    const handleCommentInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        const val = e.target.value;
+        const cursor = e.target.selectionStart || 0;
+        const before = val.slice(0, cursor);
+        const mm = before.match(/@(\w*)$/);
+        setComment(val);
+        if (mm) { setShowMentions(true); setMentionQuery(mm[1].toLowerCase()); setMentionIndex(0); }
+        else setShowMentions(false);
+    };
+
+    const handleCommentKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        if (!showMentions) return;
+        if (e.key === "ArrowDown") { e.preventDefault(); setMentionIndex((i) => Math.min(i + 1, filteredMentions.length - 1)); }
+        if (e.key === "ArrowUp") { e.preventDefault(); setMentionIndex((i) => Math.max(i - 1, 0)); }
+        if (e.key === "Enter" && filteredMentions[mentionIndex]) { e.preventDefault(); handleSelectMention(filteredMentions[mentionIndex]); }
+        if (e.key === "Escape") setShowMentions(false);
+    };
+
+    const handleSelectMention = (member: any) => {
+        const lastAt = comment.lastIndexOf("@");
+        setComment(`${comment.slice(0, lastAt)}@${member.user.firstName} ${member.user.lastName} `);
+        setShowMentions(false);
+        commentRef.current?.focus();
+    };
+
+    /* close drawer when viewport becomes desktop */
+    useEffect(() => {
+        const handler = () => { if (window.innerWidth >= 1024) setDrawerOpen(false); };
+        window.addEventListener("resize", handler);
+        return () => window.removeEventListener("resize", handler);
+    }, []);
+
+    /* lock body scroll while drawer open */
+    useEffect(() => {
+        document.body.style.overflow = drawerOpen ? "hidden" : "";
+        return () => { document.body.style.overflow = ""; };
+    }, [drawerOpen]);
+
+    /* ════════════ LOADING ════════════ */
     if (taskLoading) return (
-        <div className="p-8 space-y-4">
-            <Skeleton className="h-10 w-1/3" />
-            <div className="flex gap-8">
-                <Skeleton className="h-[600px] flex-1" />
-                <Skeleton className="h-[600px] w-80" />
+        <div className="w-full overflow-hidden p-4 sm:p-6 space-y-4">
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-10 w-3/4 rounded-xl" />
+            <div className="flex gap-2">
+                <Skeleton className="h-6 w-20 rounded-full" />
+                <Skeleton className="h-6 w-24 rounded-full" />
             </div>
+            <Skeleton className="h-40 rounded-2xl" />
+            <Skeleton className="h-32 rounded-2xl" />
         </div>
     );
-    if (taskError) return (
-        <div className="flex flex-col items-center justify-center h-full p-12 gap-4 text-center bg-background">
-            <div className="h-16 w-16 rounded-2xl bg-destructive/10 flex items-center justify-center">
-                <AlertCircle className="h-8 w-8 text-destructive" />
+
+    /* ════════════ ERROR ════════════ */
+    if (taskError || !task) return (
+        <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 p-6 text-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-destructive/10">
+                <AlertCircle className="h-7 w-7 text-destructive" />
             </div>
-            <h2 className="text-2xl font-bold text-foreground">Failed to load task</h2>
-            <p className="text-muted-foreground max-w-sm">{taskErrorObj instanceof Error ? taskErrorObj.message : "An unexpected error occurred while fetching task details."}</p>
-            <div className="flex gap-3">
-                <Button onClick={() => window.location.reload()} variant="default">Try Again</Button>
-                <Button onClick={() => window.history.back()} variant="outline">Go Back</Button>
+            <div>
+                <h2 className="text-lg font-extrabold">{taskError ? "Failed to load task" : "Task not found"}</h2>
+                <p className="mt-1 text-sm text-muted-foreground max-w-xs mx-auto">
+                    {taskError
+                        ? taskErrorObj instanceof Error ? taskErrorObj.message : "An unexpected error occurred."
+                        : "This task may have been deleted or you don't have access."}
+                </p>
+            </div>
+            <div className="flex flex-wrap justify-center gap-3">
+                {taskError && <Button onClick={() => window.location.reload()}>Try Again</Button>}
+                <Button variant="outline" onClick={() => window.history.back()}>Go Back</Button>
             </div>
         </div>
     );
 
-    if (!task) return (
-        <div className="flex flex-col items-center justify-center h-full p-12 gap-4 text-center bg-background">
-            <div className="h-16 w-16 rounded-2xl bg-destructive/10 flex items-center justify-center">
-                <AlertCircle className="h-8 w-8 text-destructive" />
+    /* ════════════════════════════════
+       PROPERTIES PANEL (sidebar / drawer shared)
+    ════════════════════════════════ */
+    const PropertiesPanel = () => (
+        <div className="space-y-5 pb-8">
+
+            {/* Timer */}
+            <div className="rounded-xl border border-border/60 bg-muted/30 p-3">
+                <div className="mb-3 flex items-center justify-between gap-2">
+                    <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground shrink-0">
+                        <Clock className="h-3 w-3" /> Time Tracking
+                    </span>
+                    <span className={cn("text-xs font-bold tabular-nums truncate", isTracking ? "text-primary" : "text-muted-foreground")}>
+                        {totalTracked > 0 ? formatDurationShort(totalTracked) : "0m"} tracked
+                    </span>
+                </div>
+                <Button
+                    size="sm"
+                    variant={isTracking ? "destructive" : "default"}
+                    className="h-9 w-full gap-2 text-xs font-bold"
+                    onClick={() => isTracking ? stopTimer.mutate(task.id) : startTimer.mutate(task.id)}
+                    disabled={startTimer.isPending || stopTimer.isPending}
+                >
+                    {isTracking
+                        ? <><Square className="h-3.5 w-3.5 shrink-0" />Stop Timer</>
+                        : <><Play className="h-3.5 w-3.5 shrink-0" />Start Timer</>}
+                </Button>
             </div>
-            <h2 className="text-2xl font-bold text-foreground">Task not found</h2>
-            <p className="text-muted-foreground max-w-sm">This task may have been deleted or you don't have access to it.</p>
-            <Button onClick={() => window.history.back()} variant="outline">Go Back</Button>
+
+            <Divider />
+
+            {/* Status */}
+            <div>
+                <FieldLabel>Status</FieldLabel>
+                <Select value={task.status as string} onValueChange={(v) => updateTask.mutate({ status: v as any })}>
+                    <SelectTrigger className="h-9 w-full rounded-xl border-border bg-muted/40 text-xs font-bold">
+                        <div className="flex min-w-0 items-center gap-2">
+                            <ColorDot className={TASK_STATUSES.find((s) => s.id === task.status)?.color} />
+                            <span className="truncate"><SelectValue /></span>
+                        </div>
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl">
+                        {TASK_STATUSES.map((s) => (
+                            <SelectItem key={s.id} value={s.id} className="text-xs font-bold">
+                                <div className="flex items-center gap-2"><ColorDot className={s.color} />{s.label}</div>
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
+
+            {/* Priority */}
+            <div>
+                <FieldLabel>Priority</FieldLabel>
+                <Select value={task.priority as string} onValueChange={(v) => updateTask.mutate({ priority: v as any })}>
+                    <SelectTrigger className="h-9 w-full rounded-xl border-border bg-muted/40 text-xs font-bold">
+                        <div className="flex min-w-0 items-center gap-2">
+                            <ColorDot className={TASK_PRIORITIES.find((p) => p.id === task.priority)?.color} />
+                            <span className="truncate"><SelectValue /></span>
+                        </div>
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl">
+                        {TASK_PRIORITIES.map((p) => (
+                            <SelectItem key={p.id} value={p.id} className="text-xs font-bold">
+                                <div className="flex items-center gap-2"><ColorDot className={p.color} />{p.label}</div>
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
+
+            <Divider />
+
+            {/* People */}
+            {(
+                [
+                    ["assigneeId", "Assignee", "Unassigned"],
+                    ["reviewerId", "Reviewer", "None"],
+                    ["testerId", "Tester", "None"],
+                ] as [keyof Task, string, string][]
+            ).map(([field, label, placeholder]) => {
+                const uid = (task as any)[field] as string | undefined;
+                const u = usersMap.get(uid || "");
+                return (
+                    <div key={field}>
+                        <FieldLabel>{label}</FieldLabel>
+                        <Select
+                            value={uid ? String(uid) : "none"}
+                            onValueChange={(v) => updateTask.mutate({ [field]: v === "none" ? null : v } as any)}
+                        >
+                            <SelectTrigger className="h-9 w-full rounded-xl border-border bg-muted/40 text-xs font-bold">
+                                <div className="flex min-w-0 items-center gap-2">
+                                    <Avatar className="h-5 w-5 shrink-0">
+                                        <AvatarFallback className="bg-primary/10 text-[8px] font-extrabold text-primary">
+                                            {getInitials(u)}
+                                        </AvatarFallback>
+                                    </Avatar>
+                                    <span className="truncate">{u ? `${u.firstName} ${u.lastName}` : placeholder}</span>
+                                </div>
+                            </SelectTrigger>
+                            <SelectContent className="rounded-xl">
+                                <SelectItem value="none" className="text-xs font-bold text-muted-foreground">{placeholder}</SelectItem>
+                                {members?.filter((m) => m.user).map((m) => (
+                                    <SelectItem key={m.user.id} value={String(m.user.id)} className="text-xs font-bold">
+                                        {m.user.firstName} {m.user.lastName}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                );
+            })}
+
+            {/* Role */}
+            <div>
+                <FieldLabel>Role</FieldLabel>
+                <Select
+                    value={task.deliveryRole || "none"}
+                    onValueChange={(v) => updateTask.mutate({ deliveryRole: v === "none" ? null : v as any })}
+                >
+                    <SelectTrigger className="h-9 w-full rounded-xl border-border bg-muted/40 text-xs font-bold">
+                        <span className="truncate"><SelectValue placeholder="None" /></span>
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl">
+                        <SelectItem value="none" className="text-xs font-bold text-muted-foreground">None</SelectItem>
+                        {["Frontend", "Backend", "Fullstack", "Design", "QA", "Product", "DevOps"].map((r) => (
+                            <SelectItem key={r} value={r} className="text-xs font-bold">{r}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
+
+            <Divider />
+
+            {/* Dates */}
+            {(
+                [
+                    ["startDate", "Start Date", "Set start date"],
+                    ["dueDate", "Due Date", "Set due date"],
+                ] as [keyof Task, string, string][]
+            ).map(([field, label, placeholder]) => (
+                <div key={field}>
+                    <FieldLabel>{label}</FieldLabel>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button
+                                variant="ghost"
+                                className="h-9 w-full justify-start rounded-xl bg-muted/40 px-3 text-xs font-bold hover:bg-muted overflow-hidden"
+                            >
+                                <CalendarIcon className="mr-2 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                                <span className="truncate">
+                                    {(task as any)[field]
+                                        ? format(new Date((task as any)[field]), "MMM d, yyyy")
+                                        : <span className="font-normal text-muted-foreground">{placeholder}</span>}
+                                </span>
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto rounded-2xl p-0" align="start">
+                            <Calendar
+                                mode="single"
+                                selected={(task as any)[field] ? new Date((task as any)[field]) : undefined}
+                                onSelect={(d) => updateTask.mutate({ [field]: d ? d.toISOString() : null } as any)}
+                                initialFocus
+                            />
+                        </PopoverContent>
+                    </Popover>
+                </div>
+            ))}
+
+            {/* Milestone */}
+            <div>
+                <FieldLabel>Milestone</FieldLabel>
+                <Select
+                    value={task.milestoneId || "none"}
+                    onValueChange={(v) => updateTask.mutate({ milestoneId: v === "none" ? null : v })}
+                >
+                    <SelectTrigger className="h-9 w-full rounded-xl border-border bg-muted/40 text-xs font-bold">
+                        <div className="flex min-w-0 items-center gap-2">
+                            <Flag className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                            <span className="truncate">{milestoneMeta?.title || "None"}</span>
+                        </div>
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl">
+                        <SelectItem value="none" className="text-xs font-bold text-muted-foreground">None</SelectItem>
+                        {milestones?.map((m) => (
+                            <SelectItem key={m.id} value={m.id} className="text-xs font-bold">{m.title}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
         </div>
     );
 
-    const initials = (u: any) => u ? ((u.firstName?.[0] || "") + (u.lastName?.[0] || "")).toUpperCase() : "?";
+    /* ════════════════════════════════
+       COMMENT TREE
+    ════════════════════════════════ */
 
-    return (
-        <div className="flex flex-col h-full bg-background overflow-hidden text-foreground">
-            {/* Header */}
-            <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-md border-b border-border px-6 py-3 flex items-center justify-between shrink-0">
-                <div className="flex items-center gap-4">
-                    <Button variant="ghost" size="sm" onClick={() => window.history.back()} className="h-8 text-muted-foreground hover:text-foreground font-bold px-2">
-                        <ChevronLeft className="h-4 w-4 mr-1" />
-                    </Button>
-                    <div className="h-4 w-px bg-border" />
-                    <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground">
-                        <span className="hover:text-primary cursor-pointer transition-colors" onClick={() => setLocation(`/projects/${project?.slug || project?.id || projectIdParam}`)}>
-                            {project?.name || (projectIdParam ? projectIdParam.split(/[-_]/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : "Project")}
-                        </span>
-                        <ChevronRight className="h-2.5 w-2.5 opacity-50" />
-                        {parentTask && (
-                            <>
-                                <span className="hover:text-primary cursor-pointer transition-colors" onClick={() => setLocation(`/projects/${project?.slug || project?.id || projectIdParam}/${parentTask.slug || parentTask.id}`)}>{parentTask.title}</span>
-                                <ChevronRight className="h-2.5 w-2.5 opacity-50" />
-                            </>
+    const renderComments = (parentId: string | null = null, depth = 0): React.ReactNode =>
+        commentMap.get(parentId)?.map((c) => (
+            <div
+                key={c.id}
+                className={cn(
+                    "flex flex-col gap-2",
+                    depth > 0 && "ml-4 border-l border-border/40 pl-3 sm:ml-6 sm:pl-4"
+                )}
+            >
+                <div className="group flex gap-2.5 sm:gap-3">
+                    {/* Avatar */}
+                    <Avatar className={cn(
+                        "shrink-0 ring-2 ring-background",
+                        depth === 0 ? "h-8 w-8 sm:h-9 sm:w-9" : "h-7 w-7"
+                    )}>
+                        <AvatarFallback className="bg-muted text-[9px] font-bold text-muted-foreground">
+                            {getInitials(usersMap.get(c.authorId))}
+                        </AvatarFallback>
+                    </Avatar>
+
+                    {/* Bubble — KEY FIX: min-w-0 + overflow-hidden so text wraps instead of pushing layout */}
+                    <div className="min-w-0 flex-1 overflow-hidden space-y-1">
+                        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                            <span className="text-xs font-bold text-foreground sm:text-sm">
+                                {usersMap.get(c.authorId)
+                                    ? `${usersMap.get(c.authorId).firstName} ${usersMap.get(c.authorId).lastName}`
+                                    : "System User"}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                                {c.createdAt ? format(new Date(c.createdAt), "MMM d · h:mm a") : ""}
+                            </span>
+                        </div>
+
+                        {/* Content card */}
+                        <div className="w-full rounded-2xl rounded-tl-none border border-border bg-card p-3 text-xs leading-relaxed text-foreground/80 shadow-sm sm:p-4 sm:text-sm break-words overflow-hidden">
+                            {c.content}
+
+                            {/* Reactions */}
+                            {c.reactions && c.reactions.length > 0 && (
+                                <div className="mt-2.5 flex flex-wrap gap-1">
+                                    {Object.entries(
+                                        c.reactions.reduce((acc: Record<string, number>, r: string) => {
+                                            const [emoji] = r.split(":");
+                                            acc[emoji] = (acc[emoji] || 0) + 1;
+                                            return acc;
+                                        }, {})
+                                    ).map(([emoji, count]) => {
+                                        const mine = c.reactions?.some((r) => r === `${emoji}:${me?.id}`);
+                                        return (
+                                            <button
+                                                key={emoji}
+                                                onClick={() => toggleReaction.mutate({ commentId: c.id, emoji })}
+                                                className={cn(
+                                                    "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold transition-all active:scale-95",
+                                                    mine
+                                                        ? "border-primary/20 bg-primary/10 text-primary"
+                                                        : "border-border bg-muted/50 text-muted-foreground hover:border-primary/20"
+                                                )}
+                                            >
+                                                <span>{emoji}</span><span>{count as number}</span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={() => setReplyTo(replyTo === c.id ? null : c.id)}
+                                className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground transition-colors hover:text-primary"
+                            >
+                                {replyTo === c.id ? "Cancel" : "Reply"}
+                            </button>
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <button className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground transition-all hover:text-primary opacity-0 group-hover:opacity-100 focus:opacity-100">
+                                        React
+                                    </button>
+                                </PopoverTrigger>
+                                <PopoverContent
+                                    className="flex w-auto gap-1 rounded-full border-border bg-background/95 p-1 shadow-lg backdrop-blur-sm"
+                                    align="start"
+                                >
+                                    {["👍", "❤️", "🔥", "😂", "😮", "🚀"].map((emoji) => (
+                                        <button
+                                            key={emoji}
+                                            onClick={() => toggleReaction.mutate({ commentId: c.id, emoji })}
+                                            className="flex h-8 w-8 items-center justify-center rounded-full text-lg transition-all hover:scale-125 hover:bg-muted active:scale-95"
+                                        >
+                                            {emoji}
+                                        </button>
+                                    ))}
+                                </PopoverContent>
+                            </Popover>
+                        </div>
+
+                        {/* Inline reply */}
+                        {replyTo === c.id && (
+                            <div className="mt-2 flex items-start gap-2">
+                                <Avatar className="mt-0.5 h-7 w-7 shrink-0">
+                                    <AvatarFallback className="bg-primary/10 text-[8px] font-extrabold text-primary">
+                                        {getInitials(me)}
+                                    </AvatarFallback>
+                                </Avatar>
+                                <div className="flex min-w-0 flex-1 gap-2">
+                                    <Input
+                                        value={comment}
+                                        onChange={(e) => setComment(e.target.value)}
+                                        placeholder={`Reply to ${usersMap.get(c.authorId)?.firstName || "user"}…`}
+                                        className="h-9 min-w-0 flex-1 rounded-xl bg-muted/40 text-xs"
+                                        autoFocus
+                                        onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) handleSendComment(c.id); }}
+                                    />
+                                    <Button
+                                        size="sm"
+                                        className="h-9 shrink-0 rounded-xl px-3"
+                                        disabled={!comment.trim() || createComment.isPending}
+                                        onClick={() => handleSendComment(c.id)}
+                                    >
+                                        <Send className="h-3.5 w-3.5" />
+                                    </Button>
+                                </div>
+                            </div>
                         )}
-                        <span className="text-foreground truncate max-w-[200px]">{task.title}</span>
                     </div>
                 </div>
-                <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={handleShare} className="h-8 rounded-lg border-border text-foreground font-bold gap-2 hover:bg-accent">
-                        <Share2 className="h-3.5 w-3.5 text-muted-foreground" /> Share
+
+                {/* Nested replies */}
+                {renderComments(c.id, depth + 1)}
+            </div>
+        ));
+
+    /* ════════════════════════════════
+       FULL RENDER
+    ════════════════════════════════ */
+    return (
+        /*
+          ROOT: full height, no overflow-x.
+          overflow-x:hidden on the root prevents ANY child from
+          creating horizontal scroll on the page.
+        */
+        <div className="flex h-full flex-col overflow-hidden bg-background text-foreground">
+
+            {/* ══════════ HEADER ══════════ */}
+            <header className="sticky top-0 z-30 flex shrink-0 items-center justify-between gap-2 border-b border-border bg-background/90 backdrop-blur-md
+        px-3 py-2.5
+        sm:px-4 sm:py-3
+        md:px-6
+        lg:px-8">
+
+                {/* Left: back + breadcrumb */}
+                <div className="flex min-w-0 items-center gap-1.5">
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => window.history.back()}
+                        className="h-8 w-8 shrink-0 rounded-lg p-0 font-bold text-muted-foreground hover:text-foreground sm:w-auto sm:px-3"
+                    >
+                        <ChevronLeft className="h-4 w-4 sm:mr-1" />
+                        <span className="hidden sm:inline text-xs">Back</span>
                     </Button>
+
+                    <span className="h-4 w-px shrink-0 bg-border" />
+
+                    {/* Breadcrumb — each segment truncates independently */}
+                    <nav className="flex min-w-0 items-center gap-0.5 text-[10px] font-bold sm:text-xs" aria-label="Breadcrumb">
+                        <button
+                            className="max-w-[60px] truncate text-muted-foreground transition-colors hover:text-primary sm:max-w-[100px] md:max-w-[150px]"
+                            onClick={() => setLocation(`/projects/${project?.slug || project?.id || projectIdParam}`)}
+                        >
+                            {project?.name || "Project"}
+                        </button>
+
+                        {parentTask && (
+                            <>
+                                <ChevronRight className="h-2.5 w-2.5 shrink-0 opacity-40" />
+                                <button
+                                    className="hidden max-w-[70px] truncate text-muted-foreground transition-colors hover:text-primary sm:block md:max-w-[120px]"
+                                    onClick={() => setLocation(`/projects/${project?.slug || project?.id || projectIdParam}/${parentTask.slug || parentTask.id}`)}
+                                >
+                                    {parentTask.title}
+                                </button>
+                                <ChevronRight className="hidden h-2.5 w-2.5 shrink-0 opacity-40 sm:block" />
+                            </>
+                        )}
+
+                        <ChevronRight className="h-2.5 w-2.5 shrink-0 opacity-40" />
+                        {/* Current task title in breadcrumb — longest but still truncated */}
+                        <span className="max-w-[90px] truncate text-foreground sm:max-w-[180px] md:max-w-[260px] lg:max-w-[380px]">
+                            {task.title}
+                        </span>
+                    </nav>
+                </div>
+
+                {/* Right: actions */}
+                <div className="flex shrink-0 items-center gap-1">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleShare}
+                        className="h-8 gap-1.5 rounded-lg border-border px-2 font-bold hover:bg-accent sm:px-3"
+                    >
+                        <Share2 className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="hidden sm:inline text-xs">Share</span>
+                    </Button>
+
+                    {/* Properties drawer toggle — hidden on lg+ */}
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 shrink-0 rounded-lg p-0 text-muted-foreground hover:text-foreground lg:hidden"
+                        onClick={() => setDrawerOpen(true)}
+                        aria-label="Open task properties"
+                    >
+                        <SlidersHorizontal className="h-4 w-4" />
+                    </Button>
+
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
+                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground">
                                 <MoreVertical className="h-4 w-4" />
                             </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48 rounded-xl border-border shadow-elevation">
-                            <DropdownMenuItem onClick={() => navigator.clipboard.writeText(task.id)} className="font-bold text-xs text-slate-600">
-                                <Copy className="h-3.5 w-3.5 mr-2 opacity-50" /> Copy ID
+                        <DropdownMenuContent align="end" className="w-44 rounded-xl shadow-lg">
+                            <DropdownMenuItem
+                                className="gap-2 text-xs font-bold"
+                                onClick={() => navigator.clipboard.writeText(task.id)}
+                            >
+                                <Copy className="h-3.5 w-3.5 opacity-50" /> Copy task ID
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-red-600 focus:text-red-600 font-bold text-xs" onClick={() => confirm("Delete this task?") && deleteTaskMutation.mutate()}>
-                                <Trash className="h-3.5 w-3.5 mr-2 opacity-50" /> Delete
+                            <DropdownMenuItem
+                                className="gap-2 text-xs font-bold text-destructive focus:text-destructive"
+                                onClick={() => confirm("Delete this task?") && deleteTask.mutate()}
+                            >
+                                <Trash className="h-3.5 w-3.5 opacity-50" /> Delete task
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </div>
             </header>
 
-            <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-                {/* Main Content Area */}
-                <ScrollArea className="flex-1 bg-background">
-                    <div className="p-6 sm:p-10 max-w-4xl mx-auto space-y-10 animate-fade-in">
-                        {/* Title & Badges */}
-                        <div className="space-y-6">
-                            {isEditingTitle ? (
-                                <Input
-                                    value={title}
-                                    onChange={(e) => setTitle(e.target.value)}
-                                    onBlur={() => { updateTaskMutation.mutate({ title }); setIsEditingTitle(false); }}
-                                    onKeyDown={(e) => e.key === "Enter" && (updateTaskMutation.mutate({ title }), setIsEditingTitle(false))}
-                                    className="text-4xl font-extrabold h-auto py-3 bg-muted/50 border-primary/20 focus:ring-4 focus:ring-primary/10 rounded-xl"
-                                    autoFocus
-                                />
-                            ) : (
-                                <h1
-                                    className="text-4xl font-extrabold text-foreground tracking-tight leading-tight hover:bg-muted/50 rounded-xl px-2 -mx-2 cursor-pointer transition-all underline-offset-8"
-                                    onClick={() => setIsEditingTitle(true)}
-                                >
-                                    {task.title}
-                                </h1>
-                            )}
+            {/* ══════════ BODY ══════════ */}
+            <div className="relative flex min-h-0 flex-1 overflow-hidden">
 
-                            <div className="flex flex-wrap items-center gap-2 mb-8 animate-fade-up" style={{ animationDelay: '100ms' }}>
-                                <Badge variant="outline" className={cn("flex items-center gap-1.5 px-3 py-1.5 rounded-full border-border bg-card/50 backdrop-blur-sm shadow-sm transition-all", status?.color?.replace("bg-", "text-"))}>
-                                    <div className={cn("h-2 w-2 rounded-full", status?.color)} />
-                                    <span className="text-xs font-bold tracking-tight uppercase leading-none">{status?.label || task.status}</span>
-                                </Badge>
-                                <Badge variant="outline" className={cn("flex items-center gap-1.5 px-3 py-1.5 rounded-full border-border bg-card/50 backdrop-blur-sm shadow-sm transition-all", priority?.color?.replace("bg-", "text-"))}>
-                                    <div className={cn("h-2 w-2 rounded-full", priority?.color)} />
-                                    <span className="text-xs font-bold tracking-tight uppercase leading-none">{priority?.label}</span>
-                                </Badge>
-                                {task.deliveryRole && (
-                                    <Badge variant="outline" className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border-border bg-card text-muted-foreground text-xs font-bold tracking-tight uppercase leading-none shadow-sm">
-                                        {task.deliveryRole}
-                                    </Badge>
-                                )}
-                                {milestone && (
-                                    <Badge variant="outline" className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs font-bold tracking-tight uppercase leading-none shadow-sm">
-                                        {milestone.title}
-                                    </Badge>
-                                )}
-                            </div>
-                        </div>
+                {/*
+          ScrollArea wraps the two-column layout.
+          overflow-x is handled by the parent; this only scrolls vertically.
+        */}
+                <ScrollArea className="h-full w-full">
+                    <div className="flex min-h-full w-full flex-col lg:flex-row">
 
-                        {/* Description Section */}
-                        <section className="space-y-4">
-                            <h3 className="text-xs font-extrabold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                                <Layout className="h-3.5 w-3.5" /> Description
-                            </h3>
-                            <Textarea
-                                placeholder="Write something about this task..."
-                                className="min-h-[160px] text-foreground leading-relaxed bg-muted/50 border-none focus:ring-0 resize-none rounded-2xl p-6 text-base"
-                                defaultValue={task.description || ""}
-                                onBlur={(e) => e.target.value !== (task.description || "") && updateTaskMutation.mutate({ description: e.target.value })}
-                            />
-                        </section>
+                        {/* ── MAIN CONTENT ── */}
+                        <main
+                            className="
+                /* CRITICAL: w-full + min-w-0 + overflow-hidden prevents content
+                   from ever being wider than the viewport on mobile */
+                w-full min-w-0 overflow-hidden
+                flex-1
+                space-y-6
+                px-3 py-4
+                sm:px-5 sm:py-6
+                md:px-8 md:py-8
+                lg:px-10 lg:py-10
+                xl:px-12
+              "
+                        >
+                            {/* Inner width cap — left-aligned on desktop */}
+                            <div className="w-full max-w-full space-y-7 lg:max-w-[720px] xl:max-w-[800px]">
 
-                        {/* Subtasks Section */}
-                        <section className="space-y-4">
-                            <div className="flex items-center justify-between">
-                                <h3 className="text-xs font-extrabold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                                    <ListTodo className="h-3.5 w-3.5" /> Subtasks
-                                </h3>
-                                <Button size="sm" variant="ghost" onClick={() => setShowCreateSubtask(true)} className="h-8 text-primary font-bold hover:bg-primary/10">
-                                    <Plus className="h-3.5 w-3.5 mr-1" /> Add
-                                </Button>
-                            </div>
+                                {/* ── Title ── */}
+                                <div className="space-y-3">
+                                    {isEditingTitle ? (
+                                        <Input
+                                            value={editTitle}
+                                            onChange={(e) => setEditTitle(e.target.value)}
+                                            onBlur={() => { updateTask.mutate({ title: editTitle }); setIsEditingTitle(false); }}
+                                            onKeyDown={(e) => {
+                                                if (e.key === "Enter") { updateTask.mutate({ title: editTitle }); setIsEditingTitle(false); }
+                                                if (e.key === "Escape") { setEditTitle(task.title); setIsEditingTitle(false); }
+                                            }}
+                                            /* w-full so it never overflows */
+                                            className="h-auto w-full rounded-xl py-2 text-xl font-extrabold leading-tight tracking-tight sm:text-2xl md:text-3xl"
+                                            autoFocus
+                                        />
+                                    ) : (
+                                        <h1
+                                            /*
+                                              break-words: long single words wrap instead of overflowing.
+                                              overflow-hidden: belt-and-suspenders guard.
+                                              w-full: never wider than container.
+                                            */
+                                            className="w-full cursor-pointer break-words overflow-hidden rounded-xl px-1.5 py-1 -mx-1.5 text-xl font-extrabold leading-tight tracking-tight text-foreground transition-colors hover:bg-muted/50 sm:text-2xl md:text-3xl"
+                                            onClick={() => setIsEditingTitle(true)}
+                                            title="Click to edit"
+                                        >
+                                            {task.title}
+                                        </h1>
+                                    )}
 
-                            <div className="bg-muted/50 rounded-2xl p-1 border border-border">
-                                {subtasks?.tasks?.length ? (
-                                    <div className="space-y-1">
-                                        {subtasks.tasks.map(s => (
-                                            <div key={s.id} onClick={() => setLocation(`/projects/${project?.slug || project?.id || projectIdParam}/${task.slug || task.id}/${s.slug || s.id}`)} className="flex items-center justify-between p-3 rounded-xl hover:bg-card hover:shadow-sm cursor-pointer transition-all group">
-                                                <div className="flex items-center gap-3">
-                                                    <div className={cn("w-2 h-2 rounded-full", TASK_STATUSES.find(st => st.id === s.status)?.color || "bg-muted")} />
-                                                    <span className="text-sm font-semibold text-foreground group-hover:text-primary">{s.title}</span>
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{TASK_PRIORITIES.find(p => p.id === s.priority)?.label}</span>
-                                                    {s.assigneeId && (
-                                                        <Avatar className="h-6 w-6 border-2 border-background shadow-sm">
-                                                            <AvatarFallback className="text-[8px] bg-primary/10 text-primary font-bold">{initials(usersMap.get(s.assigneeId))}</AvatarFallback>
-                                                        </Avatar>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <div className="py-10 text-center text-muted-foreground text-sm font-medium">No subtasks created for this task.</div>
-                                )}
-                            </div>
-                        </section>
-
-                        <div className="h-px bg-border" />
-                        <TaskAttachments taskId={task.id!} />
-                        <div className="h-px bg-border" />
-
-                        {/* Comments / Activity feed */}
-                        <section className="space-y-6 pt-6 animate-fade-up">
-                            <div className="flex items-center gap-2 px-1">
-                                <h3 className="text-xs font-extrabold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                                    <Clock className="h-3.5 w-3.5 opacity-50" /> Activity Feed
-                                </h3>
-                                <div className="h-px flex-1 bg-muted/50" />
-                            </div>
-
-                            <div className="space-y-6 relative before:absolute before:left-[19px] before:top-2 before:bottom-2 before:w-px before:bg-muted">
-                                {(() => {
-                                    const commentMap = new Map<string | null, Comment[]>();
-                                    comments?.forEach(c => {
-                                        const pid = c.parentId || null;
-                                        if (!commentMap.has(pid)) commentMap.set(pid, []);
-                                        commentMap.get(pid)!.push(c);
-                                    });
-
-                                    const renderComments = (parentId: string | null = null, depth = 0) => {
-                                        return commentMap.get(parentId)?.map((c) => (
-                                            <div key={c.id} className={cn("flex flex-col gap-2", depth > 0 && "ml-10")}>
-                                                <div className="flex gap-4 group relative">
-                                                    <div className="relative z-10 shrink-0">
-                                                        <Avatar className={cn("ring-4 ring-background shadow-premium", depth === 0 ? "h-10 w-10" : "h-8 w-8")}>
-                                                            <AvatarFallback className="bg-muted text-muted-foreground font-bold text-[10px]">{initials(usersMap.get(c.authorId))}</AvatarFallback>
-                                                        </Avatar>
-                                                    </div>
-                                                    <div className="flex-1 space-y-1.5 min-w-0">
-                                                        <div className="flex items-center gap-2 px-0.5">
-                                                            <span className="text-sm font-bold text-foreground truncate">
-                                                                {usersMap.get(c.authorId) ? `${usersMap.get(c.authorId).firstName} ${usersMap.get(c.authorId).lastName}` : "System User"}
-                                                            </span>
-                                                            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-tighter">
-                                                                {c.createdAt ? format(new Date(c.createdAt), "h:mm a") : ""}
-                                                            </span>
-                                                        </div>
-                                                        <div className="bg-card p-4 rounded-2xl rounded-tl-none text-sm text-foreground/80 leading-relaxed border border-border shadow-sm transition-all group-hover:shadow-md group-hover:border-border/80">
-                                                            {c.content}
-
-                                                            {/* Reactions */}
-                                                            {c.reactions && c.reactions.length > 0 && (
-                                                                <div className="flex flex-wrap gap-1 mt-3">
-                                                                    {Object.entries(
-                                                                        c.reactions.reduce((acc: any, r: string) => {
-                                                                            const [emoji] = r.split(':');
-                                                                            acc[emoji] = (acc[emoji] || 0) + 1;
-                                                                            return acc;
-                                                                        }, {})
-                                                                    ).map(([emoji, count]: [string, any]) => {
-                                                                        const hasReacted = c.reactions?.some(r => r === `${emoji}:${currentUser?.id}`);
-                                                                        return (
-                                                                            <button
-                                                                                key={emoji}
-                                                                                onClick={() => toggleReactionMutation.mutate({ commentId: c.id, emoji })}
-                                                                                className={cn(
-                                                                                    "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border transition-all",
-                                                                                    hasReacted
-                                                                                        ? "bg-primary/10 border-primary/20 text-primary shadow-sm"
-                                                                                        : "bg-muted/50 border-border text-muted-foreground hover:border-primary/20"
-                                                                                )}
-                                                                            >
-                                                                                <span>{emoji}</span>
-                                                                                <span>{count}</span>
-                                                                            </button>
-                                                                        );
-                                                                    })}
-                                                                </div>
-                                                            )}
-                                                        </div>
-
-                                                        {/* Actions */}
-                                                        <div className="flex items-center gap-3 px-1">
-                                                            <button
-                                                                onClick={() => setReplyTo(replyTo === c.id ? null : c.id)}
-                                                                className="text-[10px] font-extrabold text-muted-foreground hover:text-primary uppercase tracking-wider transition-colors"
-                                                            >
-                                                                Reply
-                                                            </button>
-
-                                                            <Popover>
-                                                                <PopoverTrigger asChild>
-                                                                    <button className="text-[10px] font-extrabold text-muted-foreground hover:text-primary uppercase tracking-wider transition-colors opacity-0 group-hover:opacity-100">
-                                                                        React
-                                                                    </button>
-                                                                </PopoverTrigger>
-                                                                <PopoverContent className="w-auto p-1 rounded-full border-border shadow-premium flex gap-1 bg-background/95 backdrop-blur-sm" align="start">
-                                                                    {['👍', '❤️', '🔥', '😂', '😮', '🚀'].map(emoji => (
-                                                                        <button
-                                                                            key={emoji}
-                                                                            onClick={() => toggleReactionMutation.mutate({ commentId: c.id, emoji })}
-                                                                            className="h-8 w-8 flex items-center justify-center hover:bg-muted rounded-full transition-all text-lg hover:scale-125"
-                                                                        >
-                                                                            {emoji}
-                                                                        </button>
-                                                                    ))}
-                                                                </PopoverContent>
-                                                            </Popover>
-                                                        </div>
-
-                                                        {/* Inline Reply Form */}
-                                                        {replyTo === c.id && (
-                                                            <div className="mt-4 flex gap-3 animate-slide-down">
-                                                                <Avatar className="h-8 w-8 shadow-sm ring-1 ring-background">
-                                                                    <AvatarFallback className="bg-primary/10 text-primary font-bold text-[10px]">{initials(currentUser)}</AvatarFallback>
-                                                                </Avatar>
-                                                                <div className="flex-1 flex gap-2">
-                                                                    <Input
-                                                                        value={comment}
-                                                                        onChange={handleCommentChange}
-                                                                        placeholder={`Reply to ${usersMap.get(c.authorId)?.firstName}...`}
-                                                                        className="h-9 bg-muted/30 border-border text-xs rounded-xl focus:ring-2 focus:ring-primary/20"
-                                                                        autoFocus
-                                                                    />
-                                                                    <Button
-                                                                        size="sm"
-                                                                        disabled={!comment.trim() || createCommentMutation.isPending}
-                                                                        onClick={() => handleSendComment(c.id)}
-                                                                        className="h-9 rounded-xl px-4"
-                                                                    >
-                                                                        <Send className="h-3.5 w-3.5" />
-                                                                    </Button>
-                                                                    <Button
-                                                                        variant="ghost"
-                                                                        size="sm"
-                                                                        onClick={() => setReplyTo(null)}
-                                                                        className="h-9 rounded-xl text-xs font-bold"
-                                                                    >
-                                                                        Cancel
-                                                                    </Button>
-                                                                </div>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                                {renderComments(c.id, depth + 1)}
-                                            </div>
-                                        ));
-                                    };
-
-                                    return renderComments();
-                                })()}
-
-                                <div className="flex gap-4 pt-4 sticky bottom-0 bg-background/95 backdrop-blur-sm py-4 border-t border-border">
-                                    <div className="shrink-0">
-                                        <Avatar className="h-10 w-10 shadow-premium ring-2 ring-background">
-                                            <AvatarFallback className="bg-primary text-primary-foreground font-extrabold text-xs">{initials(currentUser)}</AvatarFallback>
-                                        </Avatar>
-                                    </div>
-                                    <div className="flex-1 flex flex-col gap-2 relative min-w-0">
-                                        {showMentions && filteredMentions.length > 0 && (
-                                            <div className="absolute bottom-full left-0 w-64 bg-card/90 backdrop-blur-xl border border-white/20 rounded-2xl shadow-premium mb-2 overflow-hidden z-50 animate-pop-in border-border/50">
-                                                <div className="p-3 bg-muted/50 border-b border-border text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest">Mention member</div>
-                                                <ScrollArea className="max-h-48 p-1">
-                                                    {filteredMentions.map((m, i) => (
-                                                        <button key={m.userId} onClick={() => handleSelectMention(m)} className={cn("w-full flex items-center gap-2 p-2 rounded-xl text-sm font-bold text-foreground hover:bg-primary hover:text-white transition-all", selectedMentionIndex === i && "bg-primary text-white")}>
-                                                            <Avatar className="h-6 w-6 ring-1 ring-white/20"><AvatarFallback className="text-[8px] font-extrabold">{initials(m.user)}</AvatarFallback></Avatar>
-                                                            {m.user.firstName} {m.user.lastName}
-                                                        </button>
-                                                    ))}
-                                                </ScrollArea>
-                                            </div>
+                                    {/* Badges — wrap freely, never overflow */}
+                                    <div className="flex flex-wrap items-center gap-1.5">
+                                        {statusMeta && (
+                                            <Badge variant="outline" className={cn("gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-tight sm:text-xs", statusMeta.color?.replace("bg-", "text-"))}>
+                                                <ColorDot className={cn("h-1.5 w-1.5", statusMeta.color)} />
+                                                {statusMeta.label}
+                                            </Badge>
                                         )}
-                                        <div className="flex gap-2">
-                                            <Textarea value={comment} onChange={handleCommentChange} placeholder="Write a comment... Use @ to mention" className="min-h-[100px] bg-muted/50 border-border focus:bg-background focus:border-primary/20 focus:ring-4 focus:ring-primary/10 rounded-2xl p-4 text-sm resize-none transition-all" />
-                                            <Button disabled={!comment.trim() || createCommentMutation.isPending} onClick={() => handleSendComment()} className="h-[100px] w-14 bg-primary hover:bg-primary/90 text-primary-foreground rounded-2xl flex items-center justify-center shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95">
-                                                <Send className="h-5 w-5" />
-                                            </Button>
-                                        </div>
+                                        {priorityMeta && (
+                                            <Badge variant="outline" className={cn("gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-tight sm:text-xs", priorityMeta.color?.replace("bg-", "text-"))}>
+                                                <ColorDot className={cn("h-1.5 w-1.5", priorityMeta.color)} />
+                                                {priorityMeta.label}
+                                            </Badge>
+                                        )}
+                                        {task.deliveryRole && (
+                                            <Badge variant="outline" className="rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-tight text-muted-foreground sm:text-xs">
+                                                {task.deliveryRole}
+                                            </Badge>
+                                        )}
+                                        {milestoneMeta && (
+                                            <Badge className="gap-1 rounded-full border border-blue-500/20 bg-blue-500/10 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-tight text-blue-600 dark:text-blue-400 sm:text-xs">
+                                                <Flag className="h-2.5 w-2.5 shrink-0" />
+                                                <span className="truncate max-w-[120px]">{milestoneMeta.title}</span>
+                                            </Badge>
+                                        )}
                                     </div>
                                 </div>
+
+                                {/* ── Description ── */}
+                                <section className="space-y-2.5">
+                                    <SectionHeader icon={<Layout className="h-3.5 w-3.5" />} label="Description" />
+                                    {/* w-full prevents textarea from breaking layout */}
+                                    <Textarea
+                                        placeholder="Add a description…"
+                                        defaultValue={task.description || ""}
+                                        onBlur={(e) =>
+                                            e.target.value !== (task.description || "") &&
+                                            updateTask.mutate({ description: e.target.value })
+                                        }
+                                        className="w-full min-h-[120px] resize-none rounded-2xl border-none bg-muted/40 p-4 text-xs leading-relaxed focus:ring-0 sm:min-h-[140px] sm:text-sm"
+                                    />
+                                </section>
+
+                                {/* ── Subtasks ── */}
+                                <section className="space-y-2.5">
+                                    <div className="flex items-center justify-between gap-2">
+                                        <SectionHeader icon={<ListTodo className="h-3.5 w-3.5" />} label="Subtasks" />
+                                        <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            onClick={() => setShowCreateSubtask(true)}
+                                            className="h-7 shrink-0 gap-1 rounded-lg px-2 text-xs font-bold text-primary hover:bg-primary/10"
+                                        >
+                                            <Plus className="h-3.5 w-3.5" />
+                                            <span>Add</span>
+                                        </Button>
+                                    </div>
+
+                                    {/* overflow-hidden prevents subtask rows from poking out */}
+                                    <div className="w-full overflow-hidden rounded-2xl border border-border bg-muted/30">
+                                        {subtasks?.tasks?.length ? (
+                                            <div className="divide-y divide-border">
+                                                {subtasks.tasks.map((s) => (
+                                                    <div
+                                                        key={s.id}
+                                                        onClick={() =>
+                                                            setLocation(
+                                                                `/projects/${project?.slug || project?.id || projectIdParam}/${task.slug || task.id}/${s.slug || s.id}`
+                                                            )
+                                                        }
+                                                        className="group flex cursor-pointer items-center justify-between gap-2 p-3 transition-colors hover:bg-card"
+                                                    >
+                                                        <div className="flex min-w-0 items-center gap-2.5">
+                                                            <ColorDot className={cn("h-2 w-2 shrink-0", TASK_STATUSES.find((st) => st.id === s.status)?.color || "bg-muted")} />
+                                                            {/* truncate prevents long titles from overflowing */}
+                                                            <span className="truncate text-xs font-semibold text-foreground transition-colors group-hover:text-primary sm:text-sm">
+                                                                {s.title}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex shrink-0 items-center gap-2">
+                                                            <span className="hidden text-[10px] font-bold uppercase tracking-wide text-muted-foreground sm:block">
+                                                                {TASK_PRIORITIES.find((p) => p.id === s.priority)?.label}
+                                                            </span>
+                                                            {s.assigneeId && (
+                                                                <Avatar className="h-6 w-6 shrink-0 border-2 border-background shadow-sm">
+                                                                    <AvatarFallback className="bg-primary/10 text-[8px] font-extrabold text-primary">
+                                                                        {getInitials(usersMap.get(s.assigneeId))}
+                                                                    </AvatarFallback>
+                                                                </Avatar>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="flex flex-col items-center gap-2 py-8 text-center text-muted-foreground">
+                                                <CheckCircle2 className="h-8 w-8 opacity-20" />
+                                                <p className="text-xs font-medium sm:text-sm">No subtasks yet</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </section>
+
+                                {/* ── Attachments ── */}
+                                <Divider />
+                                {/* overflow-hidden guards TaskAttachments internals from breaking layout */}
+                                <div className="w-full overflow-hidden">
+                                    <TaskAttachments taskId={task.id!} />
+                                </div>
+                                <Divider />
+
+                                {/* ── Activity / Comments ── */}
+                                <section className="space-y-4 pb-4">
+                                    <SectionHeader icon={<Clock className="h-3.5 w-3.5 opacity-60" />} label="Activity" />
+
+                                    <div className="w-full space-y-4 overflow-hidden">
+                                        {comments && comments.length > 0
+                                            ? renderComments()
+                                            : (
+                                                <p className="py-6 text-center text-xs text-muted-foreground sm:text-sm">
+                                                    No comments yet. Start the conversation!
+                                                </p>
+                                            )
+                                        }
+                                    </div>
+
+                                    {/* Comment composer */}
+                                    <div className="sticky bottom-0 border-t border-border bg-background/95 pt-3 pb-2 backdrop-blur-sm sm:pt-4">
+                                        <div className="flex w-full gap-2 sm:gap-3">
+                                            {/* Avatar hidden on very small screens to save space */}
+                                            <Avatar className="mt-0.5 hidden shrink-0 ring-2 ring-background sm:flex h-9 w-9">
+                                                <AvatarFallback className="bg-primary text-[9px] font-extrabold text-primary-foreground">
+                                                    {getInitials(me)}
+                                                </AvatarFallback>
+                                            </Avatar>
+
+                                            {/* Input wrapper — relative for mention dropdown positioning */}
+                                            <div className="relative min-w-0 flex-1">
+                                                {/* Mention dropdown */}
+                                                {showMentions && filteredMentions.length > 0 && (
+                                                    <div className="absolute bottom-full left-0 z-50 mb-2 w-52 overflow-hidden rounded-2xl border border-border bg-card shadow-xl sm:w-64">
+                                                        <div className="border-b border-border bg-muted/50 px-3 py-2 text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground">
+                                                            Mention
+                                                        </div>
+                                                        <div className="max-h-36 overflow-y-auto p-1">
+                                                            {filteredMentions.map((m, i) => (
+                                                                <button
+                                                                    key={m.userId}
+                                                                    onClick={() => handleSelectMention(m)}
+                                                                    className={cn(
+                                                                        "flex w-full items-center gap-2 rounded-xl p-2 text-left text-xs font-bold transition-colors",
+                                                                        mentionIndex === i
+                                                                            ? "bg-primary text-primary-foreground"
+                                                                            : "text-foreground hover:bg-primary hover:text-primary-foreground"
+                                                                    )}
+                                                                >
+                                                                    <Avatar className="h-6 w-6 shrink-0">
+                                                                        <AvatarFallback className="text-[8px] font-extrabold">{getInitials(m.user)}</AvatarFallback>
+                                                                    </Avatar>
+                                                                    <span className="truncate">{m.user.firstName} {m.user.lastName}</span>
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                <div className="flex w-full gap-2">
+                                                    <Textarea
+                                                        ref={commentRef}
+                                                        value={comment}
+                                                        onChange={handleCommentInput}
+                                                        onKeyDown={handleCommentKeyDown}
+                                                        placeholder="Write a comment… Use @ to mention"
+                                                        className="min-h-[76px] flex-1 resize-none rounded-2xl border-border bg-muted/40 p-3 text-xs leading-relaxed transition-all focus:bg-background focus:ring-2 focus:ring-primary/20 sm:min-h-[96px] sm:p-4 sm:text-sm"
+                                                    />
+                                                    <Button
+                                                        disabled={!comment.trim() || createComment.isPending}
+                                                        onClick={() => handleSendComment()}
+                                                        className="w-10 shrink-0 self-stretch rounded-2xl bg-primary transition-all hover:bg-primary/90 active:scale-95 sm:w-12"
+                                                    >
+                                                        <Send className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </section>
+
+                            </div>{/* /inner max-width */}
+                        </main>
+
+                        {/* ── DESKTOP SIDEBAR (lg+) ── */}
+                        <aside className="hidden w-60 shrink-0 border-l border-border bg-background lg:block xl:w-72 2xl:w-80">
+                            <div className="sticky top-0 h-[calc(100vh-57px)] overflow-y-auto p-4 xl:p-5">
+                                <PropertiesPanel />
                             </div>
-                        </section>
+                        </aside>
+
                     </div>
                 </ScrollArea>
 
-                {/* Sticky Sidebar */}
-                <aside className="w-full lg:w-80 border-t lg:border-t-0 lg:border-l border-border bg-background p-6 space-y-8 overflow-y-auto shrink-0 shadow-[-4px_0_24px_rgba(0,0,0,0.02)]">
-                    <div className="space-y-6">
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider px-1">Current Status</label>
-                            <Select value={task?.status as any} onValueChange={(val) => updateTaskMutation.mutate({ status: val as any })}>
-                                <SelectTrigger className="h-10 rounded-xl border-border bg-muted/50 font-bold text-xs text-foreground focus:ring-4 focus:ring-primary/10">
-                                    <div className="flex items-center gap-2">
-                                        <div className={cn("w-1.5 h-1.5 rounded-full", TASK_STATUSES.find(s => s.id === task.status)?.color)} />
-                                        <SelectValue />
-                                    </div>
-                                </SelectTrigger>
-                                <SelectContent className="rounded-xl border-border shadow-elevation">
-                                    {TASK_STATUSES.map(s => (
-                                        <SelectItem key={s.id} value={s.id} className="font-bold text-xs text-foreground/80">
-                                            <div className="flex items-center gap-2">
-                                                <div className={cn("w-1.5 h-1.5 rounded-full", s.color)} />
-                                                {s.label}
-                                            </div>
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                {/* ══════════════════════════════
+            MOBILE / TABLET PROPERTIES DRAWER
+        ══════════════════════════════ */}
+
+                {/* Backdrop */}
+                <div
+                    aria-hidden="true"
+                    className={cn(
+                        "fixed inset-0 z-40 bg-black/50 backdrop-blur-sm transition-opacity duration-300 lg:hidden",
+                        drawerOpen ? "opacity-100" : "pointer-events-none opacity-0"
+                    )}
+                    onClick={() => setDrawerOpen(false)}
+                />
+
+                {/* Drawer panel */}
+                <div
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label="Task properties"
+                    className={cn(
+                        "fixed inset-y-0 right-0 z-50 flex flex-col border-l border-border bg-background shadow-2xl transition-transform duration-300 ease-in-out lg:hidden",
+                        /*
+                          Width strategy:
+                          - Below 360 px: full viewport width (no cropping)
+                          - 360–639 px: fixed 320 px
+                          - 640–1023 px: fixed 380 px
+                        */
+                        "w-full max-w-full sm:w-80 md:w-96",
+                        drawerOpen ? "translate-x-0" : "translate-x-full"
+                    )}
+                >
+                    {/* Drawer header */}
+                    <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-3">
+                        <div className="flex items-center gap-2">
+                            <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
+                            <h2 className="text-sm font-extrabold uppercase tracking-widest text-foreground">Properties</h2>
                         </div>
-
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider px-1">Priority Level</label>
-                            <Select value={task?.priority as any} onValueChange={(val) => updateTaskMutation.mutate({ priority: val as any })}>
-                                <SelectTrigger className="h-10 rounded-xl border-border bg-muted/50 font-bold text-xs text-foreground focus:ring-4 focus:ring-primary/10">
-                                    <div className="flex items-center gap-2">
-                                        <div className={cn("w-1.5 h-1.5 rounded-full", TASK_PRIORITIES.find(p => p.id === task.priority)?.color)} />
-                                        <SelectValue />
-                                    </div>
-                                </SelectTrigger>
-                                <SelectContent className="rounded-xl border-border shadow-elevation">
-                                    {TASK_PRIORITIES.map(p => (
-                                        <SelectItem key={p.id} value={p.id} className="font-bold text-xs text-foreground/80">
-                                            <div className="flex items-center gap-2">
-                                                <div className={cn("w-1.5 h-1.5 rounded-full", p.color)} />
-                                                {p.label}
-                                            </div>
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        <div className="h-px bg-border/50" />
-
-                        <div className="space-y-4">
-                            <div className="flex flex-col gap-2">
-                                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider px-1">Assignee</label>
-                                <Select value={task?.assigneeId ? String(task.assigneeId) : "unassigned"} onValueChange={(v) => updateTaskMutation.mutate({ assigneeId: v === "unassigned" ? null : v as any })}>
-                                    <SelectTrigger className="h-10 border-border bg-muted/50 hover:bg-muted rounded-xl transition-colors ring-offset-0 focus:ring-4 focus:ring-primary/10">
-                                        <div className="flex items-center gap-2">
-                                            <Avatar className="h-6 w-6 ring-2 ring-background shadow-sm"><AvatarFallback className="text-[8px] font-extrabold bg-primary/10 text-primary">{initials(usersMap.get(task.assigneeId as any))}</AvatarFallback></Avatar>
-                                            <span className="text-xs font-bold text-foreground">{usersMap.get(task.assigneeId as any) ? `${usersMap.get(task.assigneeId as any).firstName} ${usersMap.get(task.assigneeId as any).lastName}` : "Unassigned"}</span>
-                                        </div>
-                                    </SelectTrigger>
-                                    <SelectContent className="rounded-xl border-border shadow-elevation">
-                                        <SelectItem value="unassigned" className="text-muted-foreground font-bold text-xs">Unassigned</SelectItem>
-                                        {members?.filter(m => m.user).map(m => <SelectItem key={m.user.id} value={String(m.user.id)} className="font-bold text-xs text-foreground/80">{m.user.firstName} {m.user.lastName}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            <div className="flex flex-col gap-2">
-                                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider px-1">Reviewer</label>
-                                <Select value={task?.reviewerId ? String(task.reviewerId) : "unassigned"} onValueChange={(v) => updateTaskMutation.mutate({ reviewerId: v === "unassigned" ? null : v as any })}>
-                                    <SelectTrigger className="h-10 border-border bg-muted/50 hover:bg-muted rounded-xl transition-colors ring-offset-0 focus:ring-4 focus:ring-primary/10">
-                                        <div className="flex items-center gap-2">
-                                            <Avatar className="h-6 w-6 ring-2 ring-background shadow-sm"><AvatarFallback className="text-[8px] font-extrabold bg-muted text-muted-foreground">{initials(usersMap.get(task.reviewerId as any))}</AvatarFallback></Avatar>
-                                            <span className="text-xs font-bold text-muted-foreground">{usersMap.get(task.reviewerId as any) ? `${usersMap.get(task.reviewerId as any).firstName} ${usersMap.get(task.reviewerId as any).lastName}` : "None"}</span>
-                                        </div>
-                                    </SelectTrigger>
-                                    <SelectContent className="rounded-xl border-border shadow-elevation">
-                                        <SelectItem value="unassigned" className="font-bold text-xs text-muted-foreground">None</SelectItem>
-                                        {members?.filter(m => m.user).map(m => <SelectItem key={m.user.id} value={String(m.user.id)} className="font-bold text-xs text-foreground/80">{m.user.firstName} {m.user.lastName}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            <div className="flex flex-col gap-2">
-                                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider px-1">Tester</label>
-                                <Select value={task?.testerId ? String(task.testerId) : "unassigned"} onValueChange={(v) => updateTaskMutation.mutate({ testerId: v === "unassigned" ? null : v as any })}>
-                                    <SelectTrigger className="h-10 border-border bg-muted/50 hover:bg-muted rounded-xl transition-colors ring-offset-0 focus:ring-4 focus:ring-primary/10">
-                                        <div className="flex items-center gap-2">
-                                            <Avatar className="h-6 w-6 ring-2 ring-background shadow-sm"><AvatarFallback className="text-[8px] font-extrabold bg-muted text-muted-foreground">{initials(usersMap.get(task.testerId as any))}</AvatarFallback></Avatar>
-                                            <span className="text-xs font-bold text-muted-foreground">{usersMap.get(task.testerId as any) ? `${usersMap.get(task.testerId as any).firstName} ${usersMap.get(task.testerId as any).lastName}` : "None"}</span>
-                                        </div>
-                                    </SelectTrigger>
-                                    <SelectContent className="rounded-xl border-border shadow-elevation">
-                                        <SelectItem value="unassigned" className="font-bold text-xs text-muted-foreground">None</SelectItem>
-                                        {members?.filter(m => m.user).map(m => <SelectItem key={m.user.id} value={String(m.user.id)} className="font-bold text-xs text-foreground/80">{m.user.firstName} {m.user.lastName}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            <div className="flex flex-col gap-2">
-                                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider px-1">Role</label>
-                                <Select value={task?.deliveryRole || "unassigned"} onValueChange={(v) => updateTaskMutation.mutate({ deliveryRole: v === "unassigned" ? null : v as any })}>
-                                    <SelectTrigger className="h-10 border-border bg-muted/50 hover:bg-muted rounded-xl transition-colors ring-offset-0 focus:ring-4 focus:ring-primary/10">
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-xs font-bold text-foreground/80">{task?.deliveryRole || "None"}</span>
-                                        </div>
-                                    </SelectTrigger>
-                                    <SelectContent className="rounded-xl border-border shadow-elevation">
-                                        <SelectItem value="unassigned" className="font-bold text-xs text-muted-foreground">None</SelectItem>
-                                        {["Frontend", "Backend", "Fullstack", "Design", "QA", "Product", "DevOps"].map(r => (
-                                            <SelectItem key={r} value={r} className="font-bold text-xs text-foreground/80">{r}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        </div>
-
-                        <div className="h-px bg-border/50" />
-
-                        <div className="space-y-4">
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider px-1">Start Date</label>
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button variant="ghost" className="w-full justify-start h-10 font-bold text-xs text-foreground/80 bg-muted/50 hover:bg-muted rounded-xl px-3 transition-colors">
-                                            <CalendarIcon className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
-                                            {task?.startDate ? format(new Date(task.startDate), "MMM d, yyyy") : <span className="text-muted-foreground">Set start date</span>}
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0 border-border rounded-2xl shadow-elevation" align="start">
-                                        <Calendar mode="single" selected={task?.startDate ? new Date(task.startDate) : undefined} onSelect={(d) => updateTaskMutation.mutate({ startDate: (d ? d.toISOString() : null) as any })} initialFocus />
-                                    </PopoverContent>
-                                </Popover>
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider px-1">Due Date</label>
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button variant="ghost" className="w-full justify-start h-10 font-bold text-xs text-foreground/80 bg-muted/50 hover:bg-muted rounded-xl px-3 transition-colors">
-                                            <CalendarIcon className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
-                                            {task?.dueDate ? format(new Date(task.dueDate), "MMM d, yyyy") : <span className="text-muted-foreground">Set due date</span>}
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0 border-border rounded-2xl shadow-elevation" align="start">
-                                        <Calendar mode="single" selected={task?.dueDate ? new Date(task.dueDate) : undefined} onSelect={(d) => updateTaskMutation.mutate({ dueDate: (d ? d.toISOString() : null) as any })} initialFocus />
-                                    </PopoverContent>
-                                </Popover>
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider px-1">Milestone</label>
-                                <Select value={task?.milestoneId || "no-milestone"} onValueChange={(v) => updateTaskMutation.mutate({ milestoneId: v === "no-milestone" ? null : v })}>
-                                    <SelectTrigger className="h-10 border-border bg-muted/50 hover:bg-muted rounded-xl px-3 ring-offset-0 focus:ring-4 focus:ring-primary/10">
-                                        <div className="flex items-center gap-2">
-                                            <Flag className="h-3.5 w-3.5 text-muted-foreground" />
-                                            <span className="text-xs font-bold text-foreground/80 truncate">{milestones?.find(m => m.id === task.milestoneId)?.title || "None"}</span>
-                                        </div>
-                                    </SelectTrigger>
-                                    <SelectContent className="rounded-xl border-border shadow-elevation">
-                                        <SelectItem value="no-milestone" className="font-bold text-xs text-muted-foreground">None</SelectItem>
-                                        {milestones?.map(m => <SelectItem key={m.id} value={m.id} className="font-bold text-xs text-foreground/80">{m.title}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        </div>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 rounded-lg text-muted-foreground"
+                            onClick={() => setDrawerOpen(false)}
+                            aria-label="Close properties"
+                        >
+                            <X className="h-4 w-4" />
+                        </Button>
                     </div>
-                </aside>
-            </div>
 
-            <CreateTaskDialog open={showCreateSubtask} onClose={() => setShowCreateSubtask(false)} projectId={task.projectId} parentId={task.id} onSuccess={() => { queryClient.invalidateQueries({ queryKey: ["/api/tasks/search"] }); setShowCreateSubtask(false); }} projects={project ? [project] : []} members={members?.map(m => m.user).filter(Boolean)} />
+                    {/* Drawer scrollable body */}
+                    <ScrollArea className="flex-1">
+                        <div className="p-4 sm:p-5">
+                            <PropertiesPanel />
+                        </div>
+                    </ScrollArea>
+                </div>
+
+            </div>{/* /body */}
+
+            {/* Create subtask dialog */}
+            <CreateTaskDialog
+                open={showCreateSubtask}
+                onClose={() => setShowCreateSubtask(false)}
+                projectId={task.projectId}
+                parentId={task.id}
+                onSuccess={() => {
+                    queryClient.invalidateQueries({ queryKey: ["/api/tasks/search"] });
+                    setShowCreateSubtask(false);
+                }}
+                projects={project ? [project] : []}
+                members={members?.map((m) => m.user).filter(Boolean)}
+            />
         </div>
     );
 }
-

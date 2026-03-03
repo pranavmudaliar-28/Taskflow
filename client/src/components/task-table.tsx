@@ -59,7 +59,7 @@ import {
     useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { ArrowUpDown, Calendar as CalendarIcon, User as UserIcon, Check, MoreHorizontal, GripVertical, ChevronDown, ChevronRight, Share2 } from "lucide-react";
+import { ArrowUpDown, Calendar as CalendarIcon, User as UserIcon, Check, MoreHorizontal, GripVertical, ChevronDown, ChevronRight, Share2, Play, Square, Clock } from "lucide-react";
 import { TASK_STATUSES, TASK_PRIORITIES } from "@/lib/constants";
 import { useSidebar } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -71,6 +71,9 @@ import {
     CommandItem,
     CommandList,
 } from "@/components/ui/command";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface TaskWithChildren extends Task {
     subRows?: TaskWithChildren[];
@@ -173,6 +176,39 @@ export function TaskTable({ tasks, users, milestones, onTaskClick, getTaskUrl, o
     const [internalExpanded, setInternalExpanded] = useState<ExpandedState>({});
     const [editingTitleId, setEditingTitleId] = useState<string | null>(null);
     const [tempTitle, setTempTitle] = useState("");
+
+    const queryClient = useQueryClient();
+    const { toast } = useToast();
+
+    // Fetch active logs
+    const { data: activeLogs } = useQuery<any[]>({
+        queryKey: ["/api/timelogs/active"],
+        refetchInterval: 5000,
+    });
+
+    const startTimerMutation = useMutation({
+        mutationFn: async (taskId: string) => {
+            const res = await apiRequest("POST", "/api/timelogs/start", { taskId });
+            return res.json();
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["/api/timelogs"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/timelogs/active"] });
+            toast({ title: "Timer started" });
+        },
+    });
+
+    const stopTimerMutation = useMutation({
+        mutationFn: async (taskId: string) => {
+            const res = await apiRequest("POST", "/api/timelogs/stop", { taskId });
+            return res.json();
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["/api/timelogs"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/timelogs/active"] });
+            toast({ title: "Timer stopped" });
+        },
+    });
 
     // Use controlled state if provided, otherwise internal
     const expanded = controlledExpanded ?? internalExpanded;
@@ -772,7 +808,48 @@ export function TaskTable({ tasks, users, milestones, onTaskClick, getTaskUrl, o
             ),
             size: 40,
         }),
-    ], [users, milestones, onTaskUpdate, onTaskClick, getTaskUrl, onCreateSubtask, isLargeScreen, setRowSelection]);
+        columnHelper.display({
+            id: "timer",
+            header: () => (
+                <div className="w-full h-8 flex items-center justify-center text-muted-foreground">
+                    <Clock className="h-4 w-4" />
+                </div>
+            ),
+            cell: ({ row }) => {
+                const taskId = row.original.id;
+                const isTracking = activeLogs?.some(log => log.taskId === taskId);
+
+                const handleToggleTimer = (e: React.MouseEvent) => {
+                    e.stopPropagation();
+                    if (isTracking) {
+                        stopTimerMutation.mutate(taskId);
+                    } else {
+                        startTimerMutation.mutate(taskId);
+                    }
+                };
+
+                return (
+                    <div className="w-full flex items-center justify-center pointer-events-auto" onClick={(e) => e.stopPropagation()}>
+                        <Button
+                            variant={isTracking ? "destructive" : "ghost"}
+                            size="icon"
+                            className={cn(
+                                "h-7 w-7 sm:h-8 sm:w-8 rounded-lg transition-all",
+                                isTracking
+                                    ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    : "text-muted-foreground hover:text-primary hover:bg-primary/10"
+                            )}
+                            onClick={handleToggleTimer}
+                            disabled={startTimerMutation.isPending || stopTimerMutation.isPending}
+                        >
+                            {isTracking ? <Square className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+                        </Button>
+                    </div>
+                );
+            },
+            size: 60,
+        }),
+    ], [users, milestones, onTaskUpdate, onTaskClick, getTaskUrl, onCreateSubtask, isLargeScreen, setRowSelection, activeLogs]);
 
     const table = useReactTable({
         data: tasks,

@@ -108,17 +108,17 @@ export function TaskAttachments({ taskId }: TaskAttachmentsProps) {
 
     return (
         <div className="space-y-4">
-            <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-lg flex items-center gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+                <h3 className="font-semibold text-lg flex items-center gap-2 shrink-0">
                     <Paperclip className="h-5 w-5" />
                     Attachments
                 </h3>
-                <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => setIsAddingLink(!isAddingLink)}>
+                <div className="flex flex-wrap gap-2">
+                    <Button variant="outline" size="sm" onClick={() => setIsAddingLink(!isAddingLink)} className="shrink-0">
                         <LinkIcon className="h-4 w-4 mr-2" />
                         Add Link
                     </Button>
-                    <label className="cursor-pointer">
+                    <label className="cursor-pointer shrink-0">
                         <Input
                             type="file"
                             className="hidden"
@@ -126,8 +126,9 @@ export function TaskAttachments({ taskId }: TaskAttachmentsProps) {
                             disabled={createAttachmentMutation.isPending}
                         />
                         <div className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-3">
-                            <Plus className="h-4 w-4 mr-2" />
-                            Upload File
+                            <Plus className="h-4 w-4 shrink-0 sm:mr-2" />
+                            <span className="hidden sm:inline">Upload File</span>
+                            <span className="sm:hidden ml-1">Upload</span>
                         </div>
                     </label>
                 </div>
