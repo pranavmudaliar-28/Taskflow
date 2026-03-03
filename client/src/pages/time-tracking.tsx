@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -11,11 +10,10 @@ import { format, differenceInSeconds } from "date-fns";
 import type { TimeLog, Task, Project } from "@shared/schema";
 import { cn } from "@/lib/utils";
 
-/* ── helpers ── */
+/* ── helpers — UNCHANGED ── */
 const fmtHMS = (s: number) =>
   `${String(Math.floor(s / 3600)).padStart(2, "0")}:${String(Math.floor((s % 3600) / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 
-/* Shows seconds for sub-minute durations so we never display 0m */
 const fmtShort = (s: number) => {
   if (s < 60) return `${s}s`;
   const h = Math.floor(s / 3600);
@@ -23,10 +21,7 @@ const fmtShort = (s: number) => {
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
 };
 
-/* ── live elapsed-time hook ──
-   Returns a Record<taskId, seconds> that ticks every second.
-   It initialises from log.startTime so it's correct from the
-   very first render (no jump from 0).                          */
+/* ── live elapsed-time hook — UNCHANGED ── */
 function useLiveElapsed(activeLogs: TimeLog[]): Record<string, number> {
   const computeNow = () => {
     const times: Record<string, number> = {};
@@ -38,21 +33,13 @@ function useLiveElapsed(activeLogs: TimeLog[]): Record<string, number> {
     return times;
   };
 
-  // Initialise synchronously so first render shows real elapsed time
   const [elapsedTimes, setElapsedTimes] = useState<Record<string, number>>(computeNow);
-
-  // Keep a ref to activeLogs so the interval closure is always fresh
   const logsRef = useRef(activeLogs);
   useEffect(() => { logsRef.current = activeLogs; }, [activeLogs]);
 
   useEffect(() => {
-    if (activeLogs.length === 0) {
-      setElapsedTimes({});
-      return;
-    }
-    // Re-compute immediately whenever active logs change (e.g. new timer started)
+    if (activeLogs.length === 0) { setElapsedTimes({}); return; }
     setElapsedTimes(computeNow());
-
     const interval = setInterval(() => {
       const times: Record<string, number> = {};
       logsRef.current.forEach((log) => {
@@ -62,7 +49,6 @@ function useLiveElapsed(activeLogs: TimeLog[]): Record<string, number> {
       });
       setElapsedTimes(times);
     }, 1000);
-
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeLogs]);
@@ -70,23 +56,23 @@ function useLiveElapsed(activeLogs: TimeLog[]): Record<string, number> {
   return elapsedTimes;
 }
 
+/* ════════════════════════════════════════════════
+   TIME TRACKING PAGE
+════════════════════════════════════════════════ */
 export default function TimeTracking() {
   const { toast } = useToast();
   const [selectedProject, setSelectedProject] = useState<string>("all");
 
-  // Poll completed logs every 10 s so the history updates without a refresh
+  /* ── queries — UNCHANGED ── */
   const { data: timeLogs, isLoading: logsLoading } = useQuery<TimeLog[]>({
     queryKey: ["/api/timelogs"],
     refetchInterval: 10_000,
   });
   const { data: projects } = useQuery<Project[]>({ queryKey: ["/api/projects"] });
-  // Poll tasks every 15 s so the dropdown reflects newly created / completed tasks
   const { data: tasks } = useQuery<Task[]>({
     queryKey: ["/api/tasks"],
     refetchInterval: 15_000,
   });
-
-  // Active logs polled every 5 s — the source of truth for running timers
   const { data: activeLogs = [] } = useQuery<TimeLog[]>({
     queryKey: ["/api/timelogs/active"],
     refetchInterval: 5_000,
@@ -94,12 +80,11 @@ export default function TimeTracking() {
 
   const elapsedTimes = useLiveElapsed(activeLogs);
 
-  /* ── mutations ── */
+  /* ── mutations — UNCHANGED ── */
   const startTimerMutation = useMutation({
     mutationFn: async (taskId: string) =>
       (await apiRequest("POST", "/api/timelogs/start", { taskId })).json(),
     onSuccess: async () => {
-      // Await the refetch so activeLogs is updated BEFORE the dropdown can reappear
       await queryClient.refetchQueries({ queryKey: ["/api/timelogs/active"] });
       queryClient.invalidateQueries({ queryKey: ["/api/timelogs"] });
       toast({ title: "Timer started" });
@@ -111,7 +96,6 @@ export default function TimeTracking() {
     mutationFn: async (taskId: string) =>
       (await apiRequest("POST", "/api/timelogs/stop", { taskId })).json(),
     onSuccess: async () => {
-      // Await refetch so the active-timer list clears before UI re-renders
       await queryClient.refetchQueries({ queryKey: ["/api/timelogs/active"] });
       queryClient.invalidateQueries({ queryKey: ["/api/timelogs"] });
       toast({ title: "Timer stopped" });
@@ -119,7 +103,7 @@ export default function TimeTracking() {
     onError: () => toast({ title: "Failed to stop timer", variant: "destructive" }),
   });
 
-  /* ── derived ── */
+  /* ── derived — UNCHANGED ── */
   const getTaskName = (id: string) => tasks?.find((t) => t.id === id)?.title || "Unknown Task";
   const getProjectName = (id: string) => {
     const t = tasks?.find((t) => t.id === id);
@@ -131,8 +115,7 @@ export default function TimeTracking() {
   const totalToday = timeLogs?.reduce(
     (a, l) =>
       l.duration && new Date(l.startTime).toDateString() === new Date().toDateString()
-        ? a + l.duration
-        : a,
+        ? a + l.duration : a,
     0
   ) || 0;
 
@@ -141,8 +124,6 @@ export default function TimeTracking() {
     return l.duration && new Date(l.startTime) >= w ? a + l.duration : a;
   }, 0) || 0;
 
-  // Only one timer may run at a time — tasks already being tracked are excluded
-  const hasActiveTimer = activeLogs.length > 0;
   const availTasks = tasks?.filter(
     (t) => t.status !== "done" && !activeLogs.some((l) => l.taskId === t.id)
   ) || [];
@@ -155,56 +136,71 @@ export default function TimeTracking() {
     )
     .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()) || [];
 
-  /* ── render ── */
+  /* ════════════════════════════════
+     RENDER
+  ════════════════════════════════ */
   return (
-    <div className="flex flex-col min-h-full bg-background text-foreground">
-      {/* Header */}
-      <div className="bg-card border-b border-border px-6 py-5">
-        <h1 className="text-xl font-bold text-foreground">Time Tracking</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Track time spent on your tasks</p>
+    <div className="flex min-h-full w-full flex-col overflow-x-hidden bg-background text-foreground">
+
+      {/* ── Page header ── */}
+      <div className="w-full shrink-0 border-b border-border bg-card px-4 py-4 sm:px-6 sm:py-5">
+        <h1 className="text-lg font-bold text-foreground sm:text-xl">Time Tracking</h1>
+        <p className="mt-0.5 text-xs text-muted-foreground sm:text-sm">
+          Track time spent on your tasks
+        </p>
       </div>
 
-      <div className="p-6 space-y-5">
-        {/* Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      {/* ── Page body ── */}
+      <div className="w-full flex-1 space-y-4 p-3 sm:space-y-5 sm:p-4 md:p-6">
+
+        {/* ═══ STATS — 1 col → 2 col → 3 col ═══ */}
+        <div className="grid w-full grid-cols-1 gap-3 min-[480px]:grid-cols-2 lg:grid-cols-3 sm:gap-4">
           {[
             { label: "Today", value: fmtShort(totalToday + totalActive), icon: Calendar, iconBg: "bg-blue-500/10", iconColor: "text-blue-500", testId: "text-time-today" },
             { label: "This Week", value: fmtShort(totalWeek + totalActive), icon: BarChart3, iconBg: "bg-violet-500/10", iconColor: "text-violet-500", testId: "text-time-week" },
             { label: "Active Timers", value: activeLogs.length, icon: Timer, iconBg: "bg-emerald-500/10", iconColor: "text-emerald-500" },
           ].map(({ label, value, icon: Icon, iconBg, iconColor, testId }) => (
-            <div key={label} className="bg-card rounded-xl border border-border shadow-sm p-5">
-              <div className={cn("h-9 w-9 rounded-lg flex items-center justify-center mb-3", iconBg)}>
-                <Icon className={cn("h-4.5 w-4.5", iconColor)} />
+            <div key={label} className="w-full rounded-xl border border-border bg-card p-4 shadow-sm sm:p-5">
+              <div className={cn("mb-3 flex h-9 w-9 items-center justify-center rounded-lg", iconBg)}>
+                <Icon className={cn("h-[18px] w-[18px]", iconColor)} />
               </div>
               <p className="text-2xl font-bold text-foreground" data-testid={testId}>{value}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">{label}</p>
             </div>
           ))}
         </div>
 
-        {/* ─── Active Timers + Start Timer ─── */}
-        <div className={cn("bg-card rounded-xl border shadow-sm", activeLogs.length > 0 ? "border-primary/50 ring-1 ring-primary/20" : "border-border")}>
-          <div className="flex items-center justify-between px-5 py-4 border-b border-border/50">
+        {/* ═══ ACTIVE TIMERS + START TIMER ═══ */}
+        <div className={cn(
+          "w-full overflow-hidden rounded-xl border bg-card shadow-sm",
+          activeLogs.length > 0 ? "border-primary/50 ring-1 ring-primary/20" : "border-border"
+        )}>
+          {/* header */}
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/50 px-4 py-3 sm:px-5 sm:py-4">
             <h2 className="text-sm font-semibold text-foreground">Active Timers</h2>
             {activeLogs.length > 0 && (
-              <span className="inline-flex items-center gap-1.5 bg-emerald-500/10 text-emerald-600 text-xs font-semibold px-2.5 py-1 rounded-full">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-600">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
                 {activeLogs.length} Recording
               </span>
             )}
           </div>
-          <div className="px-5 py-4 space-y-4">
-            {/* Running timers list */}
+
+          {/* body */}
+          <div className="space-y-4 px-4 py-4 sm:px-5">
             {activeLogs.length > 0 ? (
               <div className="space-y-3">
                 {activeLogs.map((log) => (
-                  <div key={log.id} className="flex items-center justify-between gap-4 bg-primary/5 rounded-lg px-4 py-3">
-                    <div>
-                      <p className="text-sm font-semibold text-foreground">{getTaskName(log.taskId)}</p>
-                      <p className="text-2xl font-mono font-bold text-primary mt-1">
+                  <div
+                    key={log.id}
+                    className="flex flex-col gap-3 rounded-lg bg-primary/5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-foreground">{getTaskName(log.taskId)}</p>
+                      <p className="mt-1 font-mono text-xl font-bold text-primary sm:text-2xl">
                         {fmtHMS(elapsedTimes[log.taskId] ?? Math.max(0, differenceInSeconds(new Date(), new Date(log.startTime))))}
                       </p>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">
+                      <p className="mt-0.5 text-[10px] text-muted-foreground">
                         Started {format(new Date(log.startTime), "h:mm a")}
                       </p>
                     </div>
@@ -213,24 +209,24 @@ export default function TimeTracking() {
                       variant="destructive"
                       onClick={() => stopTimerMutation.mutate(log.taskId)}
                       disabled={stopTimerMutation.isPending}
-                      className="gap-2 shrink-0"
+                      className="w-full gap-2 sm:w-auto sm:shrink-0"
                     >
-                      <Square className="h-3.5 w-3.5" /> Stop
+                      <Square className="h-3.5 w-3.5 shrink-0" /> Stop
                     </Button>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="text-center py-2">
-                <div className="h-10 w-10 rounded-xl bg-muted flex items-center justify-center mx-auto mb-2">
+              <div className="py-2 text-center">
+                <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-muted">
                   <Clock className="h-5 w-5 text-muted-foreground" />
                 </div>
                 <p className="text-sm text-muted-foreground">No active timers</p>
               </div>
             )}
 
-            {/* Start timer — always visible, only hides tasks already being tracked */}
-            <div className="border-t border-border/40 pt-4 space-y-2">
+            {/* Start timer */}
+            <div className="space-y-2 border-t border-border/40 pt-4">
               <label className="text-sm font-medium text-foreground">
                 {activeLogs.length > 0 ? "Track another task:" : "Start timer for task:"}
               </label>
@@ -239,19 +235,19 @@ export default function TimeTracking() {
                 onValueChange={(id) => startTimerMutation.mutate(id)}
                 disabled={startTimerMutation.isPending || startTimerMutation.isSuccess}
               >
-                <SelectTrigger data-testid="select-task-for-timer" className="h-10 border-border rounded-lg">
+                <SelectTrigger data-testid="select-task-for-timer" className="h-10 w-full rounded-lg border-border">
                   <SelectValue placeholder="Select a task…" />
                 </SelectTrigger>
                 <SelectContent>
                   {availTasks.length === 0 ? (
-                    <div className="p-2 text-sm text-muted-foreground text-center">
+                    <div className="p-2 text-center text-sm text-muted-foreground">
                       All tasks are already being tracked
                     </div>
                   ) : availTasks.map((t) => (
                     <SelectItem key={t.id} value={t.id}>
                       <div className="flex items-center gap-2">
-                        <Play className="h-3 w-3 text-muted-foreground" />
-                        {t.title}
+                        <Play className="h-3 w-3 shrink-0 text-muted-foreground" />
+                        <span className="truncate">{t.title}</span>
                       </div>
                     </SelectItem>
                   ))}
@@ -261,76 +257,136 @@ export default function TimeTracking() {
           </div>
         </div>
 
-        {/* Logs table */}
-        <div className="bg-card rounded-xl border border-border shadow-sm">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-border/50">
+        {/* ═══ TIME LOG HISTORY ═══ */}
+        <div className="w-full rounded-xl border border-border bg-card shadow-sm">
+
+          {/* Card header — stacks on mobile, row on sm+ */}
+          <div className="flex flex-col gap-2 border-b border-border/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5 sm:py-4">
             <h2 className="text-sm font-semibold text-foreground">Time Log History</h2>
             <Select value={selectedProject} onValueChange={setSelectedProject}>
-              <SelectTrigger className="w-44 h-8 border-border rounded-lg text-xs">
+              <SelectTrigger className="h-8 w-full rounded-lg border-border text-xs sm:w-44">
                 <SelectValue placeholder="Filter by project" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Projects</SelectItem>
-                {projects?.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                {projects?.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
 
+          {/* Log rows */}
           {logsLoading ? (
-            <div className="p-5 space-y-3">{[...Array(5)].map((_, i) => <Skeleton key={i} className="h-14 rounded-lg" />)}</div>
-          ) : filteredLogs.length > 0 ? (
-            <ScrollArea className="h-[420px]">
-              <div className="divide-y divide-border/50">
-                {filteredLogs.map((log) => {
-                  // Match by log ID — the active log in DB has no endTime yet
-                  const activeMatch = activeLogs.find((a) => a.id === log.id);
-                  const isActive = !!activeMatch;
-                  const liveSecs = isActive
-                    ? (elapsedTimes[log.taskId] ?? Math.max(0, differenceInSeconds(new Date(), new Date(log.startTime))))
-                    : null;
+            <div className="space-y-3 p-4 sm:p-5">
+              {[...Array(5)].map((_, i) => (
+                <Skeleton key={i} className="h-16 w-full rounded-lg" />
+              ))}
+            </div>
 
-                  return (
-                    <div key={log.id} className="flex items-center gap-4 px-5 py-3.5 hover:bg-muted/50 transition-colors" data-testid={`timelog-item-${log.id}`}>
-                      <div className={cn("h-9 w-9 rounded-lg flex items-center justify-center shrink-0", isActive ? "bg-emerald-500/10" : "bg-primary/10")}>
-                        <Clock className={cn("h-4 w-4", isActive ? "text-emerald-600" : "text-primary")} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-foreground truncate">{getTaskName(log.taskId)}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {getProjectName(log.taskId)}{getProjectName(log.taskId) && " · "}{format(new Date(log.startTime), "MMM d, yyyy")}
-                        </p>
-                      </div>
-                      <div className="text-right shrink-0">
-                        {isActive ? (
-                          /* Live ticking display for the running entry in history */
-                          <p className="text-sm font-mono font-semibold text-emerald-600">
-                            {fmtHMS(liveSecs ?? 0)}
-                          </p>
-                        ) : (
-                          <p className="text-sm font-semibold text-foreground">
-                            {log.duration != null ? fmtShort(log.duration) : "—"}
-                          </p>
-                        )}
-                        {log.approved && (
-                          <span className="text-[10px] bg-emerald-500/10 text-emerald-600 font-semibold px-1.5 py-0.5 rounded-full">Approved</span>
-                        )}
-                      </div>
+          ) : filteredLogs.length > 0 ? (
+            /*
+              ─────────────────────────────────────────────────────────────
+              KEY FIX: replaced <ScrollArea> (which wraps content in an
+              overflow:hidden div that clips on mobile) with a plain
+              overflow-y-auto div. max-h gives the scrollable window.
+
+              Each row uses CSS grid with 3 FIXED columns:
+                [36px icon] [1fr text — truncates] [auto duration — never hidden]
+
+              The duration column is "auto" = it takes exactly as much
+              space as its content needs. The middle column absorbs the
+              rest and truncates. This makes the timer/duration impossible
+              to clip or push off-screen on ANY screen width.
+              ─────────────────────────────────────────────────────────────
+            */
+            <div className="max-h-[420px] overflow-y-auto overscroll-contain divide-y divide-border/50">
+              {filteredLogs.map((log) => {
+                const activeMatch = activeLogs.find((a) => a.id === log.id);
+                const isActive = !!activeMatch;
+                const liveSecs = isActive
+                  ? (elapsedTimes[log.taskId] ?? Math.max(0, differenceInSeconds(new Date(), new Date(log.startTime))))
+                  : null;
+
+                const taskName = getTaskName(log.taskId);
+                const projectName = getProjectName(log.taskId);
+
+                return (
+                  <div
+                    key={log.id}
+                    data-testid={`timelog-item-${log.id}`}
+                    /*
+                      CSS Grid row — 3 columns:
+                        col-1 : 36px  (icon, fixed, never shrinks)
+                        col-2 : 1fr   (text, takes all leftover space, truncates)
+                        col-3 : auto  (duration, fits its content, never squished)
+
+                      gap-x-3 on mobile → gap-x-4 on sm+
+                      px-4 on mobile    → px-5 on sm+
+                    */
+                    className="grid w-full items-center gap-x-3 px-4 py-3 transition-colors hover:bg-muted/50 sm:gap-x-4 sm:px-5 sm:py-3.5"
+                    style={{ gridTemplateColumns: "36px 1fr auto" }}
+                  >
+                    {/* ── Col 1: icon ── */}
+                    <div className={cn(
+                      "flex h-9 w-9 items-center justify-center rounded-lg",
+                      isActive ? "bg-emerald-500/10" : "bg-primary/10"
+                    )}>
+                      <Clock className={cn("h-4 w-4", isActive ? "text-emerald-600" : "text-primary")} />
                     </div>
-                  );
-                })}
-              </div>
-            </ScrollArea>
+
+                    {/* ── Col 2: task name + meta
+                        min-w-0 + overflow-hidden are BOTH required for
+                        truncate to work inside a grid cell              ── */}
+                    <div className="min-w-0 overflow-hidden">
+                      <p className="truncate text-sm font-medium text-foreground leading-snug">
+                        {taskName}
+                      </p>
+                      <p className="truncate text-xs text-muted-foreground mt-0.5">
+                        {projectName ? `${projectName} · ` : ""}
+                        {format(new Date(log.startTime), "MMM d, yyyy")}
+                      </p>
+                    </div>
+
+                    {/* ── Col 3: duration + badge
+                        "auto" column — takes exactly the space it needs.
+                        whitespace-nowrap prevents the HH:MM:SS from wrapping.
+                        text-xs on mobile keeps it fitting 320 px screens;
+                        text-sm on sm+ for normal readability.              ── */}
+                    <div className="flex flex-col items-end justify-center gap-0.5">
+                      {isActive ? (
+                        <span className="whitespace-nowrap font-mono font-semibold tabular-nums text-emerald-600 text-xs sm:text-sm">
+                          {fmtHMS(liveSecs ?? 0)}
+                        </span>
+                      ) : (
+                        <span className="whitespace-nowrap text-sm font-semibold text-foreground">
+                          {log.duration != null ? fmtShort(log.duration) : "—"}
+                        </span>
+                      )}
+                      {log.approved && (
+                        <span className="whitespace-nowrap rounded-full bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-600">
+                          Approved
+                        </span>
+                      )}
+                    </div>
+
+                  </div>
+                );
+              })}
+            </div>
+
           ) : (
-            <div className="flex flex-col items-center justify-center py-12">
-              <div className="h-12 w-12 rounded-xl bg-muted flex items-center justify-center mb-3">
+            <div className="flex flex-col items-center justify-center py-10 sm:py-12">
+              <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-muted">
                 <Clock className="h-6 w-6 text-muted-foreground/50" />
               </div>
               <p className="text-sm text-muted-foreground">No time logs yet</p>
-              <p className="text-xs text-muted-foreground/70 mt-1">Start a timer to begin tracking</p>
+              <p className="mt-1 text-xs text-muted-foreground/70">Start a timer to begin tracking</p>
             </div>
           )}
         </div>
-      </div>
+
+      </div>{/* /page body */}
     </div>
   );
 }
