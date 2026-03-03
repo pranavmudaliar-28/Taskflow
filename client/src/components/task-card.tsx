@@ -60,7 +60,7 @@ export function TaskCard({
 
   return (
     <Card
-      className={`cursor-pointer transition-all duration-150 ${isTracking ? 'ring-2 ring-primary border-primary' : 'hover-elevate active-elevate-2'}`}
+      className={`cursor-pointer touch-manipulation transition-all duration-150 ${isTracking ? 'ring-2 ring-primary border-primary' : 'hover-elevate active-elevate-2'}`}
       onClick={onClick}
       data-testid={`task-card-${task.id}`}
     >
@@ -75,7 +75,7 @@ export function TaskCard({
               <Button
                 size="icon"
                 variant={isTracking ? "destructive" : "ghost"}
-                className={`h-7 w-7 sm:h-8 sm:w-8 shrink-0 rounded-lg ${isTracking ? '' : 'text-muted-foreground hover:text-primary hover:bg-primary/10'}`}
+                className={`h-8 w-8 sm:h-8 sm:w-8 shrink-0 rounded-lg touch-manipulation ${isTracking ? '' : 'text-muted-foreground hover:text-primary hover:bg-primary/10'}`}
                 onClick={(e) => {
                   e.stopPropagation();
                   onToggleTimer(e);

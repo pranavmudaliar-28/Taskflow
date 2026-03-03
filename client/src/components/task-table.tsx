@@ -59,7 +59,7 @@ import {
     useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { ArrowUpDown, Calendar as CalendarIcon, User as UserIcon, Check, MoreHorizontal, GripVertical, ChevronDown, ChevronRight, Share2, Play, Square, Clock } from "lucide-react";
+import { ArrowUpDown, Calendar as CalendarIcon, User as UserIcon, Check, MoreHorizontal, GripVertical, ChevronDown, ChevronRight, Share2, Play, Square, Clock, Plus } from "lucide-react";
 import { TASK_STATUSES, TASK_PRIORITIES } from "@/lib/constants";
 import { useSidebar } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -128,7 +128,9 @@ function SortableRow({ row, onTaskClick, enabled }: SortableRowProps & { enabled
             data-state={row.getIsSelected() && "selected"}
             onClick={() => onTaskClick(row.original)}
             className={cn(
+                // Base: tall enough to tap comfortably on mobile (≥48px recommended by Material/HIG)
                 "cursor-pointer border-b border-border/50 hover:bg-muted/50 transition-colors duration-200",
+                "min-h-[52px] touch-manipulation",   // 52px min-height + no touch delay
                 isDragging && "bg-accent opacity-50",
                 !enabled && "cursor-default"
             )}
@@ -152,7 +154,12 @@ function SortableRow({ row, onTaskClick, enabled }: SortableRowProps & { enabled
                     )
                 }
                 return (
-                    <TableCell key={cell.id} style={{ width: cell.column.getSize() }} className="p-2 sm:p-3">
+                    <TableCell
+                        key={cell.id}
+                        style={{ width: cell.column.getSize() }}
+                        // More vertical padding on mobile for easier finger tapping
+                        className="py-3 px-2 sm:p-3"
+                    >
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                 )
@@ -341,24 +348,64 @@ export function TaskTable({ tasks, users, milestones, onTaskClick, getTaskUrl, o
                             onClick={(e) => e.stopPropagation()}
                         />
                     ) : (
-                        <span
-                            className="font-medium text-sm truncate cursor-text hover:bg-muted/30 px-1 rounded flex-1"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                setEditingTitleId(row.original.id);
-                                setTempTitle(row.original.title);
-                            }}
-                        >
-                            {getValue()}
-                        </span>
+                        <div className="flex-1 min-w-0 flex items-center gap-2">
+                            <span
+                                className={cn(
+                                    "font-medium text-sm truncate rounded px-1 transition-colors duration-150",
+                                    "hover:text-primary hover:underline underline-offset-2 decoration-primary/40"
+                                )}
+                                // Clicking the name opens the detail
+                                onClick={() => onTaskClick(row.original)}
+                                style={{ cursor: "pointer" }}
+                            >
+                                {getValue()}
+                            </span>
+
+                            {/* ClickUp-style Action Buttons appearing on hover */}
+                            <div className="flex items-center gap-1 opacity-0 group-hover/title:opacity-100 transition-opacity duration-150">
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onTaskClick(row.original);
+                                    }}
+                                    className="p-1 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
+                                    title="Open Detail"
+                                >
+                                    <Share2 className="h-3 w-3" />
+                                </button>
+                                {onCreateSubtask && (
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onCreateSubtask(row.original.id);
+                                        }}
+                                        className="p-1 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
+                                        title="Add Subtask"
+                                    >
+                                        <Plus className="h-3 w-3" />
+                                    </button>
+                                )}
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setEditingTitleId(row.original.id);
+                                        setTempTitle(row.original.title);
+                                    }}
+                                    className="p-1 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
+                                    title="Rename"
+                                >
+                                    <MoreHorizontal className="h-3 w-3" />
+                                </button>
+                            </div>
+                        </div>
                     )}
 
                     {row.original.subRows && row.original.subRows.length > 0 && (
-                        <Badge variant="secondary" className="ml-1 text-[10px] h-4 px-1 text-muted-foreground">
+                        <Badge variant="secondary" className="ml-1 text-[10px] h-4 px-1 text-muted-foreground shrink-0">
                             {row.original.subRows.length}
                         </Badge>
                     )}
-                    {row.original.parentId && <Badge variant="outline" className="text-[10px] h-4 px-1 text-muted-foreground opacity-70">Sub</Badge>}
+                    {row.original.parentId && <Badge variant="outline" className="text-[10px] h-4 px-1 text-muted-foreground opacity-70 shrink-0">Sub</Badge>}
                 </div>
             ),
             size: 300,
