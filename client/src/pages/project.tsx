@@ -51,35 +51,44 @@ import { MilestoneBoard } from "@/components/milestone-board";
 import type { ExpandedState } from "@tanstack/react-table";
 import { cn, ensureArray, ensureObject } from "@/lib/utils";
 
+/* ── types & helpers — UNCHANGED ── */
 type ProjectMemberWithUser = {
   id: string;
   projectId: string;
   userId: string;
   role: Role;
   addedAt: string | null;
-  user: Omit<User, 'password'>;
+  user: Omit<User, "password">;
 };
 
 const initials = (user: any) => {
   if (!user) return "?";
-  return `${user.firstName?.charAt(0) || ""}${user.lastName?.charAt(0) || ""}`.toUpperCase() || user.username?.charAt(0).toUpperCase() || "?";
+  return (
+    `${user.firstName?.charAt(0) || ""}${user.lastName?.charAt(0) || ""}`.toUpperCase() ||
+    user.username?.charAt(0).toUpperCase() ||
+    "?"
+  );
 };
 
 const priorityIcon = (priority: string) => {
-  const p = TASK_PRIORITIES.find(p => p.id === priority);
+  const p = TASK_PRIORITIES.find((p) => p.id === priority);
   if (!p) return null;
   const Icon = (p as any).icon;
   return <Icon className={cn("h-3.5 w-3.5", p.color)} />;
 };
 
 const statusIcon = (status: string) => {
-  const s = TASK_STATUSES.find(s => s.id === status);
+  const s = TASK_STATUSES.find((s) => s.id === status);
   if (!s) return null;
   const Icon = (s as any).icon;
   return <Icon className={cn("h-3.5 w-3.5", s.color)} />;
 };
 
+/* ════════════════════════════════════════════════
+   PROJECT PAGE
+════════════════════════════════════════════════ */
 export default function ProjectPage() {
+  /* ── All state & logic — UNCHANGED ── */
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
@@ -91,8 +100,6 @@ export default function ProjectPage() {
   const [createTaskMilestone, setCreateTaskMilestone] = useState<string | undefined>();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("list");
-
-  // Time tracking state
   const [elapsedTimes, setElapsedTimes] = useState<Record<string, number>>({});
   const [status, setStatus] = useState<string>("all");
   const [priority, setPriority] = useState<string>("all");
@@ -105,7 +112,12 @@ export default function ProjectPage() {
 
   const debouncedSearch = useDebounce(searchQuery, 300);
 
-  const { data: project, isLoading: projectLoading, isError: projectError, error: projectErrorObj } = useQuery<Project>({
+  const {
+    data: project,
+    isLoading: projectLoading,
+    isError: projectError,
+    error: projectErrorObj,
+  } = useQuery<Project>({
     queryKey: ["/api/projects", id],
     queryFn: async () => {
       if (!id) throw new Error("No project ID");
@@ -128,7 +140,7 @@ export default function ProjectPage() {
   queryParams.append("sortOrder", sortBy === "order" ? "asc" : "desc");
   queryParams.append("limit", "1000");
 
-  const { data: searchResult, isLoading: tasksLoading } = useQuery<{ tasks: Task[], total: number }>({
+  const { data: searchResult, isLoading: tasksLoading } = useQuery<{ tasks: Task[]; total: number }>({
     queryKey: ["/api/tasks/search", project?.id, debouncedSearch, status, priority, sortBy],
     queryFn: async () => {
       if (!project?.id) return { tasks: [], total: 0 };
@@ -172,7 +184,7 @@ export default function ProjectPage() {
     if (activeLogs && activeLogs.length > 0) {
       const interval = setInterval(() => {
         const newElapsedTimes: Record<string, number> = {};
-        activeLogs.forEach(log => {
+        activeLogs.forEach((log) => {
           const start = new Date(log.startTime);
           newElapsedTimes[log.taskId] = differenceInSeconds(new Date(), start);
         });
@@ -180,14 +192,14 @@ export default function ProjectPage() {
       }, 1000);
       return () => clearInterval(interval);
     } else {
-      setElapsedTimes(prev => Object.keys(prev).length === 0 ? prev : {});
+      setElapsedTimes((prev) => (Object.keys(prev).length === 0 ? prev : {}));
     }
   }, [activeLogs]);
 
   const taskDurations = useMemo(() => {
     const durations: Record<string, number> = {};
     if (timeLogs) {
-      timeLogs.forEach(log => {
+      timeLogs.forEach((log) => {
         const duration = log.duration || 0;
         durations[log.taskId] = (durations[log.taskId] || 0) + duration;
       });
@@ -199,24 +211,18 @@ export default function ProjectPage() {
   }, [timeLogs, elapsedTimes]);
 
   const updateTaskMutation = useMutation({
-    mutationFn: async ({ taskId, updates }: { taskId: string; updates: Partial<Task> }) => {
-      // For optimistic update success simulate, fetch is not awaited if we don't return it immediately, but returning the promise is standard.
-      return apiRequest("PATCH", `/api/tasks/${taskId}`, updates);
-    },
+    mutationFn: async ({ taskId, updates }: { taskId: string; updates: Partial<Task> }) =>
+      apiRequest("PATCH", `/api/tasks/${taskId}`, updates),
     onMutate: async ({ taskId, updates }) => {
       await queryClient.cancelQueries({ queryKey: ["/api/tasks/search"] });
       const previousQueries = queryClient.getQueriesData({ queryKey: ["/api/tasks/search"] });
-
       queryClient.setQueriesData({ queryKey: ["/api/tasks/search"] }, (old: any) => {
         if (!old || !old.tasks) return old;
         return {
           ...old,
-          tasks: old.tasks.map((t: Task) =>
-            t.id === taskId ? { ...t, ...updates } : t
-          ),
+          tasks: old.tasks.map((t: Task) => (t.id === taskId ? { ...t, ...updates } : t)),
         };
       });
-
       return { previousQueries };
     },
     onError: (err, newTodo, context: any) => {
@@ -257,7 +263,7 @@ export default function ProjectPage() {
   });
 
   const handleToggleTimer = (taskId: string) => {
-    const isActive = activeLogs && activeLogs.some(log => log.taskId === taskId);
+    const isActive = activeLogs && activeLogs.some((log) => log.taskId === taskId);
     if (isActive) stopTimerMutation.mutate(taskId);
     else startTimerMutation.mutate(taskId);
   };
@@ -291,8 +297,6 @@ export default function ProjectPage() {
 
   const usersMap = useMemo(() => {
     const map = new Map<string, User>();
-    // Skip members whose user object is null (e.g. deleted users) to prevent
-    // downstream crashes where code accesses .firstName on a null value.
     memberData?.forEach((m) => {
       if (m.user) map.set(m.userId, m.user as User);
     });
@@ -301,30 +305,42 @@ export default function ProjectPage() {
 
   const projectProgress = useMemo(() => {
     if (!tasks || tasks.length === 0) return 0;
-    const completed = tasks.filter(t => t.status === "done").length;
+    const completed = tasks.filter((t) => t.status === "done").length;
     return Math.round((completed / tasks.length) * 100);
   }, [tasks]);
 
-  const getTaskUrl = useCallback((task: Task) => {
-    const projectSlug = project?.slug || project?.id || id;
-    if (task.parentId) {
-      const parent = tasks.find(t => t.id === task.parentId);
-      const parentSlug = parent?.slug || parent?.id || task.parentId;
-      return `/projects/${projectSlug}/${parentSlug}/${task.slug || task.id}`;
-    }
-    return `/projects/${projectSlug}/${task.slug || task.id}`;
-  }, [project?.slug, project?.id, id, tasks]);
+  const getTaskUrl = useCallback(
+    (task: Task) => {
+      const projectSlug = project?.slug || project?.id || id;
+      if (task.parentId) {
+        const parent = tasks.find((t) => t.id === task.parentId);
+        const parentSlug = parent?.slug || parent?.id || task.parentId;
+        return `/projects/${projectSlug}/${parentSlug}/${task.slug || task.id}`;
+      }
+      return `/projects/${projectSlug}/${task.slug || task.id}`;
+    },
+    [project?.slug, project?.id, id, tasks]
+  );
 
-  const handleTaskClick = useCallback((t: Task) => setLocation(getTaskUrl(t)), [setLocation, getTaskUrl]);
+  const handleTaskClick = useCallback(
+    (t: Task) => setLocation(getTaskUrl(t)),
+    [setLocation, getTaskUrl]
+  );
   const { mutate: updateTask } = updateTaskMutation;
-  const handleTaskUpdate = useCallback((taskId: string, up: Partial<Task>) => updateTask({ taskId, updates: up }), [updateTask]);
-  const handleCreateSubtask = useCallback((taskId: string) => setCreatingSubtaskFor(taskId), []);
+  const handleTaskUpdate = useCallback(
+    (taskId: string, up: Partial<Task>) => updateTask({ taskId, updates: up }),
+    [updateTask]
+  );
+  const handleCreateSubtask = useCallback(
+    (taskId: string) => setCreatingSubtaskFor(taskId),
+    []
+  );
 
   const buildTaskTree = (flatTasks: Task[]) => {
     const taskMap = new Map<string, Task & { subRows?: Task[] }>();
     const roots: (Task & { subRows?: Task[] })[] = [];
-    flatTasks.forEach(task => taskMap.set(task.id, { ...task, subRows: [] }));
-    flatTasks.forEach(task => {
+    flatTasks.forEach((task) => taskMap.set(task.id, { ...task, subRows: [] }));
+    flatTasks.forEach((task) => {
       const node = taskMap.get(task.id)!;
       if (task.parentId && taskMap.has(task.parentId)) {
         const parent = taskMap.get(task.parentId)!;
@@ -338,16 +354,19 @@ export default function ProjectPage() {
   };
 
   const groupedTasks = useMemo(() => {
-    if (groupBy === "none") return { "Tasks": buildTaskTree(tasks) };
+    if (groupBy === "none") return { Tasks: buildTaskTree(tasks) };
     const groups: Record<string, Task[]> = {};
-    tasks.forEach(task => {
+    tasks.forEach((task) => {
       let key = "Other";
-      if (groupBy === "status") key = TASK_STATUSES.find(s => s.id === task.status)?.label || "Unknown";
-      else if (groupBy === "priority") key = TASK_PRIORITIES.find(p => p.id === task.priority)?.label || "Unknown";
+      if (groupBy === "status")
+        key = TASK_STATUSES.find((s) => s.id === task.status)?.label || "Unknown";
+      else if (groupBy === "priority")
+        key = TASK_PRIORITIES.find((p) => p.id === task.priority)?.label || "Unknown";
       else if (groupBy === "assignee") {
         const user = task.assigneeId ? usersMap.get(task.assigneeId) : null;
         key = user ? `${user.firstName} ${user.lastName}` : "Unassigned";
-      } else if (groupBy === "milestone") key = milestones?.find(m => m.id === task.milestoneId)?.title || "No Milestone";
+      } else if (groupBy === "milestone")
+        key = milestones?.find((m) => m.id === task.milestoneId)?.title || "No Milestone";
       if (!groups[key]) groups[key] = [];
       groups[key].push(task);
     });
@@ -357,51 +376,68 @@ export default function ProjectPage() {
   const handleDragEnd = (result: DropResult) => {
     if (!result.destination) return;
     const newStatus = result.destination.droppableId;
-    updateTaskMutation.mutate({ taskId: result.draggableId, updates: { status: newStatus as any } });
+    updateTaskMutation.mutate({
+      taskId: result.draggableId,
+      updates: { status: newStatus as any },
+    });
   };
 
   const handleMilestoneDragEnd = (result: DropResult) => {
     if (!result.destination) return;
-    const newId = result.destination.droppableId === "no-milestone" ? null : result.destination.droppableId;
-    updateTaskMutation.mutate({ taskId: result.draggableId, updates: { milestoneId: newId } });
+    const newId =
+      result.destination.droppableId === "no-milestone"
+        ? null
+        : result.destination.droppableId;
+    updateTaskMutation.mutate({
+      taskId: result.draggableId,
+      updates: { milestoneId: newId },
+    });
   };
 
+  /* ── Loading ── */
   if (projectLoading) {
     return (
-      <div className="p-6 space-y-6">
-        <div className="flex justify-between items-center">
-          <Skeleton className="h-10 w-64" />
+      <div className="w-full overflow-x-hidden space-y-4 p-4 sm:p-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <Skeleton className="h-10 w-48 sm:w-64" />
           <div className="flex gap-2">
-            <Skeleton className="h-9 w-24" />
-            <Skeleton className="h-9 w-24" />
+            <Skeleton className="h-9 w-20 sm:w-24" />
+            <Skeleton className="h-9 w-20 sm:w-24" />
           </div>
         </div>
-        <Skeleton className="h-[500px] w-full rounded-xl" />
+        <Skeleton className="h-[400px] w-full rounded-xl sm:h-[500px]" />
       </div>
     );
   }
 
+  /* ── Error ── */
   if (projectError) return (
-    <div className="flex flex-col items-center justify-center h-full p-12 gap-4 text-center">
-      <div className="h-16 w-16 rounded-2xl bg-destructive/10 flex items-center justify-center">
-        <AlertCircle className="h-8 w-8 text-destructive" />
+    <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 p-6 text-center">
+      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-destructive/10">
+        <AlertCircle className="h-7 w-7 text-destructive" />
       </div>
-      <h2 className="text-2xl font-bold text-foreground">Failed to load project</h2>
-      <p className="text-muted-foreground max-w-sm">{projectErrorObj instanceof Error ? projectErrorObj.message : "An unexpected error occurred while fetching project data."}</p>
-      <div className="flex gap-3">
-        <Button onClick={() => window.location.reload()} variant="default">Try Again</Button>
+      <h2 className="text-xl font-bold text-foreground">Failed to load project</h2>
+      <p className="max-w-sm text-sm text-muted-foreground">
+        {projectErrorObj instanceof Error
+          ? projectErrorObj.message
+          : "An unexpected error occurred."}
+      </p>
+      <div className="flex flex-wrap justify-center gap-3">
+        <Button onClick={() => window.location.reload()}>Try Again</Button>
         <Button onClick={() => window.history.back()} variant="outline">Go Back</Button>
       </div>
     </div>
   );
 
   if (!project) return (
-    <div className="flex flex-col items-center justify-center h-full p-12 gap-4 text-center">
-      <div className="h-16 w-16 rounded-2xl bg-destructive/10 flex items-center justify-center">
-        <AlertCircle className="h-8 w-8 text-destructive" />
+    <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 p-6 text-center">
+      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-destructive/10">
+        <AlertCircle className="h-7 w-7 text-destructive" />
       </div>
-      <h2 className="text-2xl font-bold text-foreground">Project not found</h2>
-      <p className="text-muted-foreground max-w-sm">This project may have been deleted or you don't have access to it.</p>
+      <h2 className="text-xl font-bold text-foreground">Project not found</h2>
+      <p className="max-w-sm text-sm text-muted-foreground">
+        This project may have been deleted or you don't have access to it.
+      </p>
       <Button onClick={() => window.history.back()} variant="outline">Go Back</Button>
     </div>
   );
@@ -409,165 +445,285 @@ export default function ProjectPage() {
   const isBulkSelected = Object.keys(rowSelection).length > 0;
 
   return (
-    <div className="flex flex-col h-full bg-background/50 overflow-hidden">
-      {/* ── Sticky Header ────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-30 bg-card/80 backdrop-blur-md border-b border-border px-[var(--page-padding)] py-4 shrink-0 transition-all">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-            <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-primary flex items-center justify-center shadow-premium shrink-0">
-              <Plus className="h-5 w-5 text-primary-foreground" />
+    /* ROOT — overflow-x-hidden prevents any child from creating h-scroll */
+    <div className="flex h-full w-full flex-col overflow-x-hidden bg-background/50">
+
+      {/* ══════════════════════════════════════════════
+          STICKY HEADER
+          Mobile (<sm):  two rows
+            Row 1: [icon][breadcrumb + title]
+            Row 2: [progress pill] ··· [Members][Settings][New Task]
+          sm+:   single row, left ↔ right
+      ══════════════════════════════════════════════ */}
+      <header className="sticky top-0 z-30 shrink-0 border-b border-border bg-card/80 backdrop-blur-md
+        px-3 py-3
+        sm:px-5 sm:py-4
+        md:px-6">
+
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+
+          {/* Left: project icon + breadcrumb + title */}
+          <div className="flex min-w-0 items-center gap-2.5">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary shadow-sm sm:h-10 sm:w-10">
+              <Plus className="h-4 w-4 text-primary-foreground sm:h-5 sm:w-5" />
             </div>
             <div className="min-w-0">
-              <div className="flex items-center gap-1.5 text-[9px] sm:text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-0.5">
-                <span className="hover:text-foreground cursor-pointer whitespace-nowrap">Projects</span>
-                <ChevronRight className="h-2.5 w-2.5 opacity-50 shrink-0" />
-                <span className="text-foreground truncate">{project?.name}</span>
+              <div className="mb-0.5 flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-muted-foreground sm:text-[10px]">
+                <span className="cursor-pointer whitespace-nowrap hover:text-foreground">Projects</span>
+                <ChevronRight className="h-2.5 w-2.5 shrink-0 opacity-50" />
+                {/* max-w truncates long project names in the breadcrumb on tiny screens */}
+                <span className="max-w-[110px] truncate text-foreground sm:max-w-[200px] md:max-w-none">
+                  {project?.name}
+                </span>
               </div>
-              <h1 className="text-lg sm:text-xl font-extrabold text-foreground tracking-tight leading-none truncate">{project?.name}</h1>
+              {/* h1 also truncates — it's the most prominent element so give it more room */}
+              <h1 className="max-w-[200px] truncate text-base font-extrabold leading-none tracking-tight text-foreground sm:max-w-xs sm:text-xl md:max-w-none">
+                {project?.name}
+              </h1>
             </div>
           </div>
 
-          <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
-            <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-muted/50 rounded-lg border border-border">
-              <div className="w-12 sm:w-16 h-1 bg-secondary rounded-full overflow-hidden">
-                <div className="h-full bg-primary transition-all duration-700" style={{ width: `${projectProgress}%` }} />
+          {/* Right: progress pill + action buttons
+              On mobile: full-width flex row so buttons never overflow.
+              justify-between pushes progress left, buttons right.
+              On sm+: auto width, justify-end. */}
+          <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-end sm:gap-3">
+
+            {/* Progress */}
+            <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/50 px-2.5 py-1.5">
+              <div className="h-1 w-10 overflow-hidden rounded-full bg-secondary sm:w-14">
+                <div
+                  className="h-full bg-primary transition-all duration-700"
+                  style={{ width: `${projectProgress}%` }}
+                />
               </div>
               <span className="text-[10px] font-bold text-muted-foreground">{projectProgress}%</span>
             </div>
 
-            <div className="flex items-center gap-1">
-              <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9 text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg" onClick={() => setShowMembers(true)} title="Members">
+            {/* Action buttons */}
+            <div className="flex items-center gap-0.5 sm:gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"
+                onClick={() => setShowMembers(true)}
+                title="Members"
+              >
                 <Users className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9 text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg" onClick={() => setShowSettings(true)} title="Settings">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"
+                onClick={() => setShowSettings(true)}
+                title="Settings"
+              >
                 <Settings className="h-4 w-4" />
               </Button>
-              <Button className="h-8 sm:h-9 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-bold px-3 sm:px-4 shadow-premium transition-all text-xs" onClick={() => { setCreateTaskStatus("todo"); setShowCreateTask(true); }}>
-                <Plus className="h-4 w-4 sm:mr-1.5" /> <span className="hidden xs:inline">New Task</span>
+              {/* New Task: icon-only below 360 px, label visible from 360 px */}
+              <Button
+                className="h-8 gap-1.5 rounded-lg bg-primary px-2.5 text-xs font-bold text-primary-foreground shadow-sm hover:bg-primary/90 sm:h-9 sm:px-4"
+                onClick={() => { setCreateTaskStatus("todo"); setShowCreateTask(true); }}
+              >
+                <Plus className="h-3.5 w-3.5 shrink-0" />
+                <span className="hidden min-[360px]:inline">New Task</span>
               </Button>
             </div>
           </div>
         </div>
       </header>
 
-      {/* ── Toolbar ──────────────────────────────────────────────────────── */}
-      <div className="bg-card border-b border-border px-[var(--page-padding)] py-3 shrink-0 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-        <div className="flex items-center gap-1 bg-accent/50 border border-border/50 rounded-xl p-1 relative w-full sm:w-fit self-center lg:self-auto overflow-x-auto scrollbar-none">
-          <div
-            className="absolute h-[calc(100%-8px)] bg-background rounded-lg shadow-sm animate-tab-indicator transition-all duration-300"
-            style={{
-              width: "calc(33.33% - 4px)",
-              left: activeTab === "list" ? "4px" : activeTab === "board" ? "33.33%" : "66.66%",
-              zIndex: 0
-            }}
-          />
-          <button
-            onClick={() => setActiveTab("list")}
-            className={cn(
-              "relative z-10 px-3 sm:px-5 py-1.5 rounded-lg text-[10px] sm:text-xs lg:text-sm font-bold transition-all duration-200 flex-1 sm:w-28 whitespace-nowrap",
-              activeTab === "list" ? "text-foreground" : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            List
-          </button>
-          <button
-            onClick={() => setActiveTab("board")}
-            className={cn(
-              "relative z-10 px-3 sm:px-5 py-1.5 rounded-lg text-[10px] sm:text-xs lg:text-sm font-bold transition-all duration-200 flex-1 sm:w-28 whitespace-nowrap",
-              activeTab === "board" ? "text-foreground" : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            Board
-          </button>
-          <button
-            onClick={() => setActiveTab("milestones")}
-            className={cn(
-              "relative z-10 px-3 sm:px-5 py-1.5 rounded-lg text-[10px] sm:text-xs lg:text-sm font-bold transition-all duration-200 flex-1 sm:w-28 whitespace-nowrap",
-              activeTab === "milestones" ? "text-foreground" : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            Milestones
-          </button>
-        </div>
+      {/* ══════════════════════════════════════════════
+          TOOLBAR (tabs + search + filters)
+          Mobile (<lg):
+            Row 1: [List][Board][Milestones] ← horizontally scrollable
+            Row 2: [Search ──────────────────]
+            Row 3: [Status ▾]   [Priority ▾]
+          lg+: tabs left | search + filters right on one row
+      ══════════════════════════════════════════════ */}
+      <div className="shrink-0 border-b border-border bg-card
+        px-3 py-2.5
+        sm:px-5 sm:py-3
+        md:px-6">
 
-        <div className="flex flex-wrap items-center justify-center lg:justify-end gap-2">
-          <div className="relative group w-full sm:flex-1 lg:w-48 transition-all">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground group-focus-within:text-primary transition-colors" />
-            <Input
-              placeholder="Search..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 h-9 w-full border-border bg-muted/50 focus:bg-background focus:border-primary/50 focus:ring-4 focus:ring-primary/10 rounded-xl text-xs transition-all"
-            />
+        <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
+
+          {/* Tab switcher
+              Horizontally scrollable wrapper so the 3 tabs never wrap
+              on phones narrower than 300 px. */}
+          <div className="w-full overflow-x-auto scrollbar-none lg:w-auto lg:shrink-0">
+            <div className="relative inline-flex items-center gap-0 rounded-xl border border-border/50 bg-accent/50 p-1">
+              {/* Sliding indicator */}
+              <div
+                className="absolute h-[calc(100%-8px)] rounded-lg bg-background shadow-sm transition-all duration-300"
+                style={{
+                  width: "calc(33.33% - 4px)",
+                  left:
+                    activeTab === "list"
+                      ? "4px"
+                      : activeTab === "board"
+                        ? "33.33%"
+                        : "66.66%",
+                  zIndex: 0,
+                }}
+              />
+              {(["list", "board", "milestones"] as const).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={cn(
+                    "relative z-10 w-20 sm:w-28 lg:w-32 rounded-lg py-1.5 text-[10px] font-bold capitalize transition-all duration-200 sm:text-xs lg:text-sm",
+                    activeTab === tab
+                      ? "text-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
           </div>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <Select value={status} onValueChange={setStatus}>
-              <SelectTrigger className="h-9 flex-1 sm:w-[110px] rounded-xl border-border bg-muted/50 text-muted-foreground font-bold text-[10px] ring-offset-0 focus:ring-4 focus:ring-primary/10">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent className="rounded-xl border-border shadow-elevation">
-                <SelectItem value="all" className="font-bold text-[10px]">Any Status</SelectItem>
-                {TASK_STATUSES.map(s => <SelectItem key={s.id} value={s.id} className="font-bold text-[10px]">{s.label}</SelectItem>)}
-              </SelectContent>
-            </Select>
+          {/* Search + filters
+              Mobile:  stacked (search full-width, filters side-by-side)
+              sm+:     inline row */}
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
 
-            <Select value={priority} onValueChange={setPriority}>
-              <SelectTrigger className="h-9 flex-1 sm:w-[110px] rounded-xl border-border bg-muted/50 text-muted-foreground font-bold text-[10px] ring-offset-0 focus:ring-4 focus:ring-primary/10">
-                <SelectValue placeholder="Priority" />
-              </SelectTrigger>
-              <SelectContent className="rounded-xl border-border shadow-elevation">
-                <SelectItem value="all" className="font-bold text-[10px]">Any Priority</SelectItem>
-                {TASK_PRIORITIES.map(p => <SelectItem key={p.id} value={p.id} className="font-bold text-[10px]">{p.label}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            {/* Search input — full width on mobile */}
+            <div className="relative w-full sm:w-48 lg:w-44 xl:w-56">
+              <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search tasks…"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-9 w-full rounded-xl border-border bg-muted/50 pl-9 text-xs focus:border-primary/50 focus:bg-background focus:ring-4 focus:ring-primary/10"
+              />
+            </div>
+
+            {/* Status + Priority — flex-1 on mobile so they share the row equally */}
+            <div className="flex gap-2">
+              <Select value={status} onValueChange={setStatus}>
+                <SelectTrigger className="h-9 flex-1 rounded-xl border-border bg-muted/50 text-[10px] font-bold text-muted-foreground focus:ring-4 focus:ring-primary/10 sm:w-28 sm:flex-none">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl border-border shadow-lg">
+                  <SelectItem value="all" className="text-[10px] font-bold">Any Status</SelectItem>
+                  {TASK_STATUSES.map((s) => (
+                    <SelectItem key={s.id} value={s.id} className="text-[10px] font-bold">{s.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={priority} onValueChange={setPriority}>
+                <SelectTrigger className="h-9 flex-1 rounded-xl border-border bg-muted/50 text-[10px] font-bold text-muted-foreground focus:ring-4 focus:ring-primary/10 sm:w-28 sm:flex-none">
+                  <SelectValue placeholder="Priority" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl border-border shadow-lg">
+                  <SelectItem value="all" className="text-[10px] font-bold">Any Priority</SelectItem>
+                  {TASK_PRIORITIES.map((p) => (
+                    <SelectItem key={p.id} value={p.id} className="text-[10px] font-bold">{p.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* ── Main View Area ───────────────────────────────────────────────── */}
-      <main className="flex-1 overflow-y-auto min-h-0 bg-background/50 p-[var(--page-padding)] relative">
-        {/* Bulk Action Pill */}
+      {/* ══════════════════════════════════════════════
+          MAIN CONTENT AREA
+      ══════════════════════════════════════════════ */}
+      <main className="relative min-h-0 flex-1 overflow-y-auto bg-background/50
+        p-3
+        sm:p-4
+        md:p-6">
+
+        {/* Bulk action pill — fixed, bottom-centred
+            w-[calc(100%-24px)] on mobile so it never overflows.
+            sm+: auto width. */}
         {isBulkSelected && (
-          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-foreground text-background rounded-2xl shadow-2xl px-4 sm:px-5 py-2.5 sm:py-3 flex items-center gap-3 sm:gap-5 border border-border/10 animate-fade-up w-[calc(100%-32px)] sm:w-auto justify-between sm:justify-start">
-            <span className="text-[10px] sm:text-sm font-bold whitespace-nowrap">{Object.keys(rowSelection).length} selected</span>
-            <div className="hidden sm:block w-px h-4 bg-muted-foreground/20" />
-            <div className="flex items-center gap-1.5 sm:gap-2">
-              <Button size="sm" className="h-7 sm:h-8 bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-[10px] sm:text-xs" onClick={() => setIsBulkEditDialogOpen(true)}>Edit</Button>
-              <Button size="sm" variant="ghost" className="h-7 sm:h-8 text-destructive hover:text-destructive/80 hover:bg-destructive/10 font-bold text-[10px] sm:text-xs" onClick={handleBulkDelete}>Delete</Button>
-              <Button size="sm" variant="ghost" className="h-7 sm:h-8 opacity-60 hover:opacity-100 text-[10px] sm:text-xs px-2" onClick={() => setRowSelection({})}>X</Button>
+          <div className="fixed bottom-4 left-1/2 z-50 flex w-[calc(100%-24px)] -translate-x-1/2 items-center justify-between gap-3 rounded-2xl border border-border/10 bg-foreground px-4 py-2.5 shadow-2xl sm:w-auto sm:justify-start sm:gap-5 sm:px-5 sm:py-3 animate-fade-up">
+            <span className="whitespace-nowrap text-xs font-bold text-background sm:text-sm">
+              {Object.keys(rowSelection).length} selected
+            </span>
+            <div className="hidden h-4 w-px bg-muted-foreground/20 sm:block" />
+            <div className="flex items-center gap-1.5">
+              <Button
+                size="sm"
+                className="h-7 bg-primary text-[10px] font-bold text-primary-foreground hover:bg-primary/90 sm:h-8 sm:text-xs"
+                onClick={() => setIsBulkEditDialogOpen(true)}
+              >
+                Edit
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 text-[10px] font-bold text-destructive hover:bg-destructive/10 hover:text-destructive/80 sm:h-8 sm:text-xs"
+                onClick={handleBulkDelete}
+              >
+                Delete
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 px-2 text-[10px] opacity-60 hover:opacity-100 sm:h-8"
+                onClick={() => setRowSelection({})}
+              >
+                <X className="h-3.5 w-3.5" />
+              </Button>
             </div>
           </div>
         )}
 
+        {/* Loading skeletons */}
         {tasksLoading ? (
-          <div className="bg-card rounded-2xl border border-border shadow-sm p-4 space-y-4">
-            {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-12 w-full rounded-lg" />)}
+          <div className="space-y-3 rounded-2xl border border-border bg-card p-4 shadow-sm sm:space-y-4">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-12 w-full rounded-lg" />
+            ))}
           </div>
+
+          /* Empty state */
         ) : tasks.length === 0 ? (
-          <div className="bg-card rounded-2xl border border-dashed border-border p-8 sm:p-12 text-center">
-            <div className="h-12 w-12 sm:h-16 sm:w-16 bg-muted/50 rounded-full flex items-center justify-center mx-auto mb-4">
-              <ListTodo className="h-6 w-6 sm:h-8 sm:w-8 text-muted-foreground/30" />
+          <div className="rounded-2xl border border-dashed border-border bg-card p-6 text-center sm:p-12">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted/50 sm:h-16 sm:w-16">
+              <ListTodo className="h-6 w-6 text-muted-foreground/30 sm:h-8 sm:w-8" />
             </div>
-            <h3 className="text-base sm:text-lg font-bold text-foreground mb-1">No tasks found</h3>
-            <p className="text-muted-foreground text-[10px] sm:text-sm mb-6 max-w-sm mx-auto">Create your first task to start tracking progress on this project.</p>
-            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs" onClick={() => setShowCreateTask(true)}>
-              <Plus className="h-4 w-4 mr-2" /> Add first task
+            <h3 className="mb-1 text-base font-bold text-foreground sm:text-lg">No tasks found</h3>
+            <p className="mx-auto mb-6 max-w-xs text-xs text-muted-foreground sm:max-w-sm sm:text-sm">
+              Create your first task to start tracking progress on this project.
+            </p>
+            <Button
+              className="bg-primary text-xs font-bold text-primary-foreground hover:bg-primary/90"
+              onClick={() => setShowCreateTask(true)}
+            >
+              <Plus className="mr-2 h-4 w-4" /> Add first task
             </Button>
           </div>
+
         ) : (
           <>
+            {/* ══ LIST ══ */}
             {activeTab === "list" && (
-              <div className="space-y-6">
-                {Object.entries(groupedTasks).map(([title, group], idx) => (
+              <div className="space-y-5">
+                {Object.entries(groupedTasks).map(([title, group]) => (
                   <div key={title}>
                     {groupBy !== "none" && (
-                      <div className="flex items-center gap-2 mb-3 px-2">
-                        <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{title}</h3>
-                        <span className="text-[9px] font-bold bg-accent text-accent-foreground px-1.5 py-0.5 rounded-full">{group.length}</span>
+                      <div className="mb-3 flex items-center gap-2 px-1">
+                        <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                          {title}
+                        </h3>
+                        <span className="rounded-full bg-accent px-1.5 py-0.5 text-[9px] font-bold text-accent-foreground">
+                          {group.length}
+                        </span>
                       </div>
                     )}
-                    <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
+                    {/*
+                      overflow-hidden on the wrapper prevents TaskTable's
+                      internal <table> from blowing out the layout on mobile.
+                      The table itself should handle its own horizontal scroll.
+                    */}
+                    <div className="w-full overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
                       <TaskTable
                         tasks={group}
                         users={usersMap}
@@ -588,42 +744,76 @@ export default function ProjectPage() {
               </div>
             )}
 
+            {/* ══ BOARD ══
+                320-639 px  : single column (flex-col, each col full-width)
+                640-1023 px : 2-column CSS grid
+                1024 px+    : horizontal-scroll flex row of fixed-width columns
+            */}
             {activeTab === "board" && (
               <DragDropContext onDragEnd={handleDragEnd}>
-                <div className="h-full flex flex-col lg:flex-row gap-5 overflow-auto pb-4">
-                  {TASK_STATUSES.map((s, idx) => (
-                    <div key={s.id} className="min-w-full lg:min-w-[280px] lg:max-w-[320px] shrink-0 flex flex-col">
-                      <div className="flex items-center justify-between mb-4 px-1">
+                <div className="
+                  flex flex-col gap-4 pb-4
+                  sm:grid sm:grid-cols-2 sm:gap-4
+                  lg:flex lg:flex-row lg:gap-5 lg:overflow-x-auto lg:pb-6
+                ">
+                  {TASK_STATUSES.map((s) => (
+                    <div
+                      key={s.id}
+                      className="flex w-full flex-col sm:w-auto lg:w-72 lg:shrink-0 xl:w-80"
+                    >
+                      {/* Column header */}
+                      <div className="mb-3 flex items-center justify-between px-1">
                         <div className="flex items-center gap-2">
                           <div className={cn("h-2.5 w-2.5 rounded-full", s.color)} />
                           <h3 className="text-sm font-bold text-foreground">{s.label}</h3>
-                          <span className="text-xs font-bold text-muted-foreground">{tasks.filter(t => t.status === s.id).length}</span>
+                          <span className="text-xs font-bold text-muted-foreground">
+                            {tasks.filter((t) => t.status === s.id).length}
+                          </span>
                         </div>
-                        <button onClick={() => { setCreateTaskStatus(s.id); setShowCreateTask(true); }} className="text-muted-foreground hover:text-foreground transition-colors">
+                        <button
+                          onClick={() => { setCreateTaskStatus(s.id); setShowCreateTask(true); }}
+                          className="text-muted-foreground transition-colors hover:text-foreground"
+                        >
                           <Plus className="h-4 w-4" />
                         </button>
                       </div>
+
+                      {/* Droppable area */}
                       <Droppable droppableId={s.id}>
                         {(provided) => (
-                          <div {...provided.droppableProps} ref={provided.innerRef} className="flex-1 bg-muted/30 rounded-2xl p-2 min-h-[500px] border border-border/50">
-                            {tasks.filter(t => t.status === s.id).map((t, i) => (
-                              <Draggable key={t.id} draggableId={t.id} index={i}>
-                                {(p) => (
-                                  <div ref={p.innerRef} {...p.draggableProps} {...p.dragHandleProps} style={p.draggableProps.style}>
-                                    <div className="pb-2">
+                          <div
+                            {...provided.droppableProps}
+                            ref={provided.innerRef}
+                            className="
+                              flex-1 rounded-2xl border border-border/50 bg-muted/30 p-2
+                              min-h-[140px]
+                              lg:min-h-[500px]
+                            "
+                          >
+                            {tasks
+                              .filter((t) => t.status === s.id)
+                              .map((t, i) => (
+                                <Draggable key={t.id} draggableId={t.id} index={i}>
+                                  {(p) => (
+                                    <div
+                                      ref={p.innerRef}
+                                      {...p.draggableProps}
+                                      {...p.dragHandleProps}
+                                      style={p.draggableProps.style}
+                                      className="pb-2"
+                                    >
                                       <KanbanTaskCard
                                         task={t}
                                         user={t.assigneeId ? usersMap.get(t.assigneeId) : null}
                                         onClick={() => setLocation(getTaskUrl(t))}
                                         onToggleTimer={() => handleToggleTimer(t.id)}
-                                        isActive={activeLogs && activeLogs.some(l => l.taskId === t.id)}
+                                        isActive={activeLogs && activeLogs.some((l) => l.taskId === t.id)}
                                         duration={taskDurations[t.id] || 0}
                                       />
                                     </div>
-                                  </div>
-                                )}
-                              </Draggable>
-                            ))}
+                                  )}
+                                </Draggable>
+                              ))}
                             {provided.placeholder}
                           </div>
                         )}
@@ -634,21 +824,39 @@ export default function ProjectPage() {
               </DragDropContext>
             )}
 
+            {/* ══ MILESTONES ══ */}
             {activeTab === "milestones" && (
-              <div className="h-full flex flex-col items-start gap-4 p-[var(--page-padding)]">
-                <div className="flex w-full justify-between items-center sm:-mb-2">
-                  <h2 className="text-xl font-bold bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-transparent">Project Milestones</h2>
-                  <Button onClick={() => setShowCreateMilestone(true)} className="h-9 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-premium transition-all text-xs z-10">
-                    <Plus className="h-4 w-4 sm:mr-1.5" /> <span className="hidden sm:inline">New Milestone</span>
+              <div className="flex w-full flex-col gap-4">
+                <div className="flex w-full items-center justify-between gap-3">
+                  <h2 className="bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-lg font-bold text-transparent sm:text-xl">
+                    Project Milestones
+                  </h2>
+                  <Button
+                    onClick={() => setShowCreateMilestone(true)}
+                    className="h-8 shrink-0 gap-1.5 rounded-lg bg-primary text-xs font-bold text-primary-foreground shadow-sm hover:bg-primary/90 sm:h-9"
+                  >
+                    <Plus className="h-3.5 w-3.5 shrink-0" />
+                    <span className="hidden min-[360px]:inline">New Milestone</span>
                   </Button>
                 </div>
-                <div className="w-full flex-1">
+
+                {/* overflow-x-auto lets MilestoneBoard scroll horizontally
+                    when needed rather than breaking the page layout */}
+                <div className="w-full overflow-x-auto">
                   <MilestoneBoard
                     tasks={tasks}
                     users={usersMap}
                     onTaskClick={(t) => setLocation(getTaskUrl(t))}
-                    onAddTask={(m) => { setCreateTaskStatus("todo"); setCreateTaskMilestone(m); setShowCreateTask(true); }}
-                    activeTaskId={activeLogs && activeLogs.find(l => l.taskId && tasks.some(t => t.id === l.taskId))?.taskId}
+                    onAddTask={(m) => {
+                      setCreateTaskStatus("todo");
+                      setCreateTaskMilestone(m);
+                      setShowCreateTask(true);
+                    }}
+                    activeTaskId={
+                      activeLogs &&
+                      activeLogs.find((l) => l.taskId && tasks.some((t) => t.id === l.taskId))
+                        ?.taskId
+                    }
                     onToggleTimer={handleToggleTimer}
                     taskDurations={taskDurations}
                     milestones={stableMilestones}
@@ -661,13 +869,46 @@ export default function ProjectPage() {
         )}
       </main>
 
-      {/* ── Dialogs ────────────────────────────────────────────────────────── */}
-      <CreateTaskDialog open={showCreateTask} onClose={() => setShowCreateTask(false)} projectId={project?.id || ""} initialStatus={createTaskStatus} initialMilestone={createTaskMilestone} members={Array.from(usersMap.values()).filter(Boolean)} />
-      {creatingSubtaskFor && <CreateTaskDialog open={!!creatingSubtaskFor} onClose={() => setCreatingSubtaskFor(null)} projectId={project?.id || ""} parentId={creatingSubtaskFor} members={Array.from(usersMap.values()).filter(Boolean)} onSuccess={(c: any) => c.parentId && setExpanded((e: any) => e === true ? true : { ...e, [c.parentId]: true })} />}
-      <CreateMilestoneDialog open={showCreateMilestone} onClose={() => setShowCreateMilestone(false)} projectId={project?.id || ""} />
-      <ProjectMembersDialog open={showMembers} onClose={() => setShowMembers(false)} project={project!} memberData={memberData || []} />
-      {project && <ProjectSettingsDialog open={showSettings} onClose={() => setShowSettings(false)} project={project} />}
-
+      {/* ── Dialogs — UNCHANGED ── */}
+      <CreateTaskDialog
+        open={showCreateTask}
+        onClose={() => setShowCreateTask(false)}
+        projectId={project?.id || ""}
+        initialStatus={createTaskStatus}
+        initialMilestone={createTaskMilestone}
+        members={Array.from(usersMap.values()).filter(Boolean)}
+      />
+      {creatingSubtaskFor && (
+        <CreateTaskDialog
+          open={!!creatingSubtaskFor}
+          onClose={() => setCreatingSubtaskFor(null)}
+          projectId={project?.id || ""}
+          parentId={creatingSubtaskFor}
+          members={Array.from(usersMap.values()).filter(Boolean)}
+          onSuccess={(c: any) =>
+            c.parentId &&
+            setExpanded((e: any) => (e === true ? true : { ...e, [c.parentId]: true }))
+          }
+        />
+      )}
+      <CreateMilestoneDialog
+        open={showCreateMilestone}
+        onClose={() => setShowCreateMilestone(false)}
+        projectId={project?.id || ""}
+      />
+      <ProjectMembersDialog
+        open={showMembers}
+        onClose={() => setShowMembers(false)}
+        project={project!}
+        memberData={memberData || []}
+      />
+      {project && (
+        <ProjectSettingsDialog
+          open={showSettings}
+          onClose={() => setShowSettings(false)}
+          project={project}
+        />
+      )}
       <BulkEditDialog
         open={isBulkEditDialogOpen}
         onOpenChange={setIsBulkEditDialogOpen}
@@ -680,27 +921,66 @@ export default function ProjectPage() {
   );
 }
 
+/* ════════════════════════════════════════════════
+   KANBAN TASK CARD
+   Fixes vs original:
+   • overflow-hidden on card — priority stripe can't bleed out
+   • line-clamp-2 + pr-3 — title clears the stripe
+   • flex footer with gap — avatar & timer never overlap on narrow cards
+════════════════════════════════════════════════ */
 function KanbanTaskCard({ task, user, onClick, onToggleTimer, isActive, duration }: any) {
   return (
-    <div onClick={onClick} className="bg-card rounded-xl border border-border p-4 shadow-sm hover:shadow-md transition-all cursor-pointer group relative overflow-hidden">
-      <div className={cn("absolute top-0 right-0 w-1 h-full", TASK_PRIORITIES.find(p => p.id === task.priority)?.color)} />
-      <h4 className="text-sm font-bold text-foreground mb-2 line-clamp-2 leading-snug group-hover:text-primary transition-colors tracking-tight">{task.title}</h4>
-      <div className="flex items-center justify-between mt-3">
-        <div className="flex -space-x-1.5 overflow-hidden">
+    <div
+      onClick={onClick}
+      className="group relative cursor-pointer overflow-hidden rounded-xl border border-border bg-card p-3.5 shadow-sm transition-all hover:shadow-md"
+    >
+      {/* Priority stripe — right edge, full height */}
+      <div
+        className={cn(
+          "absolute right-0 top-0 h-full w-1",
+          TASK_PRIORITIES.find((p) => p.id === task.priority)?.color
+        )}
+      />
+
+      {/* Title */}
+      <h4 className="mb-2 line-clamp-2 pr-3 text-sm font-bold leading-snug tracking-tight text-foreground transition-colors group-hover:text-primary">
+        {task.title}
+      </h4>
+
+      {/* Footer */}
+      <div className="mt-2 flex items-center justify-between gap-2">
+        {/* Assignee avatar */}
+        <div>
           {user ? (
-            <Avatar className="h-6 w-6 border-2 border-white">
+            <Avatar className="h-6 w-6 border-2 border-background">
               <AvatarImage src={user.profileImageUrl || undefined} />
-              <AvatarFallback className="text-[10px] bg-violet-100 text-violet-600 font-bold">{user.firstName?.[0]}{user.lastName?.[0]}</AvatarFallback>
+              <AvatarFallback className="bg-violet-100 text-[10px] font-bold text-violet-600">
+                {user.firstName?.[0]}{user.lastName?.[0]}
+              </AvatarFallback>
             </Avatar>
           ) : (
-            <div className="h-6 w-6 rounded-full bg-muted border-2 border-background flex items-center justify-center">
+            <div className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-background bg-muted">
               <UserIcon className="h-3 w-3 text-muted-foreground" />
             </div>
           )}
         </div>
-        <div className="flex items-center gap-2">
-          {duration > 0 && <span className="text-[10px] font-bold text-muted-foreground">{Math.floor(duration / 60)}m</span>}
-          <button onClick={(e) => { e.stopPropagation(); onToggleTimer(); }} className={cn("h-6 w-6 rounded-full flex items-center justify-center transition-all", isActive ? "bg-amber-100/20 text-amber-600" : "bg-muted/50 text-muted-foreground hover:bg-primary/10 hover:text-primary")}>
+
+        {/* Duration + timer */}
+        <div className="flex items-center gap-1.5">
+          {duration > 0 && (
+            <span className="text-[10px] font-bold text-muted-foreground">
+              {Math.floor(duration / 60)}m
+            </span>
+          )}
+          <button
+            onClick={(e) => { e.stopPropagation(); onToggleTimer(); }}
+            className={cn(
+              "flex h-6 w-6 items-center justify-center rounded-full transition-all",
+              isActive
+                ? "bg-amber-100/20 text-amber-600"
+                : "bg-muted/50 text-muted-foreground hover:bg-primary/10 hover:text-primary"
+            )}
+          >
             <Clock className={cn("h-3.5 w-3.5", isActive && "animate-pulse")} />
           </button>
         </div>
