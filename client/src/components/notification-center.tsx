@@ -47,7 +47,7 @@ export function NotificationCenter({ children }: { children?: React.ReactNode })
         mutationFn: async () => apiRequest("POST", "/api/notifications/read-all"),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
-            toast({ title: "All notifications marked as read" });
+            toast({ title: "All notifications marked as read", variant: "success" });
         },
         onError: () => toast({ title: "Failed", variant: "destructive" }),
     });

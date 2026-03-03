@@ -33,21 +33,21 @@ type ActionType = typeof actionTypes
 
 type Action =
   | {
-      type: ActionType["ADD_TOAST"]
-      toast: ToasterToast
-    }
+    type: ActionType["ADD_TOAST"]
+    toast: ToasterToast
+  }
   | {
-      type: ActionType["UPDATE_TOAST"]
-      toast: Partial<ToasterToast>
-    }
+    type: ActionType["UPDATE_TOAST"]
+    toast: Partial<ToasterToast>
+  }
   | {
-      type: ActionType["DISMISS_TOAST"]
-      toastId?: ToasterToast["id"]
-    }
+    type: ActionType["DISMISS_TOAST"]
+    toastId?: ToasterToast["id"]
+  }
   | {
-      type: ActionType["REMOVE_TOAST"]
-      toastId?: ToasterToast["id"]
-    }
+    type: ActionType["REMOVE_TOAST"]
+    toastId?: ToasterToast["id"]
+  }
 
 interface State {
   toasts: ToasterToast[]
@@ -105,9 +105,9 @@ export const reducer = (state: State, action: Action): State => {
         toasts: state.toasts.map((t) =>
           t.id === toastId || toastId === undefined
             ? {
-                ...t,
-                open: false,
-              }
+              ...t,
+              open: false,
+            }
             : t
         ),
       }
@@ -142,6 +142,26 @@ type Toast = Omit<ToasterToast, "id">
 function toast({ ...props }: Toast) {
   const id = genId()
 
+  // Safeguard: If description is a JSON string, try to parse it
+  let description = props.description;
+  if (typeof description === 'string' && description.trim().startsWith('{')) {
+    try {
+      const parsed = JSON.parse(description);
+      description = parsed.message || parsed.error || parsed.details || description;
+    } catch (e) {
+      // Not valid JSON or missing expected fields, keep original
+    }
+  }
+
+  // Set better default titles based on variant if title is missing
+  let title = props.title;
+  if (!title) {
+    if (props.variant === 'destructive') title = 'Error';
+    else if (props.variant === 'success') title = 'Success';
+  }
+
+  const normalizedProps = { ...props, title, description, id };
+
   const update = (props: ToasterToast) =>
     dispatch({
       type: "UPDATE_TOAST",
@@ -152,8 +172,7 @@ function toast({ ...props }: Toast) {
   dispatch({
     type: "ADD_TOAST",
     toast: {
-      ...props,
-      id,
+      ...normalizedProps,
       open: true,
       onOpenChange: (open) => {
         if (!open) dismiss()

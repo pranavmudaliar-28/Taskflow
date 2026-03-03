@@ -55,7 +55,7 @@ export default function NotificationSettings() {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["/api/user/notification-preferences"] });
-            toast({ title: "Preferences updated" });
+            toast({ title: "Preferences updated", variant: "success" });
         },
         onError: (e: any) => toast({ title: "Failed to update", description: e?.message, variant: "destructive" }),
     });

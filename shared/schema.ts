@@ -4,7 +4,7 @@ import { z } from "zod";
 export * from "./models/auth";
 
 // Common Enums used in validation
-export const RoleEnum = z.enum(["admin", "team_lead", "member"]);
+export const RoleEnum = z.enum(["admin", "team_lead", "member", "owner"]);
 export const TaskStatusEnum = z.enum(["todo", "in_progress", "in_review", "testing", "done"]);
 export const TaskPriorityEnum = z.enum(["low", "medium", "high", "urgent"]);
 export const NotificationTypeEnum = z.enum(["task_assigned", "status_changed", "mentioned", "due_reminder", "added_to_project"]);
@@ -207,6 +207,7 @@ export type Attachment = z.infer<typeof attachmentSchema>;
 export type InsertAttachment = z.infer<typeof insertAttachmentSchema>;
 
 export interface FeatureFlags {
+  organizationId: string;
   timeTracking: boolean;
   priority: boolean;
   taskPriorities?: boolean;
@@ -223,6 +224,7 @@ export interface FeatureFlags {
 }
 
 export interface WorkspaceSettings {
+  organizationId: string;
   name: string;
   logoUrl?: string;
   primaryColor?: string;
@@ -233,6 +235,7 @@ export interface WorkspaceSettings {
 }
 
 export interface UserSettings {
+  userId: string;
   language: string;
   timezone: string;
   dateFormat: string;
@@ -281,3 +284,118 @@ export interface PasswordResetToken {
 
 export interface InsertViewPreferences extends Omit<ViewPreferences, "id"> { }
 export interface InsertAutomationRule extends Omit<AutomationRule, "id"> { }
+
+// ─── CHAT SYSTEM SCHEMAS ──────────────────────────────────────────────────────
+
+export const ChannelTypeEnum = z.enum(["org", "project", "direct"]);
+
+export const channelSchema = z.object({
+  id: z.string(),
+  name: z.string().optional().nullable(),
+  type: ChannelTypeEnum,
+  organizationId: z.string(),
+  projectId: z.string().optional().nullable(),
+  createdBy: z.string(),
+  memberIds: z.array(z.string()).default([]),
+  sortedMemberKey: z.string().optional().nullable(),
+  description: z.string().optional().nullable(),
+  isArchived: z.boolean().default(false),
+  createdAt: z.date().optional(),
+  updatedAt: z.date().optional(),
+});
+export const insertChannelSchema = channelSchema.omit({ id: true, createdAt: true, updatedAt: true });
+export type Channel = z.infer<typeof channelSchema>;
+export type InsertChannel = z.infer<typeof insertChannelSchema>;
+
+export const messageAttachmentSchema = z.object({
+  name: z.string(),
+  url: z.string(),
+  size: z.number().optional(),
+  mimeType: z.string().optional(),
+});
+
+export const messageSchema = z.object({
+  id: z.string(),
+  channelId: z.string(),
+  senderId: z.string(),
+  content: z.string().default(""),
+  attachments: z.array(messageAttachmentSchema).default([]),
+  voiceNoteUrl: z.string().optional().nullable(),
+  parentMessageId: z.string().optional().nullable(),
+  seenBy: z.array(z.string()).default([]),
+  linkedTaskId: z.string().optional().nullable(),
+  reactions: z.array(z.object({ emoji: z.string(), userId: z.string() })).default([]),
+  deletedAt: z.date().optional().nullable(),
+  editedAt: z.date().optional().nullable(),
+  createdAt: z.date().optional(),
+  updatedAt: z.date().optional(),
+});
+export const insertMessageSchema = messageSchema.omit({ id: true, createdAt: true, updatedAt: true, seenBy: true, reactions: true, deletedAt: true, editedAt: true });
+export type Message = z.infer<typeof messageSchema>;
+export type InsertMessage = z.infer<typeof insertMessageSchema>;
+export type MessageAttachment = z.infer<typeof messageAttachmentSchema>;
+
+export const reactionSchema = z.object({
+  id: z.string(),
+  messageId: z.string(),
+  userId: z.string(),
+  emoji: z.string(),
+  createdAt: z.date().optional(),
+});
+export const insertReactionSchema = reactionSchema.omit({ id: true, createdAt: true });
+export type Reaction = z.infer<typeof reactionSchema>;
+export type InsertReaction = z.infer<typeof insertReactionSchema>;
+
+export const CallTypeEnum = z.enum(["voice", "video"]);
+export const CallStatusEnum = z.enum(["pending", "active", "ended", "rejected"]);
+
+export const callSchema = z.object({
+  id: z.string(),
+  type: CallTypeEnum,
+  channelId: z.string(),
+  startedBy: z.string(),
+  participants: z.array(z.string()).default([]),
+  startedAt: z.date().optional(),
+  endedAt: z.date().optional().nullable(),
+  status: CallStatusEnum.default("pending"),
+  createdAt: z.date().optional(),
+});
+export const insertCallSchema = callSchema.omit({ id: true, createdAt: true });
+export type Call = z.infer<typeof callSchema>;
+export type InsertCall = z.infer<typeof insertCallSchema>;
+
+export const meetingSchema = z.object({
+  id: z.string(),
+  channelId: z.string(),
+  organizationId: z.string(),
+  createdBy: z.string(),
+  title: z.string(),
+  participants: z.array(z.string()).default([]),
+  // Private storage key — signed URL generated on demand, never exposed directly
+  recordingStorageKey: z.string().optional().nullable(),
+  transcriptUrl: z.string().optional().nullable(),
+  aiSummary: z.string().optional().nullable(),
+  keyDecisions: z.array(z.string()).default([]),
+  actionPoints: z.array(z.string()).default([]),
+  startedAt: z.date().optional(),
+  endedAt: z.date().optional().nullable(),
+  recordingExpiredAt: z.date().optional().nullable(),
+  lastSummarizedAt: z.date().optional().nullable(),
+  status: z.enum(["active", "ended"]).default("active"),
+  createdAt: z.date().optional(),
+  updatedAt: z.date().optional(),
+});
+export const insertMeetingSchema = meetingSchema.omit({ id: true, createdAt: true, updatedAt: true });
+export type Meeting = z.infer<typeof meetingSchema>;
+export type InsertMeeting = z.infer<typeof insertMeetingSchema>;
+
+export const aiSummarySchema = z.object({
+  id: z.string(),
+  channelId: z.string(),
+  organizationId: z.string(),
+  summary: z.string(),
+  generatedAt: z.date().optional(),
+  messageCount: z.number().optional(),
+  createdAt: z.date().optional(),
+});
+export type AiSummary = z.infer<typeof aiSummarySchema>;

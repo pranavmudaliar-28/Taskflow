@@ -241,6 +241,121 @@ RevokedTokenSchema.set('toJSON', {
     }
 });
 
+const FeatureFlagsSchema = new Schema({
+    organizationId: { type: String, required: true, unique: true },
+    timeTracking: { type: Boolean, default: false },
+    priority: { type: Boolean, default: false },
+    taskPriorities: { type: Boolean, default: false },
+    milestones: { type: Boolean, default: false },
+    tags: { type: Boolean, default: false },
+    customFields: { type: Boolean, default: false },
+    reminders: { type: Boolean, default: false },
+    automations: { type: Boolean, default: false },
+    reporting: { type: Boolean, default: false },
+    multipleAssignees: { type: Boolean, default: false },
+    sprintPoints: { type: Boolean, default: false },
+    nestedSubtasks: { type: Boolean, default: false },
+    dependencies: { type: Boolean, default: false },
+}, { timestamps: true });
+
+FeatureFlagsSchema.set('toJSON', {
+    transform: (doc, ret: any) => {
+        ret.id = ret._id.toString();
+        delete ret._id;
+        delete ret.__v;
+    }
+});
+
+const WorkspaceSettingsSchema = new Schema({
+    organizationId: { type: String, required: true, unique: true },
+    name: { type: String, required: true },
+    logoUrl: { type: String },
+    primaryColor: { type: String },
+    theme: { type: String, enum: ["light", "dark", "system"], default: "system" },
+    allowPublicProjects: { type: Boolean, default: true },
+    defaultMemberRole: { type: String, default: "member" },
+    defaultTaskStatuses: { type: [String], default: ["todo", "in_progress", "done"] },
+}, { timestamps: true });
+
+WorkspaceSettingsSchema.set('toJSON', {
+    transform: (doc, ret: any) => {
+        ret.id = ret._id.toString();
+        delete ret._id;
+        delete ret.__v;
+    }
+});
+
+const UserSettingsSchema = new Schema({
+    userId: { type: String, required: true, unique: true },
+    language: { type: String, default: "en" },
+    timezone: { type: String, default: "UTC" },
+    dateFormat: { type: String, default: "MMM d, yyyy" },
+    timeFormat: { type: String, enum: ["12h", "24h"], default: "12h" },
+    weekStart: { type: Number, enum: [0, 1, 6], default: 1 },
+}, { timestamps: true });
+
+UserSettingsSchema.set('toJSON', {
+    transform: (doc, ret: any) => {
+        ret.id = ret._id.toString();
+        delete ret._id;
+        delete ret.__v;
+    }
+});
+
+const NotificationPreferenceSchema = new Schema({
+    userId: { type: String, required: true },
+    channel: { type: String, enum: ["email", "in_app", "push"], required: true },
+    enabled: { type: Boolean, default: true },
+    taskAssigned: { type: Boolean, default: true },
+    statusChanged: { type: Boolean, default: true },
+    mentioned: { type: Boolean, default: true },
+    dueReminder: { type: Boolean, default: true },
+    dailyDigest: { type: Boolean, default: false },
+}, { timestamps: true });
+
+NotificationPreferenceSchema.set('toJSON', {
+    transform: (doc, ret: any) => {
+        ret.id = ret._id.toString();
+        delete ret._id;
+        delete ret.__v;
+    }
+});
+
+const ViewPreferenceSchema = new Schema({
+    userId: { type: String, required: true },
+    projectId: { type: String },
+    viewType: { type: String, enum: ["list", "board", "calendar", "gantt"], default: "list" },
+    filters: { type: Schema.Types.Mixed, default: {} },
+    sortBy: { type: String, default: "createdAt" },
+    sortOrder: { type: String, enum: ["asc", "desc"], default: "desc" },
+    hiddenColumns: { type: [String], default: [] },
+}, { timestamps: true });
+
+ViewPreferenceSchema.set('toJSON', {
+    transform: (doc, ret: any) => {
+        ret.id = ret._id.toString();
+        delete ret._id;
+        delete ret.__v;
+    }
+});
+
+const AutomationRuleSchema = new Schema({
+    organizationId: { type: String, required: true },
+    projectId: { type: String },
+    name: { type: String, required: true },
+    trigger: { type: Schema.Types.Mixed, required: true },
+    action: { type: Schema.Types.Mixed, required: true },
+    enabled: { type: Boolean, default: true },
+}, { timestamps: true });
+
+AutomationRuleSchema.set('toJSON', {
+    transform: (doc, ret: any) => {
+        ret.id = ret._id.toString();
+        delete ret._id;
+        delete ret.__v;
+    }
+});
+
 // Models
 export const UserMongo = mongoose.models.User || mongoose.model("User", UserSchema);
 export const OrganizationMongo = mongoose.models.Organization || mongoose.model("Organization", OrganizationSchema);
@@ -256,3 +371,167 @@ export const ProjectMemberMongo = mongoose.models.ProjectMember || mongoose.mode
 export const InvitationMongo = mongoose.models.Invitation || mongoose.model("Invitation", InvitationSchema);
 export const PasswordResetTokenMongo = mongoose.models.PasswordResetToken || mongoose.model("PasswordResetToken", PasswordResetTokenSchema);
 export const RevokedTokenMongo = mongoose.models.RevokedToken || mongoose.model("RevokedToken", RevokedTokenSchema);
+
+export const FeatureFlagsMongo = mongoose.models.FeatureFlags || mongoose.model("FeatureFlags", FeatureFlagsSchema);
+export const WorkspaceSettingsMongo = mongoose.models.WorkspaceSettings || mongoose.model("WorkspaceSettings", WorkspaceSettingsSchema);
+export const UserSettingsMongo = mongoose.models.UserSettings || mongoose.model("UserSettings", UserSettingsSchema);
+export const NotificationPreferencesMongo = mongoose.models.NotificationPreferences || mongoose.model("NotificationPreferences", NotificationPreferenceSchema);
+export const ViewPreferencesMongo = mongoose.models.ViewPreferences || mongoose.model("ViewPreferences", ViewPreferenceSchema);
+export const AutomationRuleMongo = mongoose.models.AutomationRule || mongoose.model("AutomationRule", AutomationRuleSchema);
+
+// ─── CHAT SYSTEM ─────────────────────────────────────────────────────────────
+
+const ChannelSchema = new Schema({
+    name: { type: String },
+    type: { type: String, enum: ["org", "project", "direct"], required: true },
+    organizationId: { type: String, required: true },
+    projectId: { type: String },
+    createdBy: { type: String, required: true },
+    memberIds: { type: [String], default: [] },
+    // Canonical key for direct channels: sorted userId pair joined by ':'
+    // Prevents duplicate DM channels between the same two users
+    sortedMemberKey: { type: String, sparse: true },
+    description: { type: String },
+    isArchived: { type: Boolean, default: false },
+}, { timestamps: true });
+
+ChannelSchema.set('toJSON', {
+    transform: (doc, ret: any) => {
+        ret.id = ret._id.toString();
+        delete ret._id;
+        delete ret.__v;
+    }
+});
+
+// Compound unique index for DM deduplication (safeguard ④)
+ChannelSchema.index({ type: 1, sortedMemberKey: 1 }, { unique: true, sparse: true });
+// Index for fast member lookups
+ChannelSchema.index({ organizationId: 1, type: 1 });
+ChannelSchema.index({ memberIds: 1 });
+
+const MessageSchema = new Schema({
+    channelId: { type: String, required: true },
+    senderId: { type: String, required: true },
+    content: { type: String, default: "" },
+    attachments: [{
+        name: { type: String },
+        url: { type: String },
+        size: { type: Number },
+        mimeType: { type: String },
+    }],
+    voiceNoteUrl: { type: String },
+    parentMessageId: { type: String },
+    seenBy: { type: [String], default: [] },
+    linkedTaskId: { type: String },
+    reactions: [{ emoji: String, userId: String }],
+    deletedAt: { type: Date },
+    editedAt: { type: Date },
+}, { timestamps: true });
+
+MessageSchema.set('toJSON', {
+    transform: (doc, ret: any) => {
+        ret.id = ret._id.toString();
+        delete ret._id;
+        delete ret.__v;
+    }
+});
+
+// Text index for full-text message search (safeguard ⑧)
+MessageSchema.index({ content: "text" });
+MessageSchema.index({ channelId: 1, createdAt: -1 });
+MessageSchema.index({ senderId: 1 });
+
+const ReactionSchema = new Schema({
+    messageId: { type: String, required: true },
+    userId: { type: String, required: true },
+    emoji: { type: String, required: true },
+}, { timestamps: true });
+
+ReactionSchema.set('toJSON', {
+    transform: (doc, ret: any) => {
+        ret.id = ret._id.toString();
+        delete ret._id;
+        delete ret.__v;
+    }
+});
+
+// Unique — one reaction per emoji per user per message
+ReactionSchema.index({ messageId: 1, userId: 1, emoji: 1 }, { unique: true });
+
+const CallSchema = new Schema({
+    type: { type: String, enum: ["voice", "video"], required: true },
+    channelId: { type: String, required: true },
+    startedBy: { type: String, required: true },
+    participants: { type: [String], default: [] },
+    startedAt: { type: Date, default: Date.now },
+    endedAt: { type: Date },
+    status: { type: String, enum: ["pending", "active", "ended", "rejected"], default: "pending" },
+}, { timestamps: true });
+
+CallSchema.set('toJSON', {
+    transform: (doc, ret: any) => {
+        ret.id = ret._id.toString();
+        delete ret._id;
+        delete ret.__v;
+    }
+});
+
+CallSchema.index({ channelId: 1, status: 1 });
+
+const MeetingSchema = new Schema({
+    channelId: { type: String, required: true },
+    organizationId: { type: String, required: true },
+    createdBy: { type: String, required: true },
+    title: { type: String, required: true },
+    participants: { type: [String], default: [] },
+    // Private storage key (NOT a public URL) — signed URL generated on request
+    recordingStorageKey: { type: String },
+    transcriptUrl: { type: String },
+    aiSummary: { type: String },
+    keyDecisions: { type: [String], default: [] },
+    actionPoints: { type: [String], default: [] },
+    startedAt: { type: Date, default: Date.now },
+    endedAt: { type: Date },
+    // Retention policy: set when recording is purged by cron job
+    recordingExpiredAt: { type: Date },
+    lastSummarizedAt: { type: Date },
+    status: { type: String, enum: ["active", "ended"], default: "active" },
+}, { timestamps: true });
+
+MeetingSchema.set('toJSON', {
+    transform: (doc, ret: any) => {
+        ret.id = ret._id.toString();
+        delete ret._id;
+        delete ret.__v;
+    }
+});
+
+MeetingSchema.index({ channelId: 1, status: 1 });
+MeetingSchema.index({ organizationId: 1 });
+
+const AiSummarySchema = new Schema({
+    channelId: { type: String, required: true },
+    organizationId: { type: String, required: true },
+    summary: { type: String, required: true },
+    generatedAt: { type: Date, default: Date.now },
+    messageCount: { type: Number },
+}, { timestamps: true });
+
+AiSummarySchema.set('toJSON', {
+    transform: (doc, ret: any) => {
+        ret.id = ret._id.toString();
+        delete ret._id;
+        delete ret.__v;
+    }
+});
+
+AiSummarySchema.index({ channelId: 1, generatedAt: -1 });
+
+// ─── CHAT MODEL EXPORTS ───────────────────────────────────────────────────────
+export const ChannelMongo = mongoose.models.Channel || mongoose.model("Channel", ChannelSchema);
+export const MessageMongo = mongoose.models.Message || mongoose.model("Message", MessageSchema);
+export const ReactionMongo = mongoose.models.Reaction || mongoose.model("Reaction", ReactionSchema);
+export const CallMongo = mongoose.models.Call || mongoose.model("Call", CallSchema);
+export const MeetingMongo = mongoose.models.Meeting || mongoose.model("Meeting", MeetingSchema);
+export const AiSummaryMongo = mongoose.models.AiSummary || mongoose.model("AiSummary", AiSummarySchema);
+

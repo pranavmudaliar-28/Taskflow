@@ -240,7 +240,7 @@ export default function ProjectPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/timelogs"] });
       queryClient.invalidateQueries({ queryKey: ["/api/timelogs/active"] });
-      toast({ title: "Timer started" });
+      toast({ title: "Timer started", variant: "success" });
     },
   });
 

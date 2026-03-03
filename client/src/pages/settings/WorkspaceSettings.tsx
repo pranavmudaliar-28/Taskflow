@@ -46,7 +46,7 @@ export default function WorkspaceSettingsPage() {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["/api/organizations"] });
-            toast({ title: "Workspace updated" });
+            toast({ title: "Workspace updated", variant: "success" });
         },
         onError: (e: any) => toast({ title: "Failed to update", description: e?.message, variant: "destructive" }),
     });

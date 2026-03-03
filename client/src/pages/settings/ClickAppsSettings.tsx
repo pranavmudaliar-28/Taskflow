@@ -76,7 +76,7 @@ export default function ClickAppsSettings() {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["/api/workspace/feature-flags"] });
-            toast({ title: "Feature flag updated" });
+            toast({ title: "Feature flag updated", variant: "success" });
         },
         onError: (e: any) => toast({ title: "Failed to update", description: e?.message, variant: "destructive" }),
     });

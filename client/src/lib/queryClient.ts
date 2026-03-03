@@ -6,8 +6,6 @@ async function throwIfResNotOk(res: Response) {
     if (res.status === 401) {
       queryClient.setQueryData(["/api/auth/user"], null);
 
-      // Prevent redirect loop if we're already on an auth page, 
-      // or if we're on a deep page and just need to show login (without hard reload if possible)
       const isAuthPage = ["/", "/login", "/signup"].includes(window.location.pathname);
       const isCallback = window.location.pathname === "/api/callback";
 
@@ -15,8 +13,22 @@ async function throwIfResNotOk(res: Response) {
         window.location.href = "/login";
       }
     }
-    const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+
+    let errorMessage = res.statusText;
+    try {
+      const data = await res.json();
+      errorMessage = data.message || data.error || data.details || JSON.stringify(data);
+    } catch (e) {
+      // Fallback to text if JSON parsing fails
+      try {
+        const text = await res.text();
+        if (text) errorMessage = text;
+      } catch (innerE) {
+        // Stick with statusText
+      }
+    }
+
+    throw new Error(errorMessage || `${res.status} Error`);
   }
 }
 

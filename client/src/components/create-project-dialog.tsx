@@ -47,8 +47,9 @@ export function CreateProjectDialog({ open, onClose, organizationId }: CreatePro
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/organizations"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
-      toast({ title: "Project created successfully" });
+      toast({ title: "Project created successfully", variant: "success" });
       handleClose();
     },
     onError: (error: any) => {

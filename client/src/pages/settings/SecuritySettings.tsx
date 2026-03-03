@@ -40,7 +40,7 @@ export default function SecuritySettings() {
             return res.json();
         },
         onSuccess: () => {
-            toast({ title: "Password changed successfully" });
+            toast({ title: "Password changed successfully", variant: "success" });
             setPasswordDialogOpen(false);
             setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
         },

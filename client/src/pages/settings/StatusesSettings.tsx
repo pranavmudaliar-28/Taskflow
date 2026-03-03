@@ -31,7 +31,7 @@ export default function StatusesSettings() {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["/api/workspace/settings"] });
-            toast({ title: "Statuses updated" });
+            toast({ title: "Statuses updated", variant: "success" });
         },
         onError: (e: any) => toast({ title: "Failed to update", description: e?.message, variant: "destructive" }),
     });

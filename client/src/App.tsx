@@ -45,6 +45,8 @@ const Onboarding = lazyRetry(() => import("@/pages/onboarding"));
 const BillingPage = lazyRetry(() => import("@/pages/billing"));
 const ForgotPassword = lazyRetry(() => import("@/pages/forgot-password"));
 const NotFound = lazyRetry(() => import("@/pages/not-found"));
+const ChatPage = lazyRetry(() => import("@/pages/chat"));
+const MeetingRoom = lazyRetry(() => import("@/pages/meeting-room"));
 
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
@@ -391,6 +393,9 @@ function AppRouter() {
                 <Route path="/settings" component={SettingsPage} />
                 <Route path="/organization-settings" component={OrganizationSettings} />
                 <Route path="/accept-invitation" component={AcceptInvitation} />
+                <Route path="/chat/:channelId" component={ChatPage} />
+                <Route path="/chat" component={ChatPage} />
+                <Route path="/meeting/:meetingId" component={MeetingRoom} />
                 <Route>
                   {() => { console.log("[AppRouter] Matched NotFound"); return <NotFound />; }}
                 </Route>

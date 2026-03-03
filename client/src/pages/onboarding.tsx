@@ -252,7 +252,7 @@ export default function Onboarding() {
                 name: orgName, email: orgEmail, address: orgAddress, invitations: filteredInvites,
             });
             await queryClient.refetchQueries({ queryKey: ["/api/auth/user"] });
-            toast({ title: "Welcome aboard! 🎉", description: "Your organization is ready." });
+            toast({ title: "Welcome aboard! 🎉", description: "Your organization is ready.", variant: "success" });
         } catch {
             toast({ title: "Setup failed. Please try again.", variant: "destructive" });
         } finally {

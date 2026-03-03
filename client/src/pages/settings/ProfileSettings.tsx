@@ -30,9 +30,9 @@ export default function ProfileSettings() {
             const res = await apiRequest("PATCH", "/api/user/profile", data);
             return res.json();
         },
-        onSuccess: (u) => {
-            queryClient.setQueryData(["/api/auth/user"], u);
-            toast({ title: "Profile saved" });
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+            toast({ title: "Profile saved", variant: "success" });
             setIsEditing(false);
         },
         onError: (e: any) => toast({ title: "Failed to save", description: e?.message, variant: "destructive" }),

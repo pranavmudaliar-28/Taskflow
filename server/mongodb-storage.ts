@@ -2,7 +2,9 @@ import {
     UserMongo, OrganizationMongo, ProjectMongo, TaskMongo,
     CommentMongo, AttachmentMongo, MilestoneMongo, TimeLogMongo,
     NotificationMongo, OrganizationMemberMongo, ProjectMemberMongo,
-    InvitationMongo, PasswordResetTokenMongo, RevokedTokenMongo
+    InvitationMongo, PasswordResetTokenMongo, RevokedTokenMongo,
+    FeatureFlagsMongo, WorkspaceSettingsMongo, UserSettingsMongo,
+    NotificationPreferencesMongo, ViewPreferencesMongo, AutomationRuleMongo
 } from "../shared/mongodb-schema";
 import { generateSlug } from "./slug-utils";
 import mongoose from "mongoose";
@@ -707,21 +709,100 @@ export class MongoStorage {
         return this.transformArray<OrganizationMember>(memberships);
     }
 
-    // Stubs for missing methods
-    async getWorkspaceSettings(orgId: string): Promise<WorkspaceSettings | undefined> { return undefined; }
-    async updateWorkspaceSettings(orgId: string, updates: Partial<WorkspaceSettings>): Promise<WorkspaceSettings | undefined> { return undefined; }
-    async getFeatureFlags(orgId: string): Promise<FeatureFlags | undefined> { return undefined; }
-    async updateFeatureFlags(orgId: string, updates: Partial<FeatureFlags>): Promise<FeatureFlags | undefined> { return undefined; }
-    async getUserSettings(userId: string): Promise<UserSettings | undefined> { return undefined; }
-    async updateUserSettings(userId: string, updates: Partial<UserSettings>): Promise<UserSettings | undefined> { return undefined; }
-    async getNotificationPreferences(userId: string): Promise<NotificationPreferences[]> { return []; }
-    async updateNotificationPreference(userId: string, channel: string, updates: Partial<NotificationPreferences>): Promise<NotificationPreferences | undefined> { return undefined; }
-    async getViewPreferences(userId: string, projectId?: string): Promise<ViewPreferences[]> { return []; }
-    async saveViewPreference(pref: any): Promise<ViewPreferences> { throw new Error("Not implemented"); }
-    async deleteViewPreference(id: string, userId: string): Promise<void> { }
-    async getAutomationRules(orgId: string, projectId?: string): Promise<AutomationRule[]> { return []; }
-    async saveAutomationRule(rule: any): Promise<AutomationRule> { throw new Error("Not implemented"); }
-    async deleteAutomationRule(id: string, orgId: string): Promise<void> { }
+    // Actual implementation for settings methods
+    async getWorkspaceSettings(orgId: string): Promise<WorkspaceSettings | undefined> {
+        return this.transform<WorkspaceSettings>(await WorkspaceSettingsMongo.findOne({ organizationId: orgId }));
+    }
+
+    async updateWorkspaceSettings(orgId: string, updates: Partial<WorkspaceSettings>): Promise<WorkspaceSettings | undefined> {
+        const settings = await WorkspaceSettingsMongo.findOneAndUpdate(
+            { organizationId: orgId },
+            { $set: updates },
+            { new: true, upsert: true }
+        );
+        return this.transform<WorkspaceSettings>(settings);
+    }
+
+    async getFeatureFlags(orgId: string): Promise<FeatureFlags | undefined> {
+        return this.transform<FeatureFlags>(await FeatureFlagsMongo.findOne({ organizationId: orgId }));
+    }
+
+    async updateFeatureFlags(orgId: string, updates: Partial<FeatureFlags>): Promise<FeatureFlags | undefined> {
+        const flags = await FeatureFlagsMongo.findOneAndUpdate(
+            { organizationId: orgId },
+            { $set: updates },
+            { new: true, upsert: true }
+        );
+        return this.transform<FeatureFlags>(flags);
+    }
+
+    async getUserSettings(userId: string): Promise<UserSettings | undefined> {
+        return this.transform<UserSettings>(await UserSettingsMongo.findOne({ userId }));
+    }
+
+    async updateUserSettings(userId: string, updates: Partial<UserSettings>): Promise<UserSettings | undefined> {
+        const settings = await UserSettingsMongo.findOneAndUpdate(
+            { userId },
+            { $set: updates },
+            { new: true, upsert: true }
+        );
+        return this.transform<UserSettings>(settings);
+    }
+
+    async getNotificationPreferences(userId: string): Promise<NotificationPreferences[]> {
+        const prefs = await NotificationPreferencesMongo.find({ userId });
+        return this.transformArray<NotificationPreferences>(prefs);
+    }
+
+    async updateNotificationPreference(userId: string, channel: string, updates: Partial<NotificationPreferences>): Promise<NotificationPreferences | undefined> {
+        const pref = await NotificationPreferencesMongo.findOneAndUpdate(
+            { userId, channel },
+            { $set: updates },
+            { new: true, upsert: true }
+        );
+        return this.transform<NotificationPreferences>(pref);
+    }
+
+    async getViewPreferences(userId: string, projectId?: string): Promise<ViewPreferences[]> {
+        const query: any = { userId };
+        if (projectId) query.projectId = projectId;
+        const prefs = await ViewPreferencesMongo.find(query);
+        return this.transformArray<ViewPreferences>(prefs);
+    }
+
+    async saveViewPreference(pref: any): Promise<ViewPreferences> {
+        const result = await ViewPreferencesMongo.findOneAndUpdate(
+            { userId: pref.userId, projectId: pref.projectId, viewType: pref.viewType },
+            { $set: pref },
+            { new: true, upsert: true }
+        );
+        return this.transform<ViewPreferences>(result)!;
+    }
+
+    async deleteViewPreference(id: string, userId: string): Promise<void> {
+        await ViewPreferencesMongo.deleteOne({ _id: id, userId });
+    }
+
+    async getAutomationRules(orgId: string, projectId?: string): Promise<AutomationRule[]> {
+        const query: any = { organizationId: orgId };
+        if (projectId) query.projectId = projectId;
+        const rules = await AutomationRuleMongo.find(query);
+        return this.transformArray<AutomationRule>(rules);
+    }
+
+    async saveAutomationRule(rule: any): Promise<AutomationRule> {
+        let result;
+        if (rule.id) {
+            result = await AutomationRuleMongo.findByIdAndUpdate(rule.id, { $set: rule }, { new: true });
+        } else {
+            result = await AutomationRuleMongo.create(rule);
+        }
+        return this.transform<AutomationRule>(result)!;
+    }
+
+    async deleteAutomationRule(id: string, orgId: string): Promise<void> {
+        await AutomationRuleMongo.deleteOne({ _id: id, organizationId: orgId });
+    }
 
     // Password Reset Tokens
     async createPasswordResetToken(email: string, token: string, expiresAt: Date): Promise<PasswordResetToken> {

@@ -30,7 +30,7 @@ export function TaskAttachments({ taskId }: TaskAttachmentsProps) {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: [`/api/tasks/${taskId}/attachments`] });
-            toast({ title: "Attachment added" });
+            toast({ title: "Attachment added", variant: "success" });
             setIsAddingLink(false);
             setLinkName("");
             setLinkUrl("");
@@ -50,7 +50,7 @@ export function TaskAttachments({ taskId }: TaskAttachmentsProps) {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: [`/api/tasks/${taskId}/attachments`] });
-            toast({ title: "Attachment deleted" });
+            toast({ title: "Attachment deleted", variant: "success" });
         },
     });
 

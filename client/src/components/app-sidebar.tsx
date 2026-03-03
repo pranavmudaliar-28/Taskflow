@@ -34,6 +34,7 @@ import {
   Building2,
   ListTodo,
   CreditCard,
+  MessageSquare,
 } from "lucide-react";
 import type { Project } from "@shared/schema";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -49,6 +50,7 @@ const navItems = [
   { title: "All Tasks", url: "/tasks", icon: ListTodo },
   { title: "Time Tracking", url: "/time-tracking", icon: Clock },
   { title: "Analytics", url: "/analytics", icon: BarChart3 },
+  { title: "Messages", url: "/chat", icon: MessageSquare },
   { title: "Notifications", url: "/notifications", icon: Bell },
   { title: "Organization", url: "/organization-settings", icon: Building2 },
 ];

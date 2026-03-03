@@ -201,7 +201,7 @@ export default function TaskView() {
                 queryClient.invalidateQueries({ queryKey: [`/api/projects/${updatedTask.projectId}/tasks`] });
             }
 
-            toast({ title: "Task updated" });
+            toast({ title: "Task updated", variant: "success" });
         },
         onError: (error: Error) => {
             toast({
@@ -221,7 +221,7 @@ export default function TaskView() {
             queryClient.invalidateQueries({ queryKey: [`/api/tasks/${task?.id}/comments`] });
             setComment("");
             setReplyTo(null);
-            toast({ title: "Comment added" });
+            toast({ title: "Comment added", variant: "success" });
         },
     });
 
@@ -288,7 +288,7 @@ export default function TaskView() {
     const handleShare = () => {
         if (!task) return;
         navigator.clipboard.writeText(`${window.location.origin}/tasks/${task.slug || task.id}`);
-        toast({ title: "Link copied to clipboard" });
+        toast({ title: "Link copied to clipboard", variant: "success" });
     };
 
     if (taskLoading) return (

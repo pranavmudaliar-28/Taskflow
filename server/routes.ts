@@ -407,6 +407,206 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
+  // === Settings & Preferences ===
+
+  // Workspace Settings
+  app.get("/api/workspace/settings", authMiddleware, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const orgs = await storage.getOrganizationsByUser(userId);
+      if (orgs.length === 0) return res.status(404).json({ message: "No workspace found" });
+
+      const settings = await storage.getWorkspaceSettings(orgs[0].id);
+      if (!settings) {
+        // Initialize default settings if they don't exist
+        const defaultSettings = await storage.updateWorkspaceSettings(orgs[0].id, {
+          organizationId: orgs[0].id,
+          name: orgs[0].name,
+          theme: "system",
+          allowPublicProjects: true,
+          defaultMemberRole: "member",
+          defaultTaskStatuses: ["todo", "in_progress", "done"]
+        });
+        return res.json(defaultSettings);
+      }
+      res.json(settings);
+    } catch (error) {
+      console.error("Error fetching workspace settings:", error);
+      res.status(500).json({ message: "Failed to fetch workspace settings" });
+    }
+  });
+
+  app.patch("/api/workspace/settings", authMiddleware, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const orgs = await storage.getOrganizationsByUser(userId);
+      if (orgs.length === 0) return res.status(404).json({ message: "No workspace found" });
+
+      // Authorization check
+      const memberships = await storage.getOrganizationMembersForUser(userId, [orgs[0].id]);
+      const role = memberships[0]?.role;
+      if (String(role) !== 'admin' && String(role) !== 'owner') {
+        return res.status(403).json({ message: "Access denied. Insufficient permissions in this organization." });
+      }
+
+      const settings = await storage.updateWorkspaceSettings(orgs[0].id, req.body);
+      res.json(settings);
+    } catch (error) {
+      console.error("Error updating workspace settings:", error);
+      res.status(500).json({ message: "Failed to update workspace settings" });
+    }
+  });
+
+  // Feature Flags (ClickApps)
+  app.get("/api/workspace/feature-flags", authMiddleware, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const orgs = await storage.getOrganizationsByUser(userId);
+      if (orgs.length === 0) return res.status(404).json({ message: "No workspace found" });
+
+      const flags = await storage.getFeatureFlags(orgs[0].id);
+      res.json(flags || {});
+    } catch (error) {
+      console.error("Error fetching feature flags:", error);
+      res.status(500).json({ message: "Failed to fetch feature flags" });
+    }
+  });
+
+  app.patch("/api/workspace/feature-flags", authMiddleware, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const orgs = await storage.getOrganizationsByUser(userId);
+      if (orgs.length === 0) return res.status(404).json({ message: "No workspace found" });
+
+      // Authorization check
+      const memberships = await storage.getOrganizationMembersForUser(userId, [orgs[0].id]);
+      const role = memberships[0]?.role;
+      if (String(role) !== 'admin' && String(role) !== 'owner') {
+        return res.status(403).json({ message: "Access denied. Insufficient permissions in this organization." });
+      }
+
+      const flags = await storage.updateFeatureFlags(orgs[0].id, req.body);
+      res.json(flags);
+    } catch (error) {
+      console.error("Error updating feature flags:", error);
+      res.status(500).json({ message: "Failed to update feature flags" });
+    }
+  });
+
+  // User Settings
+  app.get("/api/user/settings", authMiddleware, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const settings = await storage.getUserSettings(userId);
+      res.json(settings || {
+        userId,
+        language: "en",
+        timezone: "UTC",
+        dateFormat: "MMM d, yyyy",
+        timeFormat: "12h",
+        weekStart: 1
+      });
+    } catch (error) {
+      console.error("Error fetching user settings:", error);
+      res.status(500).json({ message: "Failed to fetch user settings" });
+    }
+  });
+
+  app.patch("/api/user/settings", authMiddleware, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const settings = await storage.updateUserSettings(userId, req.body);
+      res.json(settings);
+    } catch (error) {
+      console.error("Error updating user settings:", error);
+      res.status(500).json({ message: "Failed to update user settings" });
+    }
+  });
+
+  // Notification Preferences
+  app.get("/api/user/notification-preferences", authMiddleware, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const prefs = await storage.getNotificationPreferences(userId);
+      res.json(prefs);
+    } catch (error) {
+      console.error("Error fetching notification preferences:", error);
+      res.status(500).json({ message: "Failed to fetch notification preferences" });
+    }
+  });
+
+  app.patch("/api/user/notification-preferences/:channel", authMiddleware, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const channel = req.params.channel as string;
+      const pref = await storage.updateNotificationPreference(userId, channel, req.body);
+      res.json(pref);
+    } catch (error) {
+      console.error("Error updating notification preference:", error);
+      res.status(500).json({ message: "Failed to update notification preference" });
+    }
+  });
+
+  // Automations
+  app.get("/api/workspace/automations", authMiddleware, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const orgs = await storage.getOrganizationsByUser(userId);
+      if (orgs.length === 0) return res.status(404).json({ message: "No workspace found" });
+
+      const rules = await storage.getAutomationRules(orgs[0].id);
+      res.json(rules);
+    } catch (error) {
+      console.error("Error fetching automation rules:", error);
+      res.status(500).json({ message: "Failed to fetch automation rules" });
+    }
+  });
+
+  app.post("/api/workspace/automations", authMiddleware, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const orgs = await storage.getOrganizationsByUser(userId);
+      if (orgs.length === 0) return res.status(404).json({ message: "No workspace found" });
+
+      // Authorization check
+      const memberships = await storage.getOrganizationMembersForUser(userId, [orgs[0].id]);
+      const role = memberships[0]?.role;
+      if (String(role) !== 'admin' && String(role) !== 'owner') {
+        return res.status(403).json({ message: "Access denied. Insufficient permissions in this organization." });
+      }
+
+      const rule = await storage.saveAutomationRule({
+        ...req.body,
+        organizationId: orgs[0].id
+      });
+      res.status(201).json(rule);
+    } catch (error) {
+      console.error("Error saving automation rule:", error);
+      res.status(500).json({ message: "Failed to save automation rule" });
+    }
+  });
+
+  app.delete("/api/workspace/automations/:id", authMiddleware, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const orgs = await storage.getOrganizationsByUser(userId);
+      if (orgs.length === 0) return res.status(404).json({ message: "No workspace found" });
+
+      // Authorization check
+      const memberships = await storage.getOrganizationMembersForUser(userId, [orgs[0].id]);
+      const role = memberships[0]?.role;
+      if (String(role) !== 'admin' && String(role) !== 'owner') {
+        return res.status(403).json({ message: "Access denied. Insufficient permissions in this organization." });
+      }
+
+      await storage.deleteAutomationRule(req.params.id as string, orgs[0].id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting automation rule:", error);
+      res.status(500).json({ message: "Failed to delete automation rule" });
+    }
+  });
+
   // === Stripe & Onboarding ===
   app.post("/api/onboarding/setup-organization", authMiddleware, async (req, res) => {
     try {
@@ -2144,6 +2344,656 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       res.status(500).json({ message: "Failed to mark notifications read" });
     }
   });
+
+  // ─── CHAT SYSTEM ROUTES ────────────────────────────────────────────────────
+  // Lazy imports to keep startup fast
+  const { setupChatWebSocket, invalidateMembershipCache, issueWsToken } = await import("./chat-ws");
+  const { ChannelMongo, MessageMongo, MeetingMongo, AiSummaryMongo, OrganizationMemberMongo } =
+    await import("../shared/mongodb-schema");
+  const { summarizeChannel, summarizeMeeting, getLatestChannelSummary } =
+    await import("./services/ai-chat");
+  const multerMod = await import("multer");
+  const multerFn = (multerMod as any).default ?? multerMod;
+  const rateLimitMod = await import("express-rate-limit");
+  const rateLimit = (rateLimitMod as any).default ?? rateLimitMod.rateLimit ?? rateLimitMod;
+
+  // Initialize WebSocket server
+  setupChatWebSocket(httpServer);
+
+  // ─── FILE UPLOAD CONFIG (Safeguards ⑥⑩) ─────────────────────────────────
+  const ALLOWED_FILE_MIME = new Set([
+    "image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml",
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "text/plain", "text/csv",
+  ]);
+  const ALLOWED_VOICE_MIME = new Set([
+    "audio/webm", "audio/ogg", "audio/mpeg", "audio/wav", "audio/mp4",
+  ]);
+
+  const chatUpload = multerFn({
+    dest: path.join(process.cwd(), "uploads", "chat"),
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+    fileFilter: (_req: any, file: any, cb: any) => {
+      if (ALLOWED_FILE_MIME.has(file.mimetype)) return cb(null, true);
+      cb(new Error("File type not allowed"));
+    },
+  });
+
+  const voiceUpload = multerFn({
+    dest: path.join(process.cwd(), "uploads", "voice"),
+    limits: { fileSize: 2 * 1024 * 1024 }, // 2MB voice notes
+    fileFilter: (_req: any, file: any, cb: any) => {
+      if (ALLOWED_VOICE_MIME.has(file.mimetype)) return cb(null, true);
+      cb(new Error("File type not allowed for voice notes. Use audio/webm, ogg, mpeg or wav."));
+    },
+  });
+
+  // Ensure upload directories exist
+  ["chat", "voice", "recordings"].forEach((d) => {
+    const dir = path.join(process.cwd(), "uploads", d);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  });
+
+  // ─── AI RATE LIMITER (Safeguard ⑧ — 10 calls/hour/org) ──────────────────
+  const aiSummarizeRateLimit = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    max: 10,
+    // Key: org ID if available, else user ID — never use raw IP to avoid ERR_ERL_KEY_GEN_IPV6
+    keyGenerator: (req: any) => {
+      const user = (req as any).user;
+      return `org:${user?.orgId || user?.id || "anon"}`;
+    },
+    handler: (_req: any, res: any) => {
+      res.status(429).json({
+        error: "AI summarization limit reached. Try again later.",
+        retryAfter: 3600,
+      });
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+    skip: () => false,
+  });
+
+  // ─── WS TOKEN ENDPOINT ───────────────────────────────────────────────────
+  app.get("/api/chat/ws-token", isAuthenticated, (req: any, res) => {
+    const user = req.user;
+    if (!user) return res.status(401).json({ message: "Unauthorized" });
+    const token = issueWsToken(user.id, user.orgId || "", user.role || "member");
+    res.json({ token });
+  });
+
+  // ─── ICE CONFIG (Safeguard ⑤) ───────────────────────────────────────────
+  app.get("/api/rtc/ice-config", isAuthenticated, (_req, res) => {
+    const servers: any[] = [
+      { urls: "stun:stun.l.google.com:19302" },
+      { urls: "stun:stun1.l.google.com:19302" },
+    ];
+
+    // Support multiple TURN servers via JSON env var or individual vars
+    if (process.env.TURN_SERVERS) {
+      try {
+        const turns = JSON.parse(process.env.TURN_SERVERS);
+        servers.push(...turns);
+      } catch { }
+    } else {
+      if (process.env.TURN_URL_1) {
+        servers.push({
+          urls: process.env.TURN_URL_1,
+          username: process.env.TURN_USERNAME_1,
+          credential: process.env.TURN_CREDENTIAL_1,
+        });
+      }
+      if (process.env.TURN_URL_2) {
+        servers.push({
+          urls: process.env.TURN_URL_2,
+          username: process.env.TURN_USERNAME_2,
+          credential: process.env.TURN_CREDENTIAL_2,
+        });
+      }
+    }
+
+    res.json({ iceServers: servers });
+  });
+
+  // ─── FILE UPLOAD ─────────────────────────────────────────────────────────
+  app.post("/api/chat/upload", isAuthenticated, chatUpload.single("file"), (req: any, res) => {
+    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+    const url = `/uploads/chat/${req.file.filename}`;
+    res.json({
+      url,
+      name: req.file.originalname,
+      size: req.file.size,
+      mimeType: req.file.mimetype,
+    });
+  });
+
+  app.post("/api/chat/upload/voice", isAuthenticated, voiceUpload.single("file"), (req: any, res) => {
+    if (!req.file) return res.status(400).json({ error: "No voice note uploaded" });
+    const url = `/uploads/voice/${req.file.filename}`;
+    res.json({ url, name: req.file.originalname, size: req.file.size, mimeType: req.file.mimetype });
+  });
+
+  // ─── CHANNELS ────────────────────────────────────────────────────────────
+
+  // List user's channels (org + project + DMs)
+  app.get("/api/channels", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getUserId(req);
+      const channels = await ChannelMongo.find({ memberIds: userId, isArchived: false })
+        .sort({ updatedAt: -1 })
+        .lean();
+      res.json(channels.map((c: any) => ({ ...c, id: c._id.toString() })));
+    } catch (err) {
+      res.status(500).json({ message: "Failed to fetch channels" });
+    }
+  });
+
+  // Create a project channel
+  app.post("/api/channels/project", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getUserId(req);
+      const { name, projectId, organizationId } = req.body;
+      if (!name?.trim()) return res.status(400).json({ message: "Channel name required" });
+
+      // Determine member list: project members OR all org members
+      let memberIds: string[] = [userId];
+
+      if (projectId) {
+        const { ProjectMemberMongo } = await import("../shared/mongodb-schema");
+        const pms = await (ProjectMemberMongo as any).find({ projectId }).lean() as any[];
+        pms.forEach((pm: any) => {
+          if (pm.userId && !memberIds.includes(pm.userId)) memberIds.push(pm.userId);
+        });
+      } else if (organizationId) {
+        const { OrganizationMemberMongo } = await import("../shared/mongodb-schema");
+        const oms = await (OrganizationMemberMongo as any).find({ organizationId }).lean() as any[];
+        oms.forEach((om: any) => {
+          if (om.userId && !memberIds.includes(om.userId)) memberIds.push(om.userId);
+        });
+      }
+
+      const channel = await ChannelMongo.create({
+        name: name.trim(),
+        type: "project",
+        projectId: projectId || null,
+        organizationId: organizationId || null,
+        createdBy: userId,
+        memberIds,
+      });
+
+      // Invalidate membership cache for the new channel
+      const { invalidateMembershipCache } = await import("./chat-ws");
+      invalidateMembershipCache((channel as any)._id.toString());
+
+      res.status(201).json({ ...(channel as any).toJSON(), id: (channel as any)._id.toString() });
+    } catch (err: any) {
+      res.status(500).json({ message: "Failed to create project channel" });
+    }
+  });
+
+  // Get-or-create Direct Message channel (Safeguard ④ DM dedup)
+  app.post("/api/channels/direct", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getUserId(req);
+      const { targetUserId } = req.body;
+      let { organizationId } = req.body;
+
+      if (!targetUserId) {
+        return res.status(400).json({ message: "targetUserId is required" });
+      }
+
+      // Server-side org lookup as fallback — never trust client blindly
+      if (!organizationId) {
+        const membership = await OrganizationMemberMongo.findOne({ userId }).lean() as any;
+        organizationId = membership?.organizationId || null;
+      }
+      if (!organizationId) {
+        return res.status(400).json({ message: "Unable to determine organization" });
+      }
+
+      const sortedMemberKey = [userId, targetUserId].sort().join(":");
+
+      // Atomic findOrCreate
+      let channel = await ChannelMongo.findOne({ type: "direct", sortedMemberKey }).lean() as any;
+      if (!channel) {
+        channel = await ChannelMongo.create({
+          type: "direct",
+          organizationId,
+          createdBy: userId,
+          memberIds: [userId, targetUserId],
+          sortedMemberKey,
+        });
+      }
+
+      res.json({ ...channel, id: channel._id?.toString() || channel.id });
+    } catch (err: any) {
+      if (err.code === 11000) {
+        // Race condition: another request created the channel — return existing
+        const channel = await ChannelMongo.findOne({
+          type: "direct",
+          sortedMemberKey: [req.body.targetUserId || "", getUserId(req)].sort().join(":"),
+        }).lean() as any;
+        return res.json({ ...channel, id: channel._id.toString() });
+      }
+      res.status(500).json({ message: "Failed to create DM" });
+    }
+  });
+
+  // Get channel detail
+  app.get("/api/channels/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getUserId(req);
+      const channel = await ChannelMongo.findById(req.params.id).lean() as any;
+      if (!channel) return res.status(404).json({ message: "Channel not found" });
+      if (!channel.memberIds?.includes(userId)) {
+        return res.status(403).json({ message: "Not a member of this channel" });
+      }
+      res.json({ ...channel, id: channel._id.toString() });
+    } catch {
+      res.status(500).json({ message: "Failed to fetch channel" });
+    }
+  });
+
+  // Add member to channel (admin only)
+  app.post("/api/channels/:id/members", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getUserId(req);
+      const user = req.user;
+      if (!["admin", "owner"].includes(user?.role)) {
+        return res.status(403).json({ message: "Only admins can add members to channels" });
+      }
+      const { memberId } = req.body;
+      await ChannelMongo.findByIdAndUpdate(req.params.id, {
+        $addToSet: { memberIds: memberId },
+      });
+      invalidateMembershipCache(req.params.id);
+      res.json({ message: "Member added" });
+    } catch {
+      res.status(500).json({ message: "Failed to add member" });
+    }
+  });
+
+  // ─── MESSAGES ────────────────────────────────────────────────────────────
+
+  // Paginated message history (cursor-based)
+  app.get("/api/channels/:id/messages", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getUserId(req);
+      const channel = await ChannelMongo.findById(req.params.id).lean() as any;
+      if (!channel || !channel.memberIds?.includes(userId)) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const { cursor, limit = "50" } = req.query as any;
+      const pageSize = Math.min(parseInt(limit, 10), 100);
+      const query: any = { channelId: req.params.id, deletedAt: null };
+      if (cursor) query.createdAt = { $lt: new Date(cursor) };
+
+      const messages = await MessageMongo.find(query)
+        .sort({ createdAt: -1 })
+        .limit(pageSize)
+        .lean();
+
+      const result = messages.reverse().map((m: any) => ({ ...m, id: m._id.toString() }));
+      const nextCursor = messages.length === pageSize
+        ? (messages[0] as any)?.createdAt?.toISOString()
+        : null;
+
+      res.json({ messages: result, nextCursor });
+    } catch {
+      res.status(500).json({ message: "Failed to fetch messages" });
+    }
+  });
+
+  // Send message via REST (fallback)
+  app.post("/api/channels/:id/messages", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getUserId(req);
+      const channel = await ChannelMongo.findById(req.params.id).lean() as any;
+      if (!channel || !channel.memberIds?.includes(userId)) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      const { content, parentMessageId, attachments } = req.body;
+      const msg = await MessageMongo.create({
+        channelId: req.params.id,
+        senderId: userId,
+        content: content || "",
+        attachments: attachments || [],
+        parentMessageId: parentMessageId || null,
+        seenBy: [userId],
+      });
+      res.status(201).json({ ...(msg as any).toJSON(), id: (msg as any)._id.toString() });
+    } catch {
+      res.status(500).json({ message: "Failed to send message" });
+    }
+  });
+
+  // Soft-delete message
+  app.delete("/api/messages/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getUserId(req);
+      const msg = await MessageMongo.findById(req.params.id).lean() as any;
+      if (!msg) return res.status(404).json({ message: "Message not found" });
+      if (msg.senderId !== userId) return res.status(403).json({ message: "Can only delete own messages" });
+      await MessageMongo.findByIdAndUpdate(req.params.id, { deletedAt: new Date() });
+      res.json({ message: "Deleted" });
+    } catch {
+      res.status(500).json({ message: "Failed to delete message" });
+    }
+  });
+
+  // ─── Message Search ───────────────────────────────────────────────────────
+  app.get("/api/messages/search", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getUserId(req);
+      const { q, channelId } = req.query;
+      if (!q || !channelId) return res.status(400).json({ message: "q and channelId required" });
+
+      // Verify membership
+      const channel = await ChannelMongo.findById(channelId).lean() as any;
+      if (!channel || !channel.memberIds?.includes(userId)) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const results = await MessageMongo.find({
+        channelId,
+        deletedAt: null,
+        content: { $regex: String(q).trim(), $options: "i" },
+      })
+        .sort({ createdAt: -1 })
+        .limit(50)
+        .lean();
+
+      res.json(results.map((m: any) => ({ ...m, id: m._id.toString() })));
+    } catch {
+      res.status(500).json({ message: "Search failed" });
+    }
+  });
+
+  // Link a task to a message
+  app.patch("/api/messages/:id/link-task", isAuthenticated, async (req: any, res) => {
+    try {
+      const { taskId } = req.body;
+      await MessageMongo.findByIdAndUpdate(req.params.id, { linkedTaskId: taskId || null });
+      res.json({ message: "Task linked" });
+    } catch {
+      res.status(500).json({ message: "Failed to link task" });
+    }
+  });
+
+  // ─── MEETINGS ────────────────────────────────────────────────────────────
+
+  // Create meeting (RBAC: admin/owner/team_lead only)
+  app.post("/api/meetings", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getUserId(req);
+      const user = req.user;
+      const allowedRoles = ["admin", "owner", "team_lead"];
+      if (!allowedRoles.includes(user?.role)) {
+        return res.status(403).json({ message: "Only admins and team leads can create meetings" });
+      }
+      const { channelId, title, organizationId } = req.body;
+      if (!channelId || !title) return res.status(400).json({ message: "channelId and title required" });
+
+      const channel = await ChannelMongo.findById(channelId).lean() as any;
+      if (!channel || !channel.memberIds?.includes(userId)) {
+        return res.status(403).json({ message: "Not a channel member" });
+      }
+
+      const meeting = await MeetingMongo.create({
+        channelId,
+        organizationId: organizationId || channel.organizationId,
+        createdBy: userId,
+        title,
+        participants: [userId],
+        status: "active",
+      });
+      res.status(201).json({ ...(meeting as any).toJSON(), id: (meeting as any)._id.toString() });
+    } catch {
+      res.status(500).json({ message: "Failed to create meeting" });
+    }
+  });
+
+  // Get meeting detail
+  app.get("/api/meetings/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getUserId(req);
+      const meeting = await MeetingMongo.findById(req.params.id).lean() as any;
+      if (!meeting) return res.status(404).json({ message: "Meeting not found" });
+      if (!meeting.participants?.includes(userId) && !["admin", "owner"].includes(req.user?.role)) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      // Never expose storage key in response
+      const { recordingStorageKey, ...safeFields } = meeting;
+      res.json({ ...safeFields, id: meeting._id.toString() });
+    } catch {
+      res.status(500).json({ message: "Failed to fetch meeting" });
+    }
+  });
+
+  // Get meetings for a channel
+  app.get("/api/channels/:id/meetings", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getUserId(req);
+      const channel = await ChannelMongo.findById(req.params.id).lean() as any;
+      if (!channel || !channel.memberIds?.includes(userId)) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      const meetings = await MeetingMongo.find(
+        { channelId: req.params.id },
+        { recordingStorageKey: 0 } // never expose
+      ).sort({ createdAt: -1 }).lean();
+      res.json(meetings.map((m: any) => ({ ...m, id: m._id.toString() })));
+    } catch {
+      res.status(500).json({ message: "Failed to fetch meetings" });
+    }
+  });
+
+  // End meeting (creator or admin only)
+  app.post("/api/meetings/:id/end", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getUserId(req);
+      const meeting = await MeetingMongo.findById(req.params.id).lean() as any;
+      if (!meeting) return res.status(404).json({ message: "Not found" });
+      const isCreator = meeting.createdBy === userId;
+      const isAdmin = ["admin", "owner"].includes(req.user?.role);
+      if (!isCreator && !isAdmin) return res.status(403).json({ message: "Cannot end this meeting" });
+
+      await MeetingMongo.findByIdAndUpdate(req.params.id, {
+        status: "ended",
+        endedAt: new Date(),
+      });
+      res.json({ message: "Meeting ended" });
+    } catch {
+      res.status(500).json({ message: "Failed to end meeting" });
+    }
+  });
+
+  // Signed URL for recordings (Safeguard ⑦)
+  app.get("/api/meetings/:id/recording", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getUserId(req);
+      const meeting = await MeetingMongo.findById(req.params.id).lean() as any;
+      if (!meeting) return res.status(404).json({ message: "Not found" });
+
+      // Only participants or admins can access recordings
+      const isParticipant = meeting.participants?.includes(userId);
+      const isAdmin = ["admin", "owner"].includes(req.user?.role);
+      if (!isParticipant && !isAdmin) return res.status(403).json({ message: "Access denied" });
+
+      if (meeting.recordingExpiredAt) {
+        return res.status(410).json({ message: "Recording has expired and been deleted" });
+      }
+      if (!meeting.recordingStorageKey) {
+        return res.status(404).json({ message: "No recording available" });
+      }
+
+      // Generate a time-limited signed URL
+      const signingSecret = process.env.RECORDING_SIGNING_SECRET || "dev-signing-secret";
+      const expiresAt = Math.floor(Date.now() / 1000) + 15 * 60; // 15 minutes
+      const payload = `${meeting.recordingStorageKey}:${expiresAt}`;
+      const sig = crypto.createHmac("sha256", signingSecret).update(payload).digest("hex");
+      const signedUrl = `/uploads/recordings/${meeting.recordingStorageKey}?sig=${sig}&exp=${expiresAt}`;
+
+      res.json({ url: signedUrl, expiresAt: new Date(expiresAt * 1000).toISOString() });
+    } catch {
+      res.status(500).json({ message: "Failed to generate recording URL" });
+    }
+  });
+
+  // ─── AI SUMMARIZATION (Safeguards ⑧, rate-limited) ──────────────────────
+
+  app.post("/api/ai/summarize-channel", isAuthenticated, aiSummarizeRateLimit, async (req: any, res) => {
+    try {
+      const userId = getUserId(req);
+      const { channelId } = req.body;
+      if (!channelId) return res.status(400).json({ message: "channelId required" });
+
+      const channel = await ChannelMongo.findById(channelId).lean() as any;
+      if (!channel) return res.status(404).json({ message: "Channel not found" });
+
+      // Org-scoping check (Safeguard ⑧)
+      const userOrg = req.user?.orgId || req.user?.organizationId;
+      if (channel.organizationId !== userOrg) {
+        return res.status(403).json({ message: "Cross-organization access denied" });
+      }
+
+      if (!channel.memberIds?.includes(userId)) {
+        return res.status(403).json({ message: "Not a channel member" });
+      }
+
+      // Check cooldown — skip if summarized in last 60 min
+      const latest = await AiSummaryMongo.findOne(
+        { channelId },
+        {},
+        { sort: { generatedAt: -1 } }
+      ).lean() as any;
+
+      if (latest) {
+        const ageMin = (Date.now() - new Date(latest.generatedAt).getTime()) / 60000;
+        if (ageMin < 60) {
+          return res.json({ ...latest, id: latest._id.toString(), cached: true });
+        }
+      }
+
+      const result = await summarizeChannel(channel.organizationId, channelId);
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message || "Failed to generate summary" });
+    }
+  });
+
+  app.post("/api/ai/summarize-meeting", isAuthenticated, aiSummarizeRateLimit, async (req: any, res) => {
+    try {
+      const { meetingId, transcript } = req.body;
+      if (!meetingId) return res.status(400).json({ message: "meetingId required" });
+
+      const meeting = await MeetingMongo.findById(meetingId).lean() as any;
+      if (!meeting) return res.status(404).json({ message: "Meeting not found" });
+
+      // Org-scoping
+      const userOrg = req.user?.orgId || req.user?.organizationId;
+      if (meeting.organizationId !== userOrg) {
+        return res.status(403).json({ message: "Cross-organization access denied" });
+      }
+
+      const result = await summarizeMeeting(meetingId, transcript);
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message || "Failed to summarize meeting" });
+    }
+  });
+
+  app.get("/api/channels/:id/ai-summary", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getUserId(req);
+      const channel = await ChannelMongo.findById(req.params.id).lean() as any;
+      if (!channel || !channel.memberIds?.includes(userId)) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      const userOrg = req.user?.orgId || req.user?.organizationId;
+      const summary = await getLatestChannelSummary(req.params.id, userOrg);
+      if (!summary) return res.status(404).json({ message: "No summary available" });
+      res.json({ ...summary, id: (summary as any)._id?.toString() });
+    } catch {
+      res.status(500).json({ message: "Failed to fetch summary" });
+    }
+  });
+
+  // ─── SEARCH ──────────────────────────────────────────────────────────────
+
+  app.get("/api/chat/search", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getUserId(req);
+      const q = (req.query.q as string || "").trim();
+      const channelId = req.query.channelId as string;
+
+      if (!q || q.length < 2) return res.status(400).json({ message: "Query too short" });
+
+      // Only search in channels the user belongs to
+      const userChannels = await ChannelMongo.find(
+        { memberIds: userId },
+        { _id: 1 }
+      ).lean();
+      const channelIds = userChannels.map((c: any) => c._id.toString());
+
+      const searchFilter: any = {
+        $text: { $search: q },
+        channelId: channelId ? channelId : { $in: channelIds },
+        deletedAt: null,
+      };
+
+      const results = await MessageMongo.find(searchFilter, { score: { $meta: "textScore" } })
+        .sort({ score: { $meta: "textScore" } })
+        .limit(50)
+        .lean();
+
+      res.json(results.map((m: any) => ({ ...m, id: m._id.toString() })));
+    } catch {
+      res.status(500).json({ message: "Search failed" });
+    }
+  });
+
+  // ─── RECORDING RETENTION CRON (Safeguard ⑩) ─────────────────────────────
+  // Run every night at midnight
+  const RETENTION_DAYS = parseInt(process.env.RECORDING_RETENTION_DAYS || "90", 10);
+  if (RETENTION_DAYS > 0) {
+    const runRetentionCleanup = async () => {
+      try {
+        const cutoff = new Date(Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000);
+        const expired = await MeetingMongo.find({
+          recordingStorageKey: { $exists: true, $ne: null },
+          endedAt: { $lt: cutoff },
+          recordingExpiredAt: null,
+        }).lean() as any[];
+
+        for (const meeting of expired) {
+          // Delete local recording file if it exists
+          const localPath = path.join(process.cwd(), "uploads", "recordings", meeting.recordingStorageKey);
+          if (fs.existsSync(localPath)) {
+            fs.unlinkSync(localPath);
+          }
+          await MeetingMongo.findByIdAndUpdate(meeting._id, {
+            recordingStorageKey: null,
+            recordingExpiredAt: new Date(),
+          });
+        }
+        if (expired.length > 0) {
+          console.log(`[RetentionCron] Purged ${expired.length} expired recording(s)`);
+        }
+      } catch (err) {
+        console.error("[RetentionCron] Error:", err);
+      }
+    };
+
+    // Run once on startup, then every 24h
+    runRetentionCleanup();
+    setInterval(runRetentionCleanup, 24 * 60 * 60 * 1000);
+  }
 
   return httpServer;
 }

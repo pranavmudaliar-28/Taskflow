@@ -35,7 +35,7 @@ export function CreateMilestoneDialog({ open, onClose, projectId }: CreateMilest
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "milestones"] });
-            toast({ title: "Milestone created successfully" });
+            toast({ title: "Milestone created successfully", variant: "success" });
             handleClose();
         },
         onError: (error) => {

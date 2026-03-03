@@ -46,12 +46,14 @@ const ROLE_LABELS: Record<Role, string> = {
   admin: "Admin",
   team_lead: "Team Lead",
   member: "Member",
+  owner: "Owner",
 };
 
 const ROLE_ICONS: Record<Role, typeof Shield> = {
   admin: ShieldCheck,
   team_lead: Shield,
   member: UserIcon,
+  owner: ShieldCheck,
 };
 
 export function ProjectMembersDialog({ open, onClose, project, memberData }: Omit<ProjectMembersDialogProps, 'projectId'> & { project: Project }) {
@@ -143,10 +145,10 @@ export function ProjectMembersDialog({ open, onClose, project, memberData }: Omi
     },
     onSuccess: (data) => {
       if (data.status === "added") {
-        toast({ title: `${data.user.email} has been added to the project` });
+        toast({ title: `${data.user.email} has been added to the project`, variant: "success" });
         queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "members"] });
       } else {
-        toast({ title: `Invitation sent to ${data.email}` });
+        toast({ title: `Invitation sent to ${data.email}`, variant: "success" });
       }
       queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "invitations"] });
       setSearchValue("");
@@ -169,7 +171,7 @@ export function ProjectMembersDialog({ open, onClose, project, memberData }: Omi
       return res.json();
     },
     onSuccess: () => {
-      toast({ title: "Role updated" });
+      toast({ title: "Role updated", variant: "success" });
       queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "members"] });
     },
     onError: (error: Error) => {

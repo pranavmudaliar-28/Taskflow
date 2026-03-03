@@ -163,7 +163,7 @@ export default function TasksPage() {
             return res.json();
         },
         onSuccess: (updated) => {
-            toast({ title: `${updated.length} tasks updated` });
+            toast({ title: `${updated.length} tasks updated`, variant: "success" });
             setRowSelection({});
             setIsBulkEditDialogOpen(false);
             queryClient.invalidateQueries({ queryKey: ["/api/tasks/search"] });

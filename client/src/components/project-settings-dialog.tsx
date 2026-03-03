@@ -37,7 +37,7 @@ export function ProjectSettingsDialog({ open, onClose, project }: ProjectSetting
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
       queryClient.invalidateQueries({ queryKey: ["/api/projects", project.id] });
-      toast({ title: "Project updated" });
+      toast({ title: "Project updated", variant: "success" });
       onClose();
     },
     onError: () => {
@@ -52,7 +52,7 @@ export function ProjectSettingsDialog({ open, onClose, project }: ProjectSetting
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
-      toast({ title: "Project deleted" });
+      toast({ title: "Project deleted", variant: "success" });
       onClose();
       setLocation("/dashboard");
     },
