@@ -1,0 +1,94 @@
+/* ── Sidebar ───────────────────────────────────────────────────────────── */
+
+[data-sidebar="sidebar"],
+.bg-sidebar {
+    @apply bg-slate-950 border-r border-slate-800/60 text-slate-400;
+}
+
+[data-sidebar="header"],
+[data-sidebar="footer"],
+[data-sidebar="content"] {
+    background: transparent;
+}
+
+[data-sidebar="group-label"] {
+    font-size: 11px;
+    @apply text-slate-500 font-bold uppercase tracking-wider;
+}
+
+[data-sidebar="menu-button"] {
+    @apply text-slate-400 rounded-lg transition-all duration-150;
+}
+
+[data-sidebar="menu-button"]:hover {
+    @apply bg-slate-800 text-white;
+}
+
+[data-sidebar="menu-button"][data-active="true"] {
+    @apply bg-indigo-600/90 text-white font-semibold shadow-lg shadow-indigo-500/10;
+}
+
+[data-sidebar="separator"] {
+    @apply bg-slate-800/60;
+}
+
+/* ── Containers ─────────────────────────────────────────────────────────── */
+
+.container-xl {
+    max-width: 1100px;
+    @apply mx-auto w-full px-6 box-border;
+}
+
+.container-lg {
+    max-width: 900px;
+    @apply mx-auto w-full px-6 box-border;
+}
+
+/* Responsive container padding */
+@media (max-width: 768px) {
+
+    .container-xl,
+    .container-lg {
+        @apply px-4;
+    }
+}
+
+/* ── Grid Blowout Fix ──────────────────────────────────────────────────── */
+
+.grid>* {
+    min-width: 0;
+}
+
+/* ── Scrollbars ─────────────────────────────────────────────────────────── */
+
+/* Firefox support */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+
+/* WebKit support */
+::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    @apply bg-white/10 rounded-full hover:bg-white/20;
+}
+
+/* ── Global Layout Utilities ────────────────────────────────────────────── */
+
+.hero-gradient {
+    background: linear-gradient(135deg, #0B0F19 0%, #111827 50%, #0B0F19 100%);
+}
+
+.page-header {
+    padding-left: var(--page-padding);
+    padding-right: var(--page-padding);
+    @apply flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-5 border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-20;
+}

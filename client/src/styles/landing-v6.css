@@ -1,0 +1,61 @@
+/* ── Tech Stack Badge & Popup (v6) ────────────────────────────────── */
+
+.tech-badge-v6 {
+    @apply flex items-center gap-2.5 bg-slate-900/80 backdrop-blur-md border border-white/10 px-3.5 py-2 rounded-full text-white/80 cursor-pointer transition-all duration-300 shadow-2xl select-none;
+}
+
+.tech-badge-v6:hover {
+    @apply bg-slate-800/90 border-white/20 -translate-y-0.5 text-white;
+}
+
+.tech-dot-v6 {
+    box-shadow: 0 0 10px #22c55e;
+    @apply w-2 h-2 bg-emerald-500 rounded-full animate-pulse;
+}
+
+.tech-popup-v6 {
+    bottom: 50px;
+    width: 320px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+    @apply absolute right-0 bg-slate-900/95 backdrop-blur-2xl border border-white/10 rounded-[20px] overflow-hidden z-[10000];
+    animation: lp6-slide-in 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.tech-popup-head-v6 {
+    @apply flex items-center justify-between p-4 bg-white/5 border-b border-white/10;
+}
+
+.tech-close-btn-v6 {
+    @apply bg-transparent border-none text-white/40 text-2xl leading-none cursor-pointer hover:text-white transition-colors px-1;
+}
+
+.tech-stack-row-v6 {
+    @apply mb-4 last:mb-0;
+}
+
+.tech-stack-cat-v6 {
+    font-size: 11px;
+    @apply flex items-center gap-1.5 font-bold uppercase text-white/40 tracking-wider mb-2;
+}
+
+.tech-stack-pills-v6 {
+    @apply flex flex-wrap gap-1.5;
+}
+
+.tech-pill-v6 {
+    font-size: 12px;
+    @apply bg-white/5 border border-white/10 px-2.5 py-1 rounded-lg text-white/70;
+}
+
+.tech-popup-footer-v6 {
+    font-size: 12px;
+    @apply p-3.5 px-4 bg-white/5 border-t border-white/10 text-white/40 flex items-center justify-center gap-1;
+}
+
+@media (max-width: 768px) {
+    .tech-popup-v6 {
+        right: -10px;
+        width: calc(100vw - 40px);
+        @apply max-w-[320px];
+    }
+}

@@ -13,15 +13,20 @@ import { motion } from "framer-motion";
 export default function Login() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const [email, setEmail] = useState("");
+  const params = new URLSearchParams(window.location.search);
+  const [email, setEmail] = useState(params.get("email") || "");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const params = new URLSearchParams(window.location.search);
+  const tokenFromUrl = params.get("token");
   const redirect = params.get("redirect");
 
   const loginMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/auth/login", { email, password });
+      const res = await apiRequest("POST", "/api/auth/login", {
+        email,
+        password,
+        token: tokenFromUrl
+      });
       return res.json();
     },
     onSuccess: (data) => {

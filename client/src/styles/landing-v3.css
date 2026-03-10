@@ -1,0 +1,106 @@
+/* ── Landing v3 — Premium SaaS Theme ───────────────────────────────── */
+
+.hero-section-v3 {
+    min-height: 90vh;
+    @apply relative flex items-center overflow-hidden pt-28;
+}
+
+.hero-in-v3 {
+    animation: lp3-hero-in 0.85s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.title-gradient-v3 {
+    @apply font-black;
+    background: linear-gradient(135deg, #6366F1 0%, #A855F7 50%, #EC4899 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: lp3-shimmer 5s ease infinite;
+}
+
+.glass-card-v3 {
+    border-radius: 20px;
+    @apply bg-white/5 backdrop-blur-3xl border border-white/10 shadow-2xl;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+.glass-card-v3:hover {
+    @apply border-indigo-500/40;
+    box-shadow: 0 20px 60px rgba(99, 102, 241, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.feature-card-v3 {
+    border-radius: 18px;
+    @apply bg-white border border-indigo-50/50 shadow-sm;
+    transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.32s ease, border-color 0.25s ease;
+}
+
+.feature-card-v3:hover {
+    @apply -translate-y-1 shadow-xl border-indigo-200;
+}
+
+.btn-v3 {
+    height: 52px;
+    font-size: 15px;
+    @apply inline-flex items-center gap-2 px-7 rounded-xl font-bold cursor-pointer;
+    background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
+    @apply text-white shadow-lg relative overflow-hidden;
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+}
+
+.btn-v3:hover {
+    transform: translateY(-0.125rem) scale(1.03);
+    @apply shadow-xl;
+}
+
+.btn-ghost-v3 {
+    height: 52px;
+    font-size: 15px;
+    @apply inline-flex items-center gap-2 px-6 rounded-xl font-semibold cursor-pointer;
+    @apply bg-white/10 text-white/90 border border-white/20 backdrop-blur-sm;
+    transition: background 0.2s, border-color 0.2s, transform 0.2s;
+}
+
+.btn-ghost-v3:hover {
+    @apply bg-white/20 border-white/30 -translate-y-0.5;
+}
+
+.pill-v3 {
+    font-size: 11px;
+    @apply inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full font-bold uppercase tracking-wider;
+    @apply bg-indigo-500/15 border border-indigo-400/30 text-indigo-300;
+}
+
+.hotspot-ping {
+    @apply absolute w-3.5 h-3.5 rounded-full bg-indigo-400 cursor-pointer z-10;
+}
+
+.hotspot-ping::after {
+    content: '';
+    inset: -4px;
+    @apply absolute rounded-full bg-indigo-400/40 animate-ping;
+    animation: lp3-ping 1.9s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+.accordion-body-v3 {
+    font-size: 14px;
+    @apply max-h-0 overflow-hidden opacity-0;
+    transition: max-height 0.38s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+    @apply text-slate-500 leading-relaxed;
+}
+
+.accordion-body-v3.open {
+    max-height: 400px;
+    @apply opacity-100 pb-4;
+}
+
+@media (max-width: 768px) {
+    .stack-v3 {
+        @apply flex-col !important;
+    }
+
+    .center-mobile-v3 {
+        @apply text-center items-center !important;
+    }
+}

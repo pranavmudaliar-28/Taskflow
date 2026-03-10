@@ -174,9 +174,24 @@ export class MongoStorage {
     }
 
     async getProjectsByUser(userId: string): Promise<Project[]> {
-        const memberships = await OrganizationMemberMongo.find({ userId });
-        const orgIds = memberships.map(m => m.organizationId);
-        const projects = await ProjectMongo.find({ organizationId: { $in: orgIds } }).sort({ createdAt: -1 });
+        // 1. Find all organizations the user belongs to and their roles
+        const orgMemberships = await OrganizationMemberMongo.find({ userId });
+        const adminOrgIds = orgMemberships
+            .filter(m => m.role === 'admin')
+            .map(m => m.organizationId);
+
+        // 2. Find projects the user is explicitly a member of
+        const projectMemberships = await ProjectMemberMongo.find({ userId });
+        const explicitProjectIds = projectMemberships.map(m => m.projectId);
+
+        // 3. Query projects: either the user is an admin of the org, OR they are explicitly a member
+        const projects = await ProjectMongo.find({
+            $or: [
+                { organizationId: { $in: adminOrgIds } },
+                { _id: { $in: explicitProjectIds } }
+            ]
+        }).sort({ createdAt: -1 });
+
         return this.transformArray<Project>(projects);
     }
 

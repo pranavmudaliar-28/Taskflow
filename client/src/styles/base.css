@@ -1,0 +1,133 @@
+@layer base {
+    :root {
+        /* Sidebar (Dark Navy) */
+        --sidebar: 222 47% 11%;
+        --sidebar-bg: 222 47% 11%;
+        --sidebar-foreground: 215 20% 65%;
+        --sidebar-primary: 217 91% 60%;
+        --sidebar-primary-foreground: 0 0% 100%;
+        --sidebar-accent: 217 33% 17%;
+        --sidebar-accent-foreground: 0 0% 100%;
+        --sidebar-border: 217 33% 17%;
+        --sidebar-ring: 217 91% 60%;
+        --sidebar-width: 16rem;
+        --sidebar-width-icon: 3rem;
+
+        /* Main surfaces */
+        --background: 210 40% 98%;
+        --foreground: 222 47% 11%;
+        --card: 0 0% 100%;
+        --card-foreground: 222 47% 11%;
+        --popover: 0 0% 100%;
+        --popover-foreground: 222 47% 11%;
+
+        /* Brand blue accent */
+        --primary: 217 91% 60%;
+        --primary-foreground: 0 0% 100%;
+
+        /* Neutrals */
+        --secondary: 210 40% 96%;
+        --secondary-foreground: 222 47% 11%;
+        --muted: 210 40% 96%;
+        --muted-foreground: 215 16% 47%;
+        --accent: 210 40% 94%;
+        --accent-foreground: 222 47% 11%;
+
+        /* Status */
+        --destructive: 0 84% 60%;
+        --destructive-foreground: 0 0% 100%;
+        --success: 160 84% 39%;
+        --warning: 38 92% 50%;
+        --info: 217 91% 60%;
+
+        /* Borders & rings */
+        --border: 214 32% 91%;
+        --input: 214 32% 91%;
+        --ring: 217 91% 60%;
+
+        /* Premium Shadows */
+        --shadow-premium: 0 10px 15px -3px rgba(0, 0, 0, 0.04), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
+        --shadow-elevation: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02);
+
+        /* Fluid Typography (Mobile First) */
+        --text-xs: clamp(0.65rem, 0.6rem + 0.25vw, 0.75rem);
+        --text-sm: clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
+        --text-base: clamp(0.875rem, 0.8rem + 0.35vw, 1rem);
+        --text-lg: clamp(1rem, 0.9rem + 0.5vw, 1.125rem);
+        --text-xl: clamp(1.125rem, 1rem + 0.6vw, 1.25rem);
+        --text-2xl: clamp(1.25rem, 1.1rem + 1vw, 1.5rem);
+        --text-3xl: clamp(1.5rem, 1.3rem + 1.5vw, 2rem);
+        --text-4xl: clamp(2rem, 1.75rem + 2vw, 2.5rem);
+
+        /* Responsive Spacing */
+        --page-padding: clamp(1rem, 5vw, 2rem);
+        --section-spacing: clamp(1.5rem, 6vw, 3rem);
+    }
+
+    .dark {
+        --background: 222 47% 11%;
+        --foreground: 210 40% 98%;
+        --card: 217 33% 17%;
+        --card-foreground: 210 40% 98%;
+        --popover: 217 33% 17%;
+        --popover-foreground: 210 40% 98%;
+        --primary: 217 91% 60%;
+        --primary-foreground: 0 0% 100%;
+        --secondary: 217 33% 22%;
+        --secondary-foreground: 210 40% 98%;
+        --muted: 217 33% 22%;
+        --muted-foreground: 215 20% 65%;
+        --accent: 217 33% 22%;
+        --accent-foreground: 210 40% 98%;
+        --destructive: 0 63% 31%;
+        --destructive-foreground: 0 0% 100%;
+        --border: 217 33% 22%;
+        --input: 217 33% 22%;
+        --sidebar: 222 47% 11%;
+        --sidebar-bg: 222 47% 11%;
+        --sidebar-foreground: 210 40% 98%;
+        --sidebar-primary: 210 40% 98%;
+        --sidebar-primary-foreground: 222 47% 11%;
+        --sidebar-accent: 217 33% 22%;
+        --sidebar-accent-foreground: 210 40% 98%;
+        --sidebar-border: 217 33% 22%;
+        --sidebar-ring: 217 91% 60%;
+    }
+}
+
+@layer base {
+
+    *,
+    ::before,
+    ::after {
+        border-color: hsl(var(--border));
+    }
+
+    html {
+        @apply h-full;
+        font-family: 'Inter', system-ui, sans-serif;
+    }
+
+    body,
+    #root {
+        @apply h-full bg-background text-foreground antialiased;
+        font-feature-settings: "cv11", "ss01";
+        /* Modern Viewport Fix */
+        min-height: 100dvh;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+        @apply font-semibold tracking-tight;
+    }
+
+    /* Accessibility */
+    :focus-visible {
+        outline: 2px solid theme('colors.indigo.500');
+        outline-offset: 2px;
+    }
+}

@@ -12,7 +12,8 @@ const UserSchema = new Schema({
     role: { type: String, default: "member" },
     plan: { type: String, default: "free" },
     stripeCustomerId: { type: String },
-    onboardingStep: { type: String, default: "plan" },
+    mustChangePassword: { type: Boolean, default: false },
+    onboardingStep: { type: String, default: "plan" }, // 'plan', 'organization', 'completed'
     seeded: { type: Boolean, default: false },
 }, { timestamps: true });
 

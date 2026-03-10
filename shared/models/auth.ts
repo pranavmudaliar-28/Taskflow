@@ -13,6 +13,7 @@ export const userSchema = z.object({
   stripeCustomerId: z.string().optional().nullable(),
   onboardingStep: z.string().default("plan"), // 'plan', 'organization', 'completed'
   seeded: z.boolean().default(false),
+  mustChangePassword: z.boolean().default(false).optional(),
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
 });

@@ -11,6 +11,7 @@ import { ProjectSettingsDialog } from "@/components/project-settings-dialog";
 import { CreateMilestoneDialog } from "@/components/create-milestone-dialog";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import {
@@ -91,6 +92,7 @@ export default function ProjectPage() {
   /* ── All state & logic — UNCHANGED ── */
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [, setLocation] = useLocation();
   const [showCreateTask, setShowCreateTask] = useState(false);
   const [showMembers, setShowMembers] = useState(false);
@@ -163,6 +165,9 @@ export default function ProjectPage() {
     queryKey: ["/api/projects", project?.id, "members"],
     enabled: !!project?.id,
   });
+
+  const currentUserMember = memberData?.find((m) => m.userId === user?.id);
+  const isProjectAdmin = currentUserMember?.role === "admin" || user?.isAdmin;
 
   const { data: milestones, isLoading: milestonesLoading } = useQuery<Milestone[]>({
     queryKey: ["/api/projects", project?.id, "milestones"],
@@ -511,15 +516,17 @@ export default function ProjectPage() {
               >
                 <Users className="h-4 w-4" />
               </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"
-                onClick={() => setShowSettings(true)}
-                title="Settings"
-              >
-                <Settings className="h-4 w-4" />
-              </Button>
+              {isProjectAdmin && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"
+                  onClick={() => setShowSettings(true)}
+                  title="Settings"
+                >
+                  <Settings className="h-4 w-4" />
+                </Button>
+              )}
               {/* New Task: icon-only below 360 px, label visible from 360 px */}
               <Button
                 className="h-8 gap-1.5 rounded-lg bg-primary px-2.5 text-xs font-bold text-primary-foreground shadow-sm hover:bg-primary/90 sm:h-9 sm:px-4"

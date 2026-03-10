@@ -11,10 +11,10 @@ import {
 function useScrollReveal() {
     useEffect(() => {
         const obs = new IntersectionObserver(
-            (es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("lp3-visible"); obs.unobserve(e.target); } }),
+            (es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("reveal-visible"); obs.unobserve(e.target); } }),
             { threshold: 0.09 }
         );
-        document.querySelectorAll(".lp3-reveal").forEach((el) => obs.observe(el));
+        document.querySelectorAll(".reveal-on-scroll").forEach((el) => obs.observe(el));
         return () => obs.disconnect();
     }, []);
 }
@@ -124,16 +124,16 @@ function useTilt(str = 8) {
 function HeroBadges() {
     return (
         <>
-            <div className="lp5-badge" style={{ top: "18%", left: "-8%", animation: "lp5-b1 4.5s ease-in-out infinite" }}>
+            <div className="hero-badge-v5" style={{ top: "18%", left: "-8%", animation: "lp5-b1 4.5s ease-in-out infinite" }}>
                 <span style={{ height: 8, width: 8, borderRadius: 99, background: "#22C55E", flexShrink: 0, boxShadow: "0 0 8px rgba(34,197,94,0.7)" }} />
                 <span>12 tasks shipped today</span>
             </div>
-            <div className="lp5-badge" style={{ top: "44%", right: "-6%", animation: "lp5-b2 5.2s ease-in-out infinite 0.8s" }}>
+            <div className="hero-badge-v5" style={{ top: "44%", right: "-6%", animation: "lp5-b2 5.2s ease-in-out infinite 0.8s" }}>
                 <span style={{ fontSize: 13 }}>📈</span>
                 <span>Team velocity <strong style={{ color: "#86EFAC" }}>+28%</strong></span>
             </div>
-            <div className="lp5-badge" style={{ bottom: "22%", left: "-5%", animation: "lp5-b3 4s ease-in-out infinite 1.4s" }}>
-                <span className="lp5-live-dot" />
+            <div className="hero-badge-v5" style={{ bottom: "22%", left: "-5%", animation: "lp5-b3 4s ease-in-out infinite 1.4s" }}>
+                <span className="live-dot-v5" />
                 <span>Sprint review — 2 pm</span>
             </div>
         </>
@@ -212,13 +212,13 @@ function DashMockup({ panel }: { panel: number }) {
             <div style={{ padding: "10px 16px", background: "rgba(0,0,0,0.25)", borderBottom: `1px solid ${BOR}`, display: "flex", alignItems: "center", gap: 10 }}>
                 <div style={{ display: "flex", gap: 6 }}>{["#FF5F57", "#FFBD2E", "#27C840"].map(c => <div key={c} style={{ height: 10, width: 10, borderRadius: 99, background: c }} />)}</div>
                 <div style={{ flex: 1, height: 20, borderRadius: 6, background: "rgba(255,255,255,0.05)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <span className="lp5-chrome-url" style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", fontFamily: "monospace" }}>app.taskflowpro.com/{["board", "timeline", "dashboard", "team"][panel]}</span>
+                    <span className="chrome-url-v5" style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", fontFamily: "monospace" }}>app.taskflowpro.com/{["board", "timeline", "dashboard", "team"][panel]}</span>
                 </div>
             </div>
             {/* body */}
-            <div className="lp5-board-body" style={{ padding: 16, minHeight: 220 }}>
+            <div className="board-body-v5" style={{ padding: 16, minHeight: 220 }}>
                 {panel === 0 && (
-                    <div className="lp5-board-cols" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+                    <div className="board-cols-v5" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
                         {cols.map(col => (
                             <div key={col.label} style={{ background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: 10, border: `1px solid ${BOR}` }}>
                                 <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 8 }}>
@@ -277,9 +277,9 @@ function MetricCell({ num, label, display }: { num: number; label: string; suffi
     const shown = val >= num ? display : val.toLocaleString();
     return (
         <div style={{ textAlign: "center", padding: "28px 16px", background: "rgba(255,255,255,0.025)", borderRight: `1px solid rgba(255,255,255,0.08)` }}>
-            <span ref={ref} className="lp5-stat-num">{shown}</span>
+            <span ref={ref} className="stat-number-v5">{shown}</span>
             <div style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.5)", marginTop: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-                {label === "Tasks daily" && <span className="lp5-live-dot" style={{ width: 6, height: 6, flexShrink: 0 }} />}
+                {label === "Tasks daily" && <span className="live-dot-v5" style={{ width: 6, height: 6, flexShrink: 0 }} />}
                 {label}
             </div>
         </div>
@@ -312,10 +312,10 @@ function TechStackBadge() {
             {/* ── Badge trigger ── */}
             <button
                 onClick={() => setOpen(!open)}
-                className="lp6-badge-btn"
+                className="tech-badge-v6"
                 aria-label="Tech stack info"
             >
-                <span className="lp6-badge-dot" />
+                <span className="tech-dot-v6" />
                 <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: "-0.01em" }}>Built by SlashEasy</span>
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ transition: "transform 0.3s", transform: open ? "rotate(180deg)" : "rotate(0deg)" }}>
                     <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -324,32 +324,32 @@ function TechStackBadge() {
 
             {/* ── Popup panel ── */}
             {open && (
-                <div className="lp6-popup">
+                <div className="tech-popup-v6">
                     {/* header */}
-                    <div className="lp6-popup-head">
+                    <div className="tech-popup-head-v6">
                         <span style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 800, fontSize: 15, color: "#fff" }}>
                             <span style={{ fontSize: 18 }}>{'</>'}</span> Tech Stack
                         </span>
-                        <button onClick={() => setOpen(false)} className="lp6-close-btn" aria-label="Close">×</button>
+                        <button onClick={() => setOpen(false)} className="tech-close-btn-v6" aria-label="Close">×</button>
                     </div>
 
                     {/* stack rows */}
                     <div style={{ padding: "12px 16px" }}>
                         {stack.map(({ cat, icon, items }) => (
-                            <div key={cat} className="lp6-stack-row">
-                                <div className="lp6-stack-cat">
+                            <div key={cat} className="tech-stack-row-v6">
+                                <div className="tech-stack-cat-v6">
                                     <span>{icon}</span>
                                     <span>{cat}</span>
                                 </div>
-                                <div className="lp6-stack-pills">
-                                    {items.map(i => <span key={i} className="lp6-pill">{i}</span>)}
+                                <div className="tech-stack-pills-v6">
+                                    {items.map(i => <span key={i} className="tech-pill-v6">{i}</span>)}
                                 </div>
                             </div>
                         ))}
                     </div>
 
                     {/* footer */}
-                    <div className="lp6-popup-footer" style={{ flexDirection: "column", gap: 2 }}>
+                    <div className="tech-popup-footer-v6" style={{ flexDirection: "column", gap: 2 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                             <span>Made with </span>
                             <span style={{ color: "#EF4444", fontSize: 15 }}>♥</span>
@@ -371,12 +371,12 @@ function TechStackBadge() {
 function Acc({ q, a }: { q: string; a: string }) {
     const [open, setOpen] = useState(false);
     return (
-        <div className="lp4-acc-item">
-            <button className="lp4-acc-trig" onClick={() => setOpen(!open)}>
+        <div className="accordion-item-v4">
+            <button className="accordion-trigger-v4" onClick={() => setOpen(!open)}>
                 {q}
                 <ChevronDown style={{ height: 18, width: 18, flexShrink: 0, color: open ? INDL : SEC, transform: open ? "rotate(180deg)" : "none", transition: "transform 0.3s, color 0.2s" }} />
             </button>
-            <div className={`lp4-acc-body${open ? " open" : ""}`}>{a}</div>
+            <div className={`accordion-body-v4${open ? " open" : ""}`}>{a}</div>
         </div>
     );
 }
@@ -400,7 +400,6 @@ export default function Landing() {
         return () => window.removeEventListener("scroll", fn);
     }, []);
 
-    const W: React.CSSProperties = { maxWidth: 1100, margin: "0 auto", padding: "0 24px", width: "100%", boxSizing: "border-box" };
     const sec: React.CSSProperties = { fontSize: "clamp(30px,4vw,48px)", fontWeight: 900, letterSpacing: "-0.035em", lineHeight: 1.06, color: TXT };
 
     return (
@@ -433,7 +432,7 @@ export default function Landing() {
                 borderBottom: `1px solid ${navBg ? BOR : "transparent"}`,
                 transition: "all 0.3s ease"
             }}>
-                <div style={{ ...W, height: 64, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 20 }}>
+                <div className="container-xl" style={{ height: 64, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 20 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
                         <div style={{ height: 34, width: 34, borderRadius: 10, background: "linear-gradient(135deg,#6366F1,#8B5CF6)", display: "inline-flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px rgba(99,102,241,0.5)", border: "1px solid rgba(255,255,255,0.1)" }}>
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -442,50 +441,50 @@ export default function Landing() {
                         </div>
                         <span style={{ fontWeight: 900, fontSize: 18, color: TXT, letterSpacing: "-0.03em" }}>TaskFlow Pro</span>
                     </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 28 }} className="lp4-hide-tab">
-                        {["Product", "Features", "Pricing", "Docs"].map(l => <a key={l} href={`#${l.toLowerCase()}`} className="lp4-nav-link">{l}</a>)}
+                    <div style={{ display: "flex", alignItems: "center", gap: 28 }} className="hidden md:flex">
+                        {["Product", "Features", "Pricing", "Docs"].map(l => <a key={l} href={`#${l.toLowerCase()}`} className="nav-link-v4">{l}</a>)}
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-                        <Link href="/login"><a className="lp4-nav-link" style={{ fontWeight: 600 }}>Login</a></Link>
-                        <Link href="/signup"><a className="lp4-cta-btn" style={{ height: 38, padding: "0 18px", fontSize: 13, borderRadius: 10 }}>Start Free</a></Link>
+                        <Link href="/login"><a className="nav-link-v4" style={{ fontWeight: 600 }}>Login</a></Link>
+                        <Link href="/signup"><a className="cta-btn-v4" style={{ height: 38, padding: "0 18px", fontSize: 13, borderRadius: 10 }}>Start Free</a></Link>
                     </div>
                 </div>
             </nav>
 
             {/* ── HERO ─────────────────────────────────────── */}
-            <section className="lp5-hero-section" style={{ position: "relative", minHeight: "90vh", display: "flex", alignItems: "center", overflow: "hidden", paddingTop: 110 }}>
+            <section className="hero-section-v5" style={{ position: "relative", minHeight: "90vh", display: "flex", alignItems: "center", overflow: "hidden", paddingTop: 110 }}>
 
                 {/* bg orbs – absolute, won't affect layout */}
                 <div style={{ position: "absolute", top: "8%", left: "5%", width: 520, height: 520, borderRadius: "50%", background: "radial-gradient(circle,rgba(99,102,241,0.16) 0%,transparent 70%)", pointerEvents: "none", animation: "lp3-orb-a 20s ease-in-out infinite" }} />
                 <div style={{ position: "absolute", bottom: "5%", right: "5%", width: 420, height: 420, borderRadius: "50%", background: "radial-gradient(circle,rgba(139,92,246,0.12) 0%,transparent 70%)", pointerEvents: "none", animation: "lp3-orb-b 24s ease-in-out infinite" }} />
 
-                <div style={{ ...W, position: "relative", paddingTop: 0, paddingBottom: 80 }}>
+                <div className="container-xl" style={{ position: "relative", paddingTop: 0, paddingBottom: 80 }}>
                     {/* ── 2-column hero grid ── */}
-                    <div className="lp5-hero-grid">
+                    <div className="hero-grid-v5">
                         {/* LEFT — copy */}
-                        <div className="lp5-hero-copy">
-                            <div className="lp3-hero-in lp3-hi-1" style={{ marginBottom: 20 }}>
-                                <span className="lp4-pill"><Sparkles style={{ height: 10, width: 10 }} /> Now free for teams up to 5</span>
+                        <div className="hero-copy-v5">
+                            <div className="hero-in-v3 lp3-hi-1" style={{ marginBottom: 20 }}>
+                                <span className="pill-v4"><Sparkles style={{ height: 10, width: 10 }} /> Now free for teams up to 5</span>
                             </div>
-                            <h1 className="lp3-hero-in lp3-hi-2" style={{ fontSize: "clamp(32px,5vw,64px)", fontWeight: 900, letterSpacing: "-0.04em", lineHeight: 1.1, marginBottom: 24, wordBreak: "break-word", textShadow: "0 10px 30px rgba(0,0,0,0.4)" }}>
-                                Bring clarity to<br /><span className="lp3-grad">every project.</span>
+                            <h1 className="hero-in-v3 lp3-hi-2" style={{ fontSize: "clamp(32px,5vw,64px)", fontWeight: 900, letterSpacing: "-0.04em", lineHeight: 1.1, marginBottom: 24, wordBreak: "break-word", textShadow: "0 10px 30px rgba(0,0,0,0.4)" }}>
+                                Bring clarity to<br /><span className="title-gradient-v3">every project.</span>
                             </h1>
-                            <p className="lp3-hero-in lp3-hi-3" style={{ fontSize: "clamp(15px,1.5vw,17px)", color: "rgba(255,255,255,0.6)", lineHeight: 1.8, marginBottom: 40, maxWidth: 500 }}>
+                            <p className="hero-in-v3 lp3-hi-3" style={{ fontSize: "clamp(15px,1.5vw,17px)", color: "rgba(255,255,255,0.6)", lineHeight: 1.8, marginBottom: 40, maxWidth: 500 }}>
                                 Plan work, align your team, and track progress in one streamlined workspace designed for speed and focus.
                             </p>
-                            <div className="lp3-hero-in lp3-hi-4 lp5-hero-btns" style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 20 }}>
-                                <Link href="/signup"><a className="lp4-cta-btn" style={{ height: 52, padding: "0 30px", fontSize: 15 }}>Start Free Workspace <ArrowRight style={{ height: 16, width: 16 }} /></a></Link>
-                                <a href="#showcase" className="lp4-ghost-btn" style={{ height: 52, padding: "0 22px" }}>
+                            <div className="hero-in-v3 lp3-hi-4 hero-btns-v5" style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 20 }}>
+                                <Link href="/signup"><a className="cta-btn-v4" style={{ height: 52, padding: "0 30px", fontSize: 15 }}>Start Free Workspace <ArrowRight style={{ height: 16, width: 16 }} /></a></Link>
+                                <a href="#showcase" className="ghost-btn-v4" style={{ height: 52, padding: "0 22px" }}>
                                     <span style={{ height: 28, width: 28, borderRadius: 99, background: "rgba(255,255,255,0.08)", display: "inline-flex", alignItems: "center", justifyContent: "center" }}><Play style={{ height: 10, width: 10, fill: TXT, color: TXT, marginLeft: 2 }} /></span>
                                     Watch Demo
                                 </a>
                             </div>
-                            <p className="lp3-hero-in lp3-hi-4" style={{ fontSize: 12, color: "rgba(255,255,255,0.28)" }}>No credit card · Free plan forever · 5-min setup</p>
+                            <p className="hero-in-v3 lp3-hi-4" style={{ fontSize: 12, color: "rgba(255,255,255,0.28)" }}>No credit card · Free plan forever · 5-min setup</p>
                         </div>
 
                         {/* RIGHT — mockup */}
-                        <div className="lp3-hero-in lp3-hi-5 lp5-hero-visual">
-                            <div className="lp3-float" style={{ position: "relative" }} {...tilt}>
+                        <div className="hero-in-v3 lp3-hi-5 hero-visual-v5">
+                            <div className="animate-float-v3" style={{ position: "relative" }} {...tilt}>
                                 <DashMockup panel={0} />
                                 <HeroBadges />
                             </div>
@@ -497,9 +496,9 @@ export default function Landing() {
 
             {/* ── TRUST BAR ────────────────────────────────── */}
             <div style={{ borderTop: `1px solid ${BOR}`, borderBottom: `1px solid ${BOR}`, padding: "48px 0", background: "rgba(255,255,255,0.01)" }}>
-                <div style={{ ...W, textAlign: "center" }}>
+                <div className="container-xl" style={{ textAlign: "center" }}>
                     <p style={{ fontSize: 13, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(255,255,255,0.5)", marginBottom: 32 }}>Trusted by 2,000+ teams worldwide</p>
-                    <div className="lp5-trust-bar" style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "clamp(24px, 4vw, 56px)", flexWrap: "wrap" }}>
+                    <div className="trust-bar-v5" style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "clamp(24px, 4vw, 56px)", flexWrap: "wrap" }}>
                         {[
                             { name: "Stripe", color: "#635BFF", path: "M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.545-2.354 1.545-1.875 0-4.965-.921-5.69-.974l.439-2.737c.725.053 2.115.155 3.332.155 1.14 0 1.854-.258 1.854-.806 0-.619-.594-.96-1.789-.96-1.423 0-3.155.679-4.509 1.341L6.1 1.096c1.788-.702 4.195-1.127 6.065-1.127 2.668 0 4.887.697 6.136 1.921 1.258 1.233 1.892 3.09 1.892 5.589 0 4.568-2.617 6.279-6.917 7.784-2.859 1.03-3.791 1.761-3.791 2.898 0 1.107.96 1.734 2.646 1.734 2.227 0 5.48-.846 6.945-1.584l-.872 5.494c-1.547.603-4.148 1.038-6.883 1.038-2.617 0-4.886-.667-6.241-1.872-1.391-1.242-2.115-3.08-2.115-5.589 0-4.437 2.684-6.279 6.983-7.73z", viewBox: "0 0 24 24", h: 22 },
                             { name: "Vercel", color: "#FFFFFF", path: "M12 1L24 22H0L12 1Z", viewBox: "0 0 24 24", h: 20 },
@@ -526,10 +525,10 @@ export default function Landing() {
 
             {/* ── PROBLEM → SOLUTION ───────────────────────── */}
             <section style={{ padding: "96px 0" }} id="product">
-                <div style={W}>
-                    <div className="lp4-split lp3-reveal">
+                <div className="container-xl">
+                    <div className="split-section-v4 reveal-on-scroll">
                         <div>
-                            <span className="lp4-pill" style={{ marginBottom: 20, display: "inline-flex" }}>The Problem</span>
+                            <span className="pill-v4" style={{ marginBottom: 20, display: "inline-flex" }}>The Problem</span>
                             <h2 style={{ ...sec, marginBottom: 20 }}>Work is scattered.<br />Clarity is missing.</h2>
                             <p style={{ fontSize: 16, color: SEC, lineHeight: 1.8, marginBottom: 24 }}>
                                 Teams juggle tasks across email threads, spreadsheets, chat messages and half-used tools. Deadlines slip. Priorities clash. Nobody knows who's doing what.
@@ -544,7 +543,7 @@ export default function Landing() {
                             ))}
                         </div>
                         <div>
-                            <span className="lp4-pill" style={{ marginBottom: 20, display: "inline-flex", background: "rgba(34,197,94,0.12)", borderColor: "rgba(34,197,94,0.28)", color: "#86EFAC" }}>The Solution</span>
+                            <span className="pill-v4" style={{ marginBottom: 20, display: "inline-flex", background: "rgba(34,197,94,0.12)", borderColor: "rgba(34,197,94,0.28)", color: "#86EFAC" }}>The Solution</span>
                             <h2 style={{ ...sec, marginBottom: 20 }}>One workspace.<br />Total clarity.</h2>
                             <p style={{ fontSize: 16, color: SEC, lineHeight: 1.8, marginBottom: 24 }}>
                                 TaskFlow Pro gives every team a single source of truth — tasks, timelines, updates and priorities visible to everyone, always up to date.
@@ -562,18 +561,18 @@ export default function Landing() {
 
             {/* ── FEATURES ─────────────────────────────────── */}
             <section id="features" style={{ padding: "80px 0", borderTop: `1px solid ${BOR}` }}>
-                <div style={W}>
-                    <div className="lp3-reveal" style={{ textAlign: "center", marginBottom: 52 }}>
-                        <span className="lp4-pill" style={{ marginBottom: 14, display: "inline-flex" }}>Features</span>
+                <div className="container-xl">
+                    <div className="reveal-on-scroll" style={{ textAlign: "center", marginBottom: 52 }}>
+                        <span className="pill-v4" style={{ marginBottom: 14, display: "inline-flex" }}>Features</span>
                         <h2 style={{ ...sec, marginBottom: 14 }}>Built for real work</h2>
                         <p style={{ fontSize: 16, color: SEC, maxWidth: 480, margin: "0 auto" }}>
                             Practical tools — not feature bloat — designed to reduce friction and keep teams focused.
                         </p>
                     </div>
-                    <div className="lp5-feat-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(290px,1fr))", gap: 14 }}>
+                    <div className="feature-grid-v5" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(290px,1fr))", gap: 14 }}>
                         {features.map(({ icon: Icon, title, desc, color, bg }, i) => (
                             <div key={title}
-                                className={`lp4-feat-card lp3-reveal lp3-d${(i % 6) + 1}`}
+                                className={`feature-card-v4 reveal-on-scroll lp3-d${(i % 6) + 1}`}
                                 style={{ cursor: "default" }}
                                 onMouseMove={e => {
                                     const r = e.currentTarget.getBoundingClientRect();
@@ -599,31 +598,31 @@ export default function Landing() {
 
             {/* ── PRODUCT SHOWCASE ─────────────────────────── */}
             <section id="showcase" style={{ padding: "88px 0", borderTop: `1px solid ${BOR}` }}>
-                <div style={{ ...W, display: "flex", flexDirection: "column", alignItems: "center", gap: 32 }}>
-                    <div className="lp3-reveal" style={{ textAlign: "center" }}>
-                        <span className="lp4-pill" style={{ marginBottom: 14, display: "inline-flex" }}>Product Showcase</span>
+                <div className="container-xl" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 32 }}>
+                    <div className="reveal-on-scroll" style={{ textAlign: "center" }}>
+                        <span className="pill-v4" style={{ marginBottom: 14, display: "inline-flex" }}>Product Showcase</span>
                         <h2 style={{ ...sec }}>Every view your team needs</h2>
                     </div>
                     {/* Clickable tab bar */}
-                    <div className="lp3-reveal lp4-tabs">
+                    <div className="reveal-on-scroll tab-group-v4">
                         {showcasePanels.map(({ key, label, icon: Icon }, i) => (
                             <button
                                 key={key}
-                                className={`lp4-tab${i === activePanel ? " active" : ""}`}
+                                className={`tab-v4${i === activePanel ? " active" : ""}`}
                                 onClick={() => setActivePanel(i)}
                             >
                                 <Icon style={{ height: 13, width: 13, display: "inline-block", marginRight: 6, verticalAlign: "middle" }} />{label}
                             </button>
                         ))}
                     </div>
-                    <div className="lp3-reveal" style={{ width: "100%", maxWidth: 820, position: "relative" }}>
+                    <div className="reveal-on-scroll" style={{ width: "100%", maxWidth: 820, position: "relative" }}>
                         <div style={{ position: "absolute", inset: "-20px", borderRadius: 40, background: "radial-gradient(ellipse at 50% 30%, rgba(99,102,241,0.18), transparent 65%)", pointerEvents: "none" }} />
-                        {/* key= forces React to remount → CSS lp5-panel-in fires on every tab switch */}
-                        <div key={activePanel} className="lp5-panel-in">
+                        {/* key= forces React to remount → CSS panel-in-v5 fires on every tab switch */}
+                        <div key={activePanel} className="panel-in-v5">
                             <DashMockup panel={activePanel} />
                         </div>
                     </div>
-                    <p key={`desc-${activePanel}`} className="lp5-panel-in" style={{ fontSize: 14, color: SEC, textAlign: "center", maxWidth: 480, marginTop: 8 }}>
+                    <p key={`desc-${activePanel}`} className="panel-in-v5" style={{ fontSize: 14, color: SEC, textAlign: "center", maxWidth: 480, marginTop: 8 }}>
                         {showcasePanels[activePanel].desc}
                     </p>
                 </div>
@@ -631,18 +630,18 @@ export default function Landing() {
 
             {/* ── USE CASES ────────────────────────────────── */}
             <section style={{ padding: "88px 0", borderTop: `1px solid ${BOR}` }}>
-                <div style={W}>
-                    <div className="lp3-reveal" style={{ textAlign: "center", marginBottom: 44 }}>
-                        <span className="lp4-pill" style={{ marginBottom: 14, display: "inline-flex" }}>Use Cases</span>
+                <div className="container-xl">
+                    <div className="reveal-on-scroll" style={{ textAlign: "center", marginBottom: 44 }}>
+                        <span className="pill-v4" style={{ marginBottom: 14, display: "inline-flex" }}>Use Cases</span>
                         <h2 style={{ ...sec }}>Built for every kind of team</h2>
                     </div>
-                    <div className="lp3-reveal" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 32 }}>
-                        <div className="lp4-tabs">
+                    <div className="reveal-on-scroll" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 32 }}>
+                        <div className="tab-group-v4">
                             {Object.keys(useCaseData).map(k => (
-                                <button key={k} className={`lp4-tab${ucTab === k ? " active" : ""}`} onClick={() => setUcTab(k as keyof typeof useCaseData)}>{k}</button>
+                                <button key={k} className={`tab-v4${ucTab === k ? " active" : ""}`} onClick={() => setUcTab(k as keyof typeof useCaseData)}>{k}</button>
                             ))}
                         </div>
-                        <div className="lp5-uc-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 48, alignItems: "center", width: "100%", maxWidth: 820 }}>
+                        <div className="use-case-grid-v5" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 48, alignItems: "center", width: "100%", maxWidth: 820 }}>
                             <div>
                                 <h3 style={{ fontSize: "clamp(22px,2.8vw,34px)", fontWeight: 800, letterSpacing: "-0.03em", color: TXT, marginBottom: 20 }}>{useCaseData[ucTab].headline}</h3>
                                 {useCaseData[ucTab].bullets.map(b => (
@@ -651,7 +650,7 @@ export default function Landing() {
                                         <span style={{ fontSize: 14, color: "rgba(255,255,255,0.7)" }}>{b}</span>
                                     </div>
                                 ))}
-                                <Link href="/signup"><a className="lp4-cta-btn" style={{ marginTop: 24, height: 46, padding: "0 22px", fontSize: 14 }}>Get Started Free <ChevronRight style={{ height: 15, width: 15 }} /></a></Link>
+                                <Link href="/signup"><a className="cta-btn-v4" style={{ marginTop: 24, height: 46, padding: "0 22px", fontSize: 14 }}>Get Started Free <ChevronRight style={{ height: 15, width: 15 }} /></a></Link>
                             </div>
                             <div style={{ background: SURF, borderRadius: 16, padding: 24, border: `1px solid ${BOR}` }}>
                                 {useCaseData[ucTab].bullets.map((b, i) => (
@@ -670,14 +669,14 @@ export default function Landing() {
 
             {/* ── TESTIMONIALS ─────────────────────────────── */}
             <section style={{ padding: "80px 0", borderTop: `1px solid ${BOR}` }}>
-                <div style={W}>
-                    <div className="lp3-reveal" style={{ textAlign: "center", marginBottom: 48 }}>
+                <div className="container-xl">
+                    <div className="reveal-on-scroll" style={{ textAlign: "center", marginBottom: 48 }}>
                         <h2 style={{ ...sec, marginBottom: 8 }}>Built for teams that move fast.</h2>
                         <p style={{ fontSize: 16, color: SEC }}>Real teams. Real results.</p>
                     </div>
-                    <div className="lp5-testi-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(260px,1fr))", gap: 16 }}>
+                    <div className="testimonial-grid-v5" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(260px,1fr))", gap: 16 }}>
                         {testimonials.map(({ name, role, init, color, q }, i) => (
-                            <div key={name} className={`lp4-testi-card lp3-reveal lp3-d${i + 1}`}>
+                            <div key={name} className={`testimonial-card-v4 reveal-on-scroll lp3-d${i + 1}`}>
                                 <div style={{ display: "flex", gap: 3, marginBottom: 16 }}>
                                     {Array.from({ length: 5 }).map((_, j) => <Star key={j} style={{ height: 14, width: 14, fill: "#F59E0B", color: "#F59E0B" }} />)}
                                 </div>
@@ -690,7 +689,7 @@ export default function Landing() {
                         ))}
                     </div>
                     {/* Animated Metrics */}
-                    <div className="lp5-metrics-grid lp3-reveal" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 1, marginTop: 52, borderRadius: 20, overflow: "hidden", border: `1px solid ${BOR}` }}>
+                    <div className="metrics-grid-v5 reveal-on-scroll" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 1, marginTop: 52, borderRadius: 20, overflow: "hidden", border: `1px solid ${BOR}` }}>
                         <MetricCell num={10000} suffix="k+" label="Tasks daily" display="10k+" />
                         <MetricCell num={999} suffix="%" label="Uptime SLA" display="99.9%" />
                         <MetricCell num={2000} suffix="+" label="Teams" display="2,000+" />
@@ -701,22 +700,22 @@ export default function Landing() {
 
             {/* ── PRICING ──────────────────────────────────── */}
             <section id="pricing" style={{ padding: "80px 0", borderTop: `1px solid ${BOR}` }}>
-                <div style={W}>
-                    <div className="lp3-reveal" style={{ textAlign: "center", marginBottom: 40 }}>
-                        <span className="lp4-pill" style={{ marginBottom: 14, display: "inline-flex" }}>Pricing</span>
+                <div className="container-xl">
+                    <div className="reveal-on-scroll" style={{ textAlign: "center", marginBottom: 40 }}>
+                        <span className="pill-v4" style={{ marginBottom: 14, display: "inline-flex" }}>Pricing</span>
                         <h2 style={{ ...sec, marginBottom: 20 }}>Simple, honest pricing</h2>
-                        <div className="lp3-toggle">
-                            <button className={`lp3-tog-btn${!annual ? " active" : ""}`} onClick={() => setAnnual(false)} style={{ background: !annual ? IND : "transparent", color: !annual ? "#fff" : SEC }}>Monthly</button>
-                            <button className={`lp3-tog-btn${annual ? " active" : ""}`} onClick={() => setAnnual(true)} style={{ background: annual ? IND : "transparent", color: annual ? "#fff" : SEC }}>
+                        <div className="toggle-group-v3">
+                            <button className={`toggle-btn-v3${!annual ? " active" : ""}`} onClick={() => setAnnual(false)} style={{ background: !annual ? IND : "transparent", color: !annual ? "#fff" : SEC }}>Monthly</button>
+                            <button className={`toggle-btn-v3${annual ? " active" : ""}`} onClick={() => setAnnual(true)} style={{ background: annual ? IND : "transparent", color: annual ? "#fff" : SEC }}>
                                 Annual <span style={{ fontSize: 10, background: GN, color: BG, padding: "1px 7px", borderRadius: 999, marginLeft: 5, fontWeight: 800 }}>Save 25%</span>
                             </button>
                         </div>
                     </div>
-                    <div className="lp5-pricing-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(280px,1fr))", gap: 16, alignItems: "start" }}>
+                    <div className="pricing-grid-v5" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(280px,1fr))", gap: 16, alignItems: "start" }}>
                         {plans.map(({ name, mp, yp, badge, cta, link, featured, perks }, i) => {
                             const price = annual ? yp : mp;
                             return (
-                                <div key={name} className={`lp4-price-card lp3-reveal lp3-d${i + 1}${featured ? " featured lp5-popular-card" : ""}`}>
+                                <div key={name} className={`pricing-card-v4 reveal-on-scroll lp3-d${i + 1}${featured ? " featured popular-card-v5" : ""}`}>
                                     {badge && (
                                         <div className="lp5-badge-shimmer-wrapper" style={{ position: "absolute", top: -14, left: "50%", transform: "translateX(-50%)", zIndex: 10 }}>
                                             <div style={{ background: "linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)", color: "#fff", fontSize: 11, fontWeight: 800, padding: "5px 16px", borderRadius: 999, whiteSpace: "nowrap", boxShadow: "0 8px 20px rgba(99,102,241,0.5)", display: "flex", alignItems: "center", gap: 6 }}>
@@ -731,7 +730,7 @@ export default function Landing() {
                                         {price > 0 && <span style={{ fontSize: 16, color: featured ? "rgba(255,255,255,0.7)" : SEC }}>/mo</span>}
                                     </div>
                                     {annual && price > 0 && <div style={{ fontSize: 13, color: featured ? "#A7F3D0" : GN, fontWeight: 700, marginBottom: 12 }}>Save ${(mp - yp) * 12}/yr when billed annually</div>}
-                                    <Link href={link}><a className="lp4-cta-btn" style={{ width: "100%", justifyContent: "center", height: 44, fontSize: 14, borderRadius: 11, marginTop: 16, marginBottom: 20, display: "inline-flex" }}>{cta}</a></Link>
+                                    <Link href={link}><a className="cta-btn-v4" style={{ width: "100%", justifyContent: "center", height: 44, fontSize: 14, borderRadius: 11, marginTop: 16, marginBottom: 20, display: "inline-flex" }}>{cta}</a></Link>
                                     <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
                                         {perks.map(f => <div key={f} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}><CheckCircle2 style={{ height: 16, width: 16, color: featured ? "#fff" : INDL, flexShrink: 0, marginTop: 1 }} /><span style={{ fontSize: 14, color: featured ? "rgba(255,255,255,0.95)" : SEC, fontWeight: featured ? 500 : 400 }}>{f}</span></div>)}
                                     </div>
@@ -744,22 +743,22 @@ export default function Landing() {
 
             {/* ── FAQ ──────────────────────────────────────── */}
             <section id="faq" style={{ padding: "80px 0", borderTop: `1px solid ${BOR}` }}>
-                <div style={{ ...W, maxWidth: 740 }}>
-                    <div className="lp3-reveal" style={{ textAlign: "center", marginBottom: 48 }}>
-                        <span className="lp4-pill" style={{ marginBottom: 14, display: "inline-flex" }}>FAQ</span>
+                <div className="container-xl" style={{ maxWidth: 740 }}>
+                    <div className="reveal-on-scroll" style={{ textAlign: "center", marginBottom: 48 }}>
+                        <span className="pill-v4" style={{ marginBottom: 14, display: "inline-flex" }}>FAQ</span>
                         <h2 style={{ ...sec }}>Questions answered</h2>
                     </div>
-                    <div className="lp3-reveal">{faqs.map(f => <Acc key={f.q} q={f.q} a={f.a} />)}</div>
+                    <div className="reveal-on-scroll">{faqs.map(f => <Acc key={f.q} q={f.q} a={f.a} />)}</div>
                 </div>
             </section>
 
             {/* ── FINAL CTA ────────────────────────────────── */}
-            <section className="lp5-cta-section" style={{ padding: "92px 0", background: "linear-gradient(135deg,rgba(13,16,32,0.8) 0%,rgba(26,14,53,0.7) 50%,rgba(11,21,32,0.8) 100%)", position: "relative", overflow: "hidden" }}>
+            <section className="cta-section-v5" style={{ padding: "92px 0", background: "linear-gradient(135deg,rgba(13,16,32,0.8) 0%,rgba(26,14,53,0.7) 50%,rgba(11,21,32,0.8) 100%)", position: "relative", overflow: "hidden" }}>
 
                 <div style={{ position: "absolute", top: "20%", left: "15%", width: 420, height: 420, borderRadius: "50%", background: "radial-gradient(circle,rgba(99,102,241,0.18) 0%,transparent 70%)", animation: "lp3-orb-a 18s ease-in-out infinite", pointerEvents: "none" }} />
                 <div style={{ position: "absolute", bottom: "10%", right: "12%", width: 360, height: 360, borderRadius: "50%", background: "radial-gradient(circle,rgba(139,92,246,0.14) 0%,transparent 70%)", animation: "lp3-orb-b 22s ease-in-out infinite", pointerEvents: "none" }} />
-                <div style={{ ...W, textAlign: "center", position: "relative" }}>
-                    <div className="lp3-reveal">
+                <div className="container-xl" style={{ textAlign: "center", position: "relative" }}>
+                    <div className="reveal-on-scroll">
                         <span className="lp4-pill" style={{ marginBottom: 20, display: "inline-flex" }}><Sparkles style={{ height: 10, width: 10 }} /> No credit card required</span>
                         <h2 style={{ fontSize: "clamp(34px,5.5vw,66px)", fontWeight: 900, letterSpacing: "-0.045em", lineHeight: 1.04, color: TXT, marginBottom: 18 }}>
                             Get organised.<br /><span className="lp3-grad">Start shipping faster.</span>
@@ -767,7 +766,7 @@ export default function Landing() {
                         <p style={{ fontSize: 17, color: SEC, maxWidth: 480, margin: "0 auto 36px", lineHeight: 1.75 }}>
                             Join 2,000+ teams using TaskFlow Pro to plan work, track delivery and stay aligned without the chaos.
                         </p>
-                        <Link href="/signup"><a className="lp4-cta-btn" style={{ height: 58, padding: "0 40px", fontSize: 16, fontWeight: 800 }}>Start Free Workspace <ArrowRight style={{ height: 18, width: 18 }} /></a></Link>
+                        <Link href="/signup"><a className="cta-btn-v4" style={{ height: 58, padding: "0 40px", fontSize: 16, fontWeight: 800 }}>Start Free Workspace <ArrowRight style={{ height: 18, width: 18 }} /></a></Link>
                         <p style={{ fontSize: 12, color: "rgba(255,255,255,0.25)", marginTop: 18 }}>Free plan included · Cancel anytime · 5-minute setup</p>
                     </div>
                 </div>
@@ -776,8 +775,8 @@ export default function Landing() {
             {/* ── FOOTER ───────────────────────────────────── */}
             <footer style={{ borderTop: `1px solid ${BOR}`, padding: "52px 0 28px", background: "transparent" }}>
 
-                <div style={W}>
-                    <div className="lp5-footer-grid" style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr 1fr 1fr 1fr", gap: 28, marginBottom: 44 }}>
+                <div className="container-xl">
+                    <div className="footer-grid-v5" style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr 1fr 1fr 1fr", gap: 28, marginBottom: 44 }}>
                         <div>
                             <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 14 }}>
                                 <span style={{ height: 26, width: 26, borderRadius: 8, background: "linear-gradient(135deg,#6366F1,#8B5CF6)", display: "inline-flex", alignItems: "center", justifyContent: "center" }}><Zap style={{ height: 12, width: 12, color: "#fff" }} /></span>

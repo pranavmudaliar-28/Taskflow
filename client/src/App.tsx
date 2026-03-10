@@ -44,6 +44,7 @@ const AcceptInvitation = lazyRetry(() => import("@/pages/accept-invitation"));
 const Onboarding = lazyRetry(() => import("@/pages/onboarding"));
 const BillingPage = lazyRetry(() => import("@/pages/billing"));
 const ForgotPassword = lazyRetry(() => import("@/pages/forgot-password"));
+const ChangePassword = lazyRetry(() => import("@/pages/change-password"));
 const NotFound = lazyRetry(() => import("@/pages/not-found"));
 
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
@@ -298,8 +299,13 @@ function AppRouter() {
 
   return (
     <Switch>
-      {/* Accept invitation — always accessible when logged in (before or after onboarding) */}
       <Route path="/accept-invitation" component={AcceptInvitation} />
+
+      {/* Change Password — always standalone (no sidebar/header) */}
+      <Route path="/change-password" component={ChangePassword} />
+      <Route path="/change password">
+        <Redirect to="/change-password" />
+      </Route>
 
       {/* Onboarding — show immediately; onboarding.tsx useEffect handles invite redirect internally */}
       <Route path="/onboarding">
@@ -324,7 +330,9 @@ function AppRouter() {
         {() => {
           const params = new URLSearchParams(window.location.search);
           const redirect = params.get("redirect") ||
-            (isOnboarded ? "/dashboard" : hasPendingInvite ? `/accept-invitation?token=${pendingInviteToken}` : "/onboarding");
+            (user.mustChangePassword ? "/change-password" :
+              isOnboarded ? "/dashboard" :
+                hasPendingInvite ? `/accept-invitation?token=${pendingInviteToken}` : "/onboarding");
           return <Redirect to={redirect} />;
         }}
       </Route>
@@ -332,7 +340,9 @@ function AppRouter() {
         {() => {
           const params = new URLSearchParams(window.location.search);
           const redirect = params.get("redirect") ||
-            (isOnboarded ? "/dashboard" : hasPendingInvite ? `/accept-invitation?token=${pendingInviteToken}` : "/onboarding");
+            (user.mustChangePassword ? "/change-password" :
+              isOnboarded ? "/dashboard" :
+                hasPendingInvite ? `/accept-invitation?token=${pendingInviteToken}` : "/onboarding");
           return <Redirect to={redirect} />;
         }}
       </Route>
@@ -354,6 +364,16 @@ function AppRouter() {
                 <Loader2 className="h-8 w-8 animate-spin text-violet-600" />
               </div>
             );
+          }
+
+          // Force password change if required (Highest Priority)
+          // Normalize location to handle potential encoding issues or spaces
+          const normalizedLocation = location.replace(/%20/g, " ").trim();
+          const isChangePasswordPage = normalizedLocation === "/change-password" || normalizedLocation === "/change password";
+
+          if (user.mustChangePassword && !isChangePasswordPage && location !== "/accept-invitation") {
+            console.log("[AppRouter] Redirecting user to /change-password", { location, normalizedLocation });
+            return <Redirect to="/change-password" />;
           }
 
           // Invited user with pending invite — send to accept-invitation
@@ -390,7 +410,6 @@ function AppRouter() {
                 <Route path="/notifications" component={Notifications} />
                 <Route path="/settings" component={SettingsPage} />
                 <Route path="/organization-settings" component={OrganizationSettings} />
-                <Route path="/accept-invitation" component={AcceptInvitation} />
                 <Route>
                   {() => { console.log("[AppRouter] Matched NotFound"); return <NotFound />; }}
                 </Route>

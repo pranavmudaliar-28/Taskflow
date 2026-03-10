@@ -69,6 +69,7 @@ export function ProjectMembersDialog({ open, onClose, project, memberData }: Omi
   }, [memberData, currentUser]);
 
   const isAdmin = currentUserRole === "admin";
+  const canManageMembers = isAdmin || currentUserRole === "team_lead";
 
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
@@ -225,116 +226,120 @@ export function ProjectMembersDialog({ open, onClose, project, memberData }: Omi
           </DialogDescription>
         </DialogHeader>
 
-        <div className="p-6 pb-0">
-          <div className="flex gap-3">
-            <div className="flex-1">
-              <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={openCombobox}
-                    className="w-full justify-between h-10 px-3 bg-muted/40 font-normal text-muted-foreground hover:text-foreground text-left border-dashed"
-                  >
-                    <div className="flex items-center gap-2 overflow-hidden">
-                      <UserPlus className="h-4 w-4 shrink-0 opacity-50" />
-                      <span className="truncate">
-                        {searchValue ? searchValue : "Search name or invite by email..."}
-                      </span>
-                    </div>
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[400px] p-0" align="start">
-                  <Command shouldFilter={false}>
-                    <CommandInput
-                      placeholder="Search members or email..."
-                      value={searchValue}
-                      onValueChange={setSearchValue}
-                      className="h-10"
-                    />
-                    <CommandList>
-                      <CommandEmpty>
-                        {isEmail(searchValue) ? (
-                          <div className="p-3 cursor-pointer hover:bg-muted/50" onClick={() => handleSelectEmail(searchValue)}>
-                            <div className="flex items-center gap-3">
-                              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
-                                <Mail className="h-4 w-4 text-primary" />
+        {canManageMembers && (
+          <>
+            <div className="p-6 pb-0">
+              <div className="flex gap-3">
+                <div className="flex-1">
+                  <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={openCombobox}
+                        className="w-full justify-between h-10 px-3 bg-muted/40 font-normal text-muted-foreground hover:text-foreground text-left border-dashed"
+                      >
+                        <div className="flex items-center gap-2 overflow-hidden">
+                          <UserPlus className="h-4 w-4 shrink-0 opacity-50" />
+                          <span className="truncate">
+                            {searchValue ? searchValue : "Search name or invite by email..."}
+                          </span>
+                        </div>
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[400px] p-0" align="start">
+                      <Command shouldFilter={false}>
+                        <CommandInput
+                          placeholder="Search members or email..."
+                          value={searchValue}
+                          onValueChange={setSearchValue}
+                          className="h-10"
+                        />
+                        <CommandList>
+                          <CommandEmpty>
+                            {isEmail(searchValue) ? (
+                              <div className="p-3 cursor-pointer hover:bg-muted/50" onClick={() => handleSelectEmail(searchValue)}>
+                                <div className="flex items-center gap-3">
+                                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
+                                    <Mail className="h-4 w-4 text-primary" />
+                                  </div>
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">Invite via email</span>
+                                    <span className="text-xs text-muted-foreground">Send invitation to <strong>{searchValue}</strong></span>
+                                  </div>
+                                </div>
                               </div>
-                              <div className="flex flex-col">
-                                <span className="font-medium">Invite via email</span>
-                                <span className="text-xs text-muted-foreground">Send invitation to <strong>{searchValue}</strong></span>
-                              </div>
-                            </div>
-                          </div>
-                        ) : (
-                          <p className="text-sm text-center py-6 text-muted-foreground">
-                            No members found. Type an email to invite.
-                          </p>
-                        )}
-                      </CommandEmpty>
+                            ) : (
+                              <p className="text-sm text-center py-6 text-muted-foreground">
+                                No members found. Type an email to invite.
+                              </p>
+                            )}
+                          </CommandEmpty>
 
-                      {filteredOrgMembers.length > 0 && (
-                        <CommandGroup heading="Organization Members">
-                          {filteredOrgMembers.map((member) => (
-                            <CommandItem
-                              key={member.userId}
-                              value={member.userId}
-                              onSelect={() => handleSelectMember(member.userId)}
-                              className="flex items-center gap-2 cursor-pointer py-2"
-                            >
-                              <Avatar className="h-7 w-7">
-                                <AvatarImage src={member.user.profileImageUrl || undefined} />
-                                <AvatarFallback className="text-[10px]">
-                                  {getInitials(member.user)}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div className="flex flex-col">
-                                <span className="text-sm font-medium">{getMemberName(member.user)}</span>
-                                <span className="text-xs text-muted-foreground">{member.user.email}</span>
-                              </div>
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      )}
+                          {filteredOrgMembers.length > 0 && (
+                            <CommandGroup heading="Organization Members">
+                              {filteredOrgMembers.map((member) => (
+                                <CommandItem
+                                  key={member.userId}
+                                  value={member.userId}
+                                  onSelect={() => handleSelectMember(member.userId)}
+                                  className="flex items-center gap-2 cursor-pointer py-2"
+                                >
+                                  <Avatar className="h-7 w-7">
+                                    <AvatarImage src={member.user.profileImageUrl || undefined} />
+                                    <AvatarFallback className="text-[10px]">
+                                      {getInitials(member.user)}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div className="flex flex-col">
+                                    <span className="text-sm font-medium">{getMemberName(member.user)}</span>
+                                    <span className="text-xs text-muted-foreground">{member.user.email}</span>
+                                  </div>
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          )}
 
-                      {isEmail(searchValue) && filteredOrgMembers.length > 0 && (
-                        <>
-                          <CommandSeparator />
-                          <CommandGroup heading="New Invitation">
-                            <CommandItem value={searchValue} onSelect={() => handleSelectEmail(searchValue)} className="py-2">
-                              <Mail className="h-4 w-4 mr-2" />
-                              <span>Invite <strong>{searchValue}</strong></span>
-                            </CommandItem>
-                          </CommandGroup>
-                        </>
-                      )}
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
+                          {isEmail(searchValue) && filteredOrgMembers.length > 0 && (
+                            <>
+                              <CommandSeparator />
+                              <CommandGroup heading="New Invitation">
+                                <CommandItem value={searchValue} onSelect={() => handleSelectEmail(searchValue)} className="py-2">
+                                  <Mail className="h-4 w-4 mr-2" />
+                                  <span>Invite <strong>{searchValue}</strong></span>
+                                </CommandItem>
+                              </CommandGroup>
+                            </>
+                          )}
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as Role)}>
+                  <SelectTrigger className="w-[120px] h-10 bg-muted/40">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="member">Member</SelectItem>
+                    <SelectItem value="team_lead">Team Lead</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {(addMemberMutation.isPending || inviteMutation.isPending) && (
+                  <div className="flex items-center justify-center h-10 w-10">
+                    <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                  </div>
+                )}
+              </div>
             </div>
 
-            <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as Role)}>
-              <SelectTrigger className="w-[120px] h-10 bg-muted/40">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="member">Member</SelectItem>
-                <SelectItem value="team_lead">Team Lead</SelectItem>
-                <SelectItem value="admin">Admin</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {(addMemberMutation.isPending || inviteMutation.isPending) && (
-              <div className="flex items-center justify-center h-10 w-10">
-                <Loader2 className="h-5 w-5 animate-spin text-primary" />
-              </div>
-            )}
-          </div>
-        </div>
-
-        <Separator className="my-4 mb-0" />
+            <Separator className="my-4 mb-0" />
+          </>
+        )}
 
         <ScrollArea className="flex-1">
           <div className="px-6 py-4 space-y-6">
@@ -376,11 +381,11 @@ export function ProjectMembersDialog({ open, onClose, project, memberData }: Omi
                           </div>
                         </div>
 
-                        {isAdmin ? (
+                        {canManageMembers ? (
                           <Select
                             value={member.role}
                             onValueChange={(newRole) => updateRoleMutation.mutate({ memberId: member.userId, role: newRole as Role })}
-                            disabled={member.userId === currentUser?.id}
+                            disabled={member.userId === currentUser?.id || (!isAdmin && member.role === "admin")}
                           >
                             <SelectTrigger className="w-[110px] h-8 text-xs border-transparent hover:border-input focus:ring-0 transition-colors bg-transparent hover:bg-muted/50">
                               <div className="flex items-center gap-1.5">

@@ -101,6 +101,17 @@ export function AppSidebar({ projects, onCreateProject }: AppSidebarProps) {
 
   const unreadCount = notifications?.filter((n) => !n.read).length ?? 0;
 
+  const { data: organizations } = useQuery<any[]>({ queryKey: ["/api/organizations"] });
+  const activeOrg = organizations?.[0];
+
+  const { data: members } = useQuery<any[]>({
+    queryKey: [`/api/organizations/${activeOrg?.id}/members`],
+    enabled: !!activeOrg?.id,
+  });
+
+  const currentUserMember = members?.find(m => m.user?.id === user?.id || m.userId === user?.id);
+  const canCreateProject = user?.isAdmin || currentUserMember?.role === "admin" || currentUserMember?.role === "team_lead";
+
   const getUserInitials = () => {
     if (user?.firstName && user?.lastName) return `${user.firstName[0]}${user.lastName[0]}`.toUpperCase();
     if (user?.email) return user.email[0].toUpperCase();
@@ -152,7 +163,7 @@ export function AppSidebar({ projects, onCreateProject }: AppSidebarProps) {
                     >
                       <Link href={item.url}>
                         <div className="relative shrink-0">
-                          <item.icon className={cn("h-4 w-4", isActive ? "text-sidebar-accent" : "text-sidebar-foreground/60")} />
+                          <item.icon className={cn("h-4 w-4", isActive ? "text-inherit" : "text-sidebar-foreground/60")} />
                           {showBadge && isCollapsed && (
                             <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-red-500 border-2 border-white" />
                           )}
@@ -179,12 +190,14 @@ export function AppSidebar({ projects, onCreateProject }: AppSidebarProps) {
         <SidebarGroup>
           <SidebarGroupLabel className="flex items-center justify-between group-data-[collapsible=icon]:hidden">
             <span>Spaces</span>
-            <button
-              onClick={onCreateProject}
-              className="h-5 w-5 rounded flex items-center justify-center hover:bg-sidebar-hover text-sidebar-foreground/40 hover:text-sidebar-foreground transition-colors"
-            >
-              <Plus className="h-3 w-3" />
-            </button>
+            {canCreateProject && (
+              <button
+                onClick={onCreateProject}
+                className="h-5 w-5 rounded flex items-center justify-center hover:bg-sidebar-hover text-sidebar-foreground/40 hover:text-sidebar-foreground transition-colors"
+              >
+                <Plus className="h-3 w-3" />
+              </button>
+            )}
           </SidebarGroupLabel>
 
           <SidebarGroupContent>
@@ -207,7 +220,7 @@ export function AppSidebar({ projects, onCreateProject }: AppSidebarProps) {
                 );
               })}
 
-              {!isCollapsed && (
+              {!isCollapsed && canCreateProject && (
                 <SidebarMenuItem>
                   <button
                     onClick={onCreateProject}
@@ -236,7 +249,7 @@ export function AppSidebar({ projects, onCreateProject }: AppSidebarProps) {
                     <SidebarMenuItem key={item.title}>
                       <SidebarMenuButton asChild isActive={isActive} tooltip={item.title}>
                         <Link href={item.url}>
-                          <item.icon className={cn("h-4 w-4 shrink-0", isActive ? "text-sidebar-accent" : "text-sidebar-foreground/60")} />
+                          <item.icon className={cn("h-4 w-4 shrink-0", isActive ? "text-inherit" : "text-sidebar-foreground/60")} />
                           <span className="text-sm font-medium">{item.title}</span>
                         </Link>
                       </SidebarMenuButton>

@@ -12,7 +12,7 @@ import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { registerStripeRoutes } from "./stripe";
 import { generateSlug } from "./slug-utils";
-import { UserMongo, ProjectMongo, ProjectMemberMongo } from "../shared/mongodb-schema";
+import { UserMongo, ProjectMongo, ProjectMemberMongo, InvitationMongo } from "../shared/mongodb-schema";
 import fs from "fs";
 import path from "path";
 import express from "express";
@@ -22,6 +22,7 @@ import { validateRequest } from "./middleware/validateRequest";
 import { TokenService } from "./services/tokenService";
 import { Serializer } from "./utils/serializers";
 import { logger } from "./utils/logger";
+import { WebhookService } from "./services/webhookService";
 
 
 export async function registerRoutes(httpServer: Server, app: Express): Promise<Server> {
@@ -135,7 +136,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         onboardingStep: "plan", // Ensure they start at plan step
         role: "member",
         plan: "free",
-        seeded: false
+        seeded: false,
+        mustChangePassword: false
       });
 
       // Initialize workspace for the new user (now part of onboarding completion)
@@ -176,6 +178,14 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         };
         res.cookie('token', token, cookieOptions);
 
+        // Update any pending invitations to 'completed'
+        if (pendingInviteToken) {
+          InvitationMongo.updateMany(
+            { email: normalizedEmail, status: "pending" },
+            { status: "completed" }
+          ).catch(err => logger.error('Failed to update invitations on registration', { error: err }));
+        }
+
         res.json({
           user: Serializer.user(user),
           token,
@@ -213,6 +223,16 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         role: (user as any).role || "member",
       });
 
+      // Handle invitation token if provided
+      const inviteToken = req.body.token;
+      if (inviteToken) {
+        const invite = await storage.getOrganizationInvitation(inviteToken);
+        if (invite && invite.email.toLowerCase() === user.email?.toLowerCase()) {
+          await storage.updateOrganizationInvitationStatus(invite.id, "completed");
+          logger.info('Marked invitation as completed via token on login', { inviteId: invite.id, email: user.email });
+        }
+      }
+
       // Check if this user has a pending invitation for their email
       const normalizedEmail = (user.email || "").trim().toLowerCase();
       const pendingInvites = await storage.getPendingOrganizationInvitationsByEmail(normalizedEmail);
@@ -237,6 +257,14 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           path: '/',
         };
         res.cookie('token', token, cookieOptions);
+
+        // Update any pending invitations to 'completed'
+        if (pendingInviteToken) {
+          InvitationMongo.updateMany(
+            { email: normalizedEmail, status: "pending" },
+            { status: "completed" }
+          ).catch(err => logger.error('Failed to update invitations on login', { error: err }));
+        }
 
         res.json({
           user: Serializer.user(user),
@@ -377,14 +405,17 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       // Verify current password
       const isValid = await bcrypt.compare(data.currentPassword, user.password);
       if (!isValid) {
-        return res.status(401).json({ message: "Current password is incorrect" });
+        return res.status(400).json({ message: "Current password is incorrect" });
       }
 
       // Hash and update new password
       const hashedPassword = await bcrypt.hash(data.newPassword, 10);
-      await storage.updateUser(userId, { password: hashedPassword });
+      const updatedUser = await storage.updateUser(userId, {
+        password: hashedPassword,
+        mustChangePassword: false
+      });
 
-      res.json({ message: "Password changed successfully" });
+      res.json(updatedUser);
     } catch (error: any) {
       if (error?.issues) {
         return res.status(400).json({ message: "Invalid input", errors: error.issues });
@@ -664,18 +695,15 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     try {
       const inviterId = getUserId(req);
       const orgId = req.params.id as string;
-      // Normalize and validate input
       const schema = z.object({
         email: z.string().email(),
         role: z.string().transform(val => {
-          // Handle potential display names or raw values
           const normalized = val.toLowerCase().replace(" ", "_");
           if (normalized === "administrator") return "admin";
           if (normalized === "team_lead") return "team_lead";
           if (normalized === "member") return "member";
-          // If it matches valid roles directly
           if (["admin", "team_lead", "member"].includes(normalized)) return normalized;
-          return val; // Let it fail if invalid
+          return val;
         })
       });
 
@@ -685,57 +713,86 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
 
       const { email, role } = result.data;
+      const normalizedEmail = email.trim().toLowerCase();
 
-      // Additional safety check for role
-      if (!["admin", "team_lead", "member"].includes(role)) {
-        return res.status(400).json({ message: "Invalid role selected" });
+      // Check if user already exists
+      let user = await storage.getUserByEmail(normalizedEmail);
+      let tempPassword = "";
+
+      if (!user) {
+        // Create new user with temp password
+        tempPassword = crypto.randomBytes(3).toString("hex").toUpperCase(); // 6 chars
+        const hashedPassword = await bcrypt.hash(tempPassword, 10);
+
+        user = await authStorage.upsertUser({
+          email: normalizedEmail,
+          password: hashedPassword,
+          firstName: normalizedEmail.split("@")[0],
+          lastName: "",
+          onboardingStep: "completed",
+          role: "member",
+          plan: "free",
+          seeded: false,
+          mustChangePassword: true
+        });
+      } else {
+        // Even for existing users, set a temp password as requested
+        tempPassword = crypto.randomBytes(3).toString("hex").toUpperCase();
+        const hashedPassword = await bcrypt.hash(tempPassword, 10);
+        await storage.updateUser(user.id!, {
+          password: hashedPassword,
+          mustChangePassword: true,
+          onboardingStep: "completed"
+        });
+        logger.info('Set temporary password for existing user invited to organization', { email: normalizedEmail });
       }
 
-      const token = crypto.randomUUID();
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + 7);
+      // Add to organization if not already a member
+      const isMember = await storage.isUserInOrganization(user.id!, orgId);
+      if (!isMember) {
+        await storage.addOrganizationMember({
+          organizationId: orgId,
+          userId: user.id!,
+          role: role as "admin" | "team_lead" | "member"
+        });
+      }
 
+      // Track invitation
+      const token = crypto.randomUUID();
       const invitation = await storage.createOrganizationInvitation({
         organizationId: orgId,
-        email,
+        email: normalizedEmail,
         role: role as "admin" | "team_lead" | "member",
         invitedBy: inviterId,
         token,
         status: "pending",
-        expiresAt,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       });
 
-      logger.info('Organization invitation sent', {
+      // Trigger n8n webhook
+      const organization = await storage.getOrganization(orgId);
+      const inviter = await storage.getUser(inviterId);
+
+      await WebhookService.triggerInviteWebhook({
+        email: normalizedEmail,
+        name: user.firstName || normalizedEmail.split("@")[0],
+        tempPassword: tempPassword || "(Already an account holder)",
+        invitedBy: inviter?.email || "Admin",
+        organization: organization?.name || "TaskFlow",
+        loginUrl: `${req.protocol}://${req.get("host")}/login?token=${token}&email=${encodeURIComponent(normalizedEmail)}`
+      });
+
+      logger.info('Member added via automation', {
         orgId,
-        email,
+        email: normalizedEmail,
         role,
         invitedBy: inviterId
       });
 
-      const organization = await storage.getOrganization(orgId);
-      const inviter = await storage.getUser(inviterId);
-
-      const acceptUrl = `${req.protocol}://${req.get("host")}/accept-invitation?token=${token}`;
-
-      await sendOrganizationInvitationEmail({
-        to: email,
-        organizationName: organization?.name || "Organization",
-        inviterName: inviter ? `${inviter.firstName} ${inviter.lastName}` : "Someone",
-        acceptUrl,
-        expiresAt,
-      });
-
-      res.json(invitation);
+      res.json({ message: "Member invited successfully", user: { email: normalizedEmail, role } });
     } catch (error) {
-
-      console.error("Error sending organization invitation:", error);
-      try {
-        const fs = await import("fs");
-        fs.appendFileSync("invite_error.log", `${new Date().toISOString()} - Error: ${error}\nStack: ${error instanceof Error ? error.stack : ''}\n\n`);
-      } catch (e) {
-        // ignore
-      }
-      res.status(500).json({ message: "Failed to send invitation", error: String(error) });
+      console.error("Error in automated invitation:", error);
+      res.status(500).json({ message: "Failed to invite member", error: String(error) });
     }
   });
 
@@ -1270,10 +1327,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.status(404).json({ message: "Project not found" });
       }
 
-      // Check if requester has access to the project
-      const hasAccess = await storage.isUserInProject(userId, project.id);
-      if (!hasAccess) {
-        return res.status(403).json({ message: "Access denied" });
+      // Check if requester has access and sufficient role
+      const callerRole = await storage.getProjectMemberRole(userId, project.id);
+      if (callerRole !== "admin" && callerRole !== "team_lead") {
+        return res.status(403).json({ message: "Only admins and team leads can add members" });
       }
 
       const isInOrg = await storage.isUserInOrganization(memberUserId, project.organizationId);
@@ -1327,19 +1384,15 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.status(404).json({ message: "Project not found" });
       }
 
-      // Check access
-      const hasAccess = await storage.isUserInProject(userId, project.id);
-      if (!hasAccess) {
-        return res.status(403).json({ message: "Access denied" });
+      // Check access and role
+      const callerRole = await storage.getProjectMemberRole(userId, project.id);
+      if (callerRole !== "admin" && callerRole !== "team_lead") {
+        return res.status(403).json({ message: "Only admins and team leads can invite members" });
       }
+
       const inOrg = await storage.isUserInOrganization(userId, project.organizationId);
-      if (!inOrg) {
-        // Double check they were specifically added to this project
-        const projectMemberRecs = await storage.getProjectMembersForUser(userId);
-        const isSelectedProjectMember = projectMemberRecs.some((pm: { projectId: string }) => pm.projectId === projectIdOrSlug);
-        if (!isSelectedProjectMember) {
-          return res.status(403).json({ message: "Forbidden: You are not a member of this project" });
-        }
+      if (!inOrg && !callerRole) {
+        return res.status(403).json({ message: "Forbidden: You are not a member of this project" });
       }
       const normalizedEmail = email.trim().toLowerCase();
 

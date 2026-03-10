@@ -98,6 +98,10 @@ export default function OrganizationSettings() {
         enabled: !!activeOrg?.id,
     });
 
+    const currentUserMember = members?.find(m => m.user.id === user?.id);
+    const isCurrentUserAdmin = currentUserMember?.role === "admin";
+    const activeTabs = isCurrentUserAdmin ? TABS : TABS.filter(t => t.id === "members");
+
     const inviteMutation = useMutation({
         mutationFn: async (data: { email: string; role: string }) => {
             const res = await apiRequest("POST", `/api/organizations/${activeOrg?.id}/invite`, data);
@@ -105,6 +109,7 @@ export default function OrganizationSettings() {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: [`/api/organizations/${activeOrg?.id}/invitations`] });
+            queryClient.invalidateQueries({ queryKey: [`/api/organizations/${activeOrg?.id}/members`] });
             toast({ title: "Invitation sent", description: `Invite sent to ${inviteEmail}` });
             setInviteEmail(""); setIsInviteOpen(false);
         },
@@ -166,58 +171,60 @@ export default function OrganizationSettings() {
                 </div>
 
                 <div className="flex items-center gap-3">
-                    <Dialog open={isInviteOpen} onOpenChange={setIsInviteOpen}>
-                        <DialogTrigger asChild>
-                            <Button className="h-10 px-4 gap-2 shadow-sm">
-                                <UserPlus className="h-4 w-4" />
-                                <span>Invite Member</span>
-                            </Button>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-md">
-                            <DialogHeader>
-                                <DialogTitle>Invite to {activeOrg.name}</DialogTitle>
-                                <DialogDescription>Send an email invitation to join your workspace</DialogDescription>
-                            </DialogHeader>
-                            <div className="space-y-4 py-4">
-                                <div className="space-y-2">
-                                    <Label>Email Address</Label>
-                                    <Input
-                                        placeholder="colleague@company.com"
-                                        value={inviteEmail}
-                                        onChange={(e) => setInviteEmail(e.target.value)}
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label>Workspace Role</Label>
-                                    <Select value={inviteRole} onValueChange={(v: any) => setInviteRole(v)}>
-                                        <SelectTrigger>
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="member">Member</SelectItem>
-                                            <SelectItem value="team_lead">Team Lead</SelectItem>
-                                            <SelectItem value="admin">Admin</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            </div>
-                            <DialogFooter>
-                                <Button variant="ghost" onClick={() => setIsInviteOpen(false)}>Cancel</Button>
-                                <Button
-                                    disabled={!inviteEmail || inviteMutation.isPending}
-                                    onClick={() => inviteMutation.mutate({ email: inviteEmail, role: inviteRole })}
-                                >
-                                    {inviteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Send Invitation"}
+                    {isCurrentUserAdmin && (
+                        <Dialog open={isInviteOpen} onOpenChange={setIsInviteOpen}>
+                            <DialogTrigger asChild>
+                                <Button className="h-10 px-4 gap-2 shadow-sm">
+                                    <UserPlus className="h-4 w-4" />
+                                    <span>Invite Member</span>
                                 </Button>
-                            </DialogFooter>
-                        </DialogContent>
-                    </Dialog>
+                            </DialogTrigger>
+                            <DialogContent className="sm:max-w-md">
+                                <DialogHeader>
+                                    <DialogTitle>Invite to {activeOrg.name}</DialogTitle>
+                                    <DialogDescription>Send an email invitation to join your workspace</DialogDescription>
+                                </DialogHeader>
+                                <div className="space-y-4 py-4">
+                                    <div className="space-y-2">
+                                        <Label>Email Address</Label>
+                                        <Input
+                                            placeholder="colleague@company.com"
+                                            value={inviteEmail}
+                                            onChange={(e) => setInviteEmail(e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Workspace Role</Label>
+                                        <Select value={inviteRole} onValueChange={(v: any) => setInviteRole(v)}>
+                                            <SelectTrigger>
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="member">Member</SelectItem>
+                                                <SelectItem value="team_lead">Team Lead</SelectItem>
+                                                <SelectItem value="admin">Admin</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </div>
+                                <DialogFooter>
+                                    <Button variant="ghost" onClick={() => setIsInviteOpen(false)}>Cancel</Button>
+                                    <Button
+                                        disabled={!inviteEmail || inviteMutation.isPending}
+                                        onClick={() => inviteMutation.mutate({ email: inviteEmail, role: inviteRole })}
+                                    >
+                                        {inviteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Send Invitation"}
+                                    </Button>
+                                </DialogFooter>
+                            </DialogContent>
+                        </Dialog>
+                    )}
                 </div>
             </div>
 
             {/* Navigation Tabs */}
             <div className="flex items-center gap-1 p-1 bg-muted/40 rounded-xl w-full sm:w-fit overflow-x-auto">
-                {TABS.map((t) => (
+                {activeTabs.map((t) => (
                     <button
                         key={t.id}
                         onClick={() => setTab(t.id)}
@@ -273,7 +280,7 @@ export default function OrganizationSettings() {
                                         </div>
 
                                         <div className="flex items-center gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
-                                            {m.user.id !== user?.id && (
+                                            {isCurrentUserAdmin && m.user.id !== user?.id && (
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"

@@ -1,0 +1,139 @@
+/* ── Landing v4 — YC-Grade Dark Theme ────────────────────────────── */
+
+.split-section-v4 {
+    @apply grid grid-cols-1 lg:grid-cols-2 gap-16 items-center;
+}
+
+.feature-card-v4 {
+    border-radius: 18px;
+    @apply bg-white/5 border border-white/10 p-6 relative overflow-hidden;
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.feature-card-v4::before {
+    content: '';
+    border-radius: inherit;
+    @apply absolute inset-0 opacity-0 pointer-events-none;
+    background: radial-gradient(circle at 50% 0%, rgba(99, 102, 241, 0.12), transparent 70%);
+    transition: opacity 0.35s ease;
+}
+
+.feature-card-v4:hover {
+    @apply -translate-y-1.5 border-indigo-500/35 shadow-2xl;
+    box-shadow: 0 20px 56px rgba(99, 102, 241, 0.15), 0 0 0 1px rgba(99, 102, 241, 0.12);
+}
+
+.feature-card-v4:hover::before {
+    @apply opacity-100;
+}
+
+.tab-group-v4 {
+    @apply flex gap-1 bg-white/5 border border-white/10 rounded-2xl p-1.5;
+}
+
+.tab-v4 {
+    font-size: 13px;
+    @apply px-5 py-2.5 rounded-xl font-semibold cursor-pointer bg-transparent text-white/50 whitespace-nowrap;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.tab-v4.active {
+    @apply bg-indigo-500/20 text-indigo-400 border border-indigo-400/30 shadow-lg;
+}
+
+.tab-v4:hover:not(.active) {
+    @apply text-white/80 bg-white/5;
+}
+
+.pricing-card-v4 {
+    border-radius: 22px;
+    @apply bg-white/5 border border-white/10 p-8 relative;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pricing-card-v4:hover {
+    @apply -translate-y-1 border-indigo-500/30 shadow-2xl;
+    box-shadow: 0 16px 52px rgba(99, 102, 241, 0.14);
+}
+
+.pricing-card-v4.featured {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(139, 92, 246, 0.08));
+    @apply border-indigo-500/40 shadow-2xl;
+    box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.2), 0 24px 64px rgba(99, 102, 241, 0.18);
+}
+
+.testimonial-card-v4 {
+    border-radius: 18px;
+    @apply bg-white/5 border border-white/10 p-7;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.15s ease;
+}
+
+.testimonial-card-v4:hover {
+    @apply border-indigo-400/30 shadow-2xl;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+}
+
+.cta-btn-v4 {
+    height: 54px;
+    font-size: 15px;
+    @apply inline-flex items-center gap-2.5 px-8 rounded-xl font-extrabold cursor-pointer;
+    background: linear-gradient(90deg, #6366F1, #8B5CF6);
+    @apply text-white relative overflow-hidden shadow-xl;
+    box-shadow: 0 4px 28px rgba(99, 102, 241, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+}
+
+.cta-btn-v4:hover {
+    transform: translateY(-0.125rem) scale(1.03);
+    @apply shadow-2xl;
+}
+
+.ghost-btn-v4 {
+    height: 54px;
+    font-size: 15px;
+    @apply inline-flex items-center gap-2 px-6 rounded-xl font-semibold cursor-pointer;
+    @apply bg-white/10 text-white/80 border border-white/15 backdrop-blur-md;
+    transition: background 0.2s, border-color 0.2s, transform 0.2s;
+}
+
+.ghost-btn-v4:hover {
+    @apply bg-white/15 border-white/30 -translate-y-0.5;
+}
+
+.pill-v4 {
+    font-size: 11px;
+    @apply inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full font-bold uppercase tracking-wider;
+    @apply bg-indigo-500/15 border border-indigo-400/30 text-indigo-200;
+}
+
+.accordion-item-v4 {
+    @apply border-b border-white/10;
+}
+
+.accordion-trigger-v4 {
+    font-size: 15px;
+    @apply w-full bg-transparent border-none text-left cursor-pointer flex justify-between items-center py-5 font-semibold text-white/80 transition-colors;
+}
+
+.accordion-trigger-v4:hover {
+    @apply text-indigo-400;
+}
+
+.accordion-body-v4 {
+    font-size: 14px;
+    @apply max-h-0 overflow-hidden opacity-0;
+    transition: max-height 0.38s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+    @apply text-white/80 leading-relaxed;
+}
+
+.accordion-body-v4.open {
+    max-height: 400px;
+    @apply opacity-100 pb-4;
+}
+
+@media (max-width: 640px) {
+    .mobile-cta-v4 {
+        z-index: 90;
+        @apply flex fixed bottom-0 left-0 right-0 p-4 bg-slate-950/90 backdrop-blur-2xl border-t border-white/10 items-center justify-between gap-3;
+    }
+}

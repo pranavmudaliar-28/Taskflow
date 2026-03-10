@@ -1,0 +1,156 @@
+/* ── Landing v5 — Enhancement Layer ─────────────────────────────────────────── */
+
+.hero-badge-v5 {
+    gap: 7px;
+    padding-top: 9px;
+    padding-bottom: 9px;
+    border-radius: 13px;
+    font-size: 12px;
+    @apply absolute flex items-center px-3.5 bg-[#111827]/90 backdrop-blur-2xl border border-white/10 shadow-2xl z-10 font-bold text-slate-50 whitespace-nowrap;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.stat-number-v5 {
+    font-size: clamp(28px, 3.5vw, 44px);
+    @apply font-black tracking-tight text-indigo-500 block transition-colors duration-300;
+}
+
+.stat-number-v5:hover {
+    @apply text-indigo-400;
+    text-shadow: 0 0 24px rgba(129, 140, 248, 0.5);
+}
+
+.popular-card-v5 {
+    box-shadow: 0 0 40px rgba(99, 102, 241, 0.2);
+    @apply ring-2 ring-indigo-500/50;
+}
+
+.separator-v5 {
+    @apply h-px border-none my-0;
+    background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.4), transparent);
+}
+
+.hero-grid-v5 {
+    @apply grid grid-cols-1 lg:grid-cols-2 gap-14 items-center;
+}
+
+.hero-copy-v5 {
+    @apply text-left lg:text-left;
+}
+
+.hero-visual-v5 {
+    @apply flex justify-center lg:justify-end items-center min-w-0;
+}
+
+.cta-section-v5 {
+    @apply py-24 relative overflow-hidden;
+    background: linear-gradient(135deg, rgba(13, 16, 32, 0.8) 0%, rgba(26, 14, 53, 0.7) 50%, rgba(11, 21, 32, 0.8) 100%);
+}
+
+/* ── Grid Layouts with Blowout Protection ─────────────────────────────── */
+
+.feature-grid-v5 {
+    @apply grid gap-3.5;
+    grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+}
+
+.feature-grid-v5>* {
+    min-width: 0;
+}
+
+.use-case-grid-v5 {
+    @apply grid grid-cols-1 md:grid-cols-2 gap-12 items-center;
+}
+
+.use-case-grid-v5>* {
+    min-width: 0;
+}
+
+.testimonial-grid-v5 {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4;
+}
+
+.testimonial-grid-v5>* {
+    min-width: 0;
+}
+
+.pricing-grid-v5 {
+    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start;
+}
+
+.pricing-grid-v5>* {
+    min-width: 0;
+}
+
+.metrics-grid-v5 {
+    border-radius: 20px;
+    @apply grid grid-cols-2 lg:grid-cols-4 gap-px overflow-hidden border border-white/10;
+}
+
+.metrics-grid-v5>* {
+    min-width: 0;
+}
+
+.footer-grid-v5 {
+    @apply grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-7;
+}
+
+.footer-grid-v5>* {
+    min-width: 0;
+}
+
+/* ── Responsive Overrides ──────────────────────────────────────────── */
+
+@media (max-width: 1024px) {
+    .footer-grid-v5 {
+        @apply grid-cols-3 gap-6 !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .hero-badge-v5 {
+        @apply hidden !important;
+    }
+
+    .hero-section-v5 {
+        @apply min-h-0 py-14 !important;
+    }
+
+    .trust-bar-v5 {
+        @apply gap-5 flex-wrap justify-center !important;
+    }
+
+    .feature-grid-v5 {
+        @apply grid-cols-2 !important;
+    }
+
+    .metrics-grid-v5 {
+        @apply grid-cols-2 !important;
+    }
+
+    .footer-grid-v5 {
+        @apply grid-cols-2 gap-7 !important;
+    }
+
+    .section-padding-v5 {
+        @apply py-14 !important;
+    }
+
+    .hero-btns-v5 {
+        @apply flex-col items-center !important;
+    }
+}
+
+@media (max-width: 480px) {
+
+    .feature-grid-v5,
+    .testimonial-grid-v5,
+    .footer-grid-v5,
+    .pricing-grid-v5 {
+        @apply grid-cols-1 !important;
+    }
+
+    .hero-title-v5 {
+        font-size: clamp(28px, 8vw, 56px) !important;
+    }
+}
