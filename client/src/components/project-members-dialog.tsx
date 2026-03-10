@@ -62,14 +62,26 @@ export function ProjectMembersDialog({ open, onClose, project, memberData }: Omi
   const [searchValue, setSearchValue] = useState("");
   const [inviteRole, setInviteRole] = useState<Role>("member");
 
+  // Fetch organization members first to determine global org role
+  const { data: orgMembers = [], isLoading: isLoadingMembers } = useQuery<Array<{ userId: string; user: Omit<User, 'password'>; role: Role }>>({
+    queryKey: [`/api/organizations/${project?.organizationId}/members`],
+    enabled: open && !!project?.organizationId,
+  });
+
+  const currentUserOrgRole = useMemo(() => {
+    if (!currentUser || !orgMembers.length) return null;
+    const myOrgMembership = orgMembers.find(m => m.userId === currentUser.id || m.user?.id === currentUser.id);
+    return myOrgMembership?.role || null;
+  }, [orgMembers, currentUser]);
+
   const currentUserRole = useMemo(() => {
     if (!currentUser) return null;
     const myMembership = memberData.find(m => m.userId === currentUser.id);
     return myMembership?.role || null;
   }, [memberData, currentUser]);
 
-  const isAdmin = currentUserRole === "admin";
-  const canManageMembers = isAdmin || currentUserRole === "team_lead";
+  const isAdmin = currentUserRole === "admin" || currentUserOrgRole === "admin";
+  const canManageMembers = isAdmin || currentUserRole === "team_lead" || currentUserOrgRole === "team_lead";
 
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
@@ -81,11 +93,7 @@ export function ProjectMembersDialog({ open, onClose, project, memberData }: Omi
     return () => clearTimeout(timer);
   }, [searchValue]);
 
-  // Fetch organization members - filter them locally instead of relying on a non-existent backend search route
-  const { data: orgMembers = [], isLoading: isLoadingMembers } = useQuery<Array<{ userId: string; user: Omit<User, 'password'>; role: Role }>>({
-    queryKey: [`/api/organizations/${project?.organizationId}/members`],
-    enabled: open && !!project?.organizationId,
-  });
+  // Org members query moved up to calculate roles early
 
   // Filter out users who are already project members, and match the search query
   const availableOrgMembers = useMemo(() => {
@@ -385,7 +393,11 @@ export function ProjectMembersDialog({ open, onClose, project, memberData }: Omi
                           <Select
                             value={member.role}
                             onValueChange={(newRole) => updateRoleMutation.mutate({ memberId: member.userId, role: newRole as Role })}
-                            disabled={member.userId === currentUser?.id || (!isAdmin && member.role === "admin")}
+                            disabled={
+                              member.userId === currentUser?.id ||
+                              (!isAdmin && member.role === "admin") ||
+                              (!isAdmin && orgMembers.some(m => m.userId === member.userId && m.role === "admin"))
+                            }
                           >
                             <SelectTrigger className="w-[110px] h-8 text-xs border-transparent hover:border-input focus:ring-0 transition-colors bg-transparent hover:bg-muted/50">
                               <div className="flex items-center gap-1.5">

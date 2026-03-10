@@ -1328,9 +1328,19 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
 
       // Check if requester has access and sufficient role
-      const callerRole = await storage.getProjectMemberRole(userId, project.id);
-      if (callerRole !== "admin" && callerRole !== "team_lead") {
-        return res.status(403).json({ message: "Only admins and team leads can add members" });
+      const callerProjectRole = await storage.getProjectMemberRole(userId, project.id);
+
+      const callerOrgMemberships = await storage.getOrganizationMembersForUser(userId, [project.organizationId]);
+      const callerOrgRole = callerOrgMemberships[0]?.role;
+
+      const hasSufficientRole =
+        callerProjectRole === "admin" ||
+        callerProjectRole === "team_lead" ||
+        callerOrgRole === "admin" ||
+        callerOrgRole === "team_lead";
+
+      if (!hasSufficientRole) {
+        return res.status(403).json({ message: "Only project or organization admins and team leads can add members" });
       }
 
       const isInOrg = await storage.isUserInOrganization(memberUserId, project.organizationId);
@@ -1385,14 +1395,24 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
 
       // Check access and role
-      const callerRole = await storage.getProjectMemberRole(userId, project.id);
-      if (callerRole !== "admin" && callerRole !== "team_lead") {
-        return res.status(403).json({ message: "Only admins and team leads can invite members" });
+      const callerProjectRole = await storage.getProjectMemberRole(userId, project.id);
+
+      const callerOrgMemberships = await storage.getOrganizationMembersForUser(userId, [project.organizationId]);
+      const callerOrgRole = callerOrgMemberships[0]?.role;
+
+      const hasSufficientRole =
+        callerProjectRole === "admin" ||
+        callerProjectRole === "team_lead" ||
+        callerOrgRole === "admin" ||
+        callerOrgRole === "team_lead";
+
+      if (!hasSufficientRole) {
+        return res.status(403).json({ message: "Only project or organization admins and team leads can invite members" });
       }
 
       const inOrg = await storage.isUserInOrganization(userId, project.organizationId);
-      if (!inOrg && !callerRole) {
-        return res.status(403).json({ message: "Forbidden: You are not a member of this project" });
+      if (!inOrg && !callerProjectRole && !callerOrgRole) {
+        return res.status(403).json({ message: "Forbidden: You are not a member of this project or organization" });
       }
       const normalizedEmail = email.trim().toLowerCase();
 
@@ -1478,9 +1498,23 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.status(400).json({ message: "Valid role is required (admin, team_lead, member)" });
       }
 
-      const callerRole = await storage.getProjectMemberRole(userId, projectId);
-      if (callerRole !== "admin") {
-        return res.status(403).json({ message: "Only admins can change member roles" });
+      const project = await resolveProject(projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      const callerProjectRole = await storage.getProjectMemberRole(userId, projectId);
+      const callerOrgMemberships = await storage.getOrganizationMembersForUser(userId, [project.organizationId]);
+      const callerOrgRole = callerOrgMemberships[0]?.role;
+
+      const hasSufficientRole =
+        callerProjectRole === "admin" ||
+        callerProjectRole === "team_lead" ||
+        callerOrgRole === "admin" ||
+        callerOrgRole === "team_lead";
+
+      if (!hasSufficientRole) {
+        return res.status(403).json({ message: "Only project or organization admins and team leads can change member roles" });
       }
 
       await storage.updateProjectMemberRole(memberId, projectId, role);
