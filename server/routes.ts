@@ -1451,24 +1451,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           return res.status(400).json({ message: "Invitation already sent to this email" });
         }
 
-        // Sync with Organization Invitations: Ensure existing invite exists or create one
-        const existingOrgInvites = await storage.getPendingOrganizationInvitationsByEmail(normalizedEmail);
-        const alreadyInvitedToOrg = existingOrgInvites.some(i => i.organizationId === project.organizationId);
-
-        if (!alreadyInvitedToOrg) {
-          const token = crypto.randomBytes(32).toString("hex");
-          const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
-
-          await storage.createOrganizationInvitation({
-            organizationId: project.organizationId,
-            email: normalizedEmail,
-            role: "member", // Default role for organization level
-            invitedBy: userId,
-            status: "pending",
-            token,
-            expiresAt,
-          });
-        }
+        // We intentionally do NOT create a duplicate Organization invitation here.
+        // The project invite alone is sufficient; when accepted, it will automatically
+        // grant them organization access if they don't already have it.
 
         await storage.createProjectInvitation({
           projectId: project.id,

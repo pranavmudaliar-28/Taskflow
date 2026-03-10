@@ -572,7 +572,11 @@ export class MongoStorage {
     }
 
     async getOrganizationInvitations(orgId: string): Promise<OrganizationInvitation[]> {
-        const invitations = await InvitationMongo.find({ organizationId: orgId, status: "pending" });
+        const invitations = await InvitationMongo.find({
+            organizationId: orgId,
+            projectId: { $exists: false },
+            status: "pending"
+        });
         return this.transformArray<OrganizationInvitation>(invitations);
     }
 
@@ -585,6 +589,7 @@ export class MongoStorage {
         const invitations = await InvitationMongo.find({
             email: email.toLowerCase(),
             organizationId: { $exists: true },
+            projectId: { $exists: false },
             status: "pending"
         });
         return this.transformArray<OrganizationInvitation>(invitations);
