@@ -4,7 +4,7 @@ import {
     ArrowRight, CheckCircle2, Zap, Users, BarChart3, Bell, Star,
     Play, Twitter, Github, Linkedin, ChevronDown, ListTodo,
     Calendar, Target, TrendingUp, Layout, Briefcase, User,
-    Building2, Sparkles, Shield, Workflow, ChevronRight,
+    Building2, Sparkles, Shield, Workflow, ChevronRight, Menu, X,
 } from "lucide-react";
 
 /* ── scroll reveal ─────────────────────────────────── */
@@ -207,7 +207,7 @@ function DashMockup({ panel }: { panel: number }) {
         { label: "Done", dot: GN, tasks: ["Set up CI/CD", "User research"] },
     ];
     return (
-        <div style={{ borderRadius: 18, overflow: "hidden", background: SURF, border: `1px solid ${BOR}`, boxShadow: `0 0 0 1px rgba(99,102,241,0.15), 0 40px 100px rgba(0,0,0,0.6)`, width: "100%", maxWidth: 780 }}>
+        <div className="dash-mockup-wrapper-v5" style={{ borderRadius: 18, overflow: "hidden", background: SURF, border: `1px solid ${BOR}`, boxShadow: `0 0 0 1px rgba(99,102,241,0.15), 0 40px 100px rgba(0,0,0,0.6)`, width: "100%", maxWidth: "100%", margin: "0 auto" }}>
             {/* chrome */}
             <div style={{ padding: "10px 16px", background: "rgba(0,0,0,0.25)", borderBottom: `1px solid ${BOR}`, display: "flex", alignItems: "center", gap: 10 }}>
                 <div style={{ display: "flex", gap: 6 }}>{["#FF5F57", "#FFBD2E", "#27C840"].map(c => <div key={c} style={{ height: 10, width: 10, borderRadius: 99, background: c }} />)}</div>
@@ -216,9 +216,9 @@ function DashMockup({ panel }: { panel: number }) {
                 </div>
             </div>
             {/* body */}
-            <div className="board-body-v5" style={{ padding: 16, minHeight: 220 }}>
+            <div className="board-body-v5" style={{ padding: 16, minHeight: 180, overflowX: "auto" }}>
                 {panel === 0 && (
-                    <div className="board-cols-v5" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+                    <div className="board-cols-v5" style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(140px, 1fr))", gap: 8 }}>
                         {cols.map(col => (
                             <div key={col.label} style={{ background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: 10, border: `1px solid ${BOR}` }}>
                                 <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 8 }}>
@@ -231,21 +231,21 @@ function DashMockup({ panel }: { panel: number }) {
                     </div>
                 )}
                 {panel === 1 && (
-                    <div>
+                    <div style={{ minWidth: "100%", width: "max-content", paddingRight: 16 }}>
                         <div style={{ fontSize: 11, fontWeight: 700, color: SEC, marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.06em" }}>Q1 Timeline</div>
                         {["Research phase", "Design & prototype", "Engineering build", "QA & launch"].map((t, i) => (
-                            <div key={t} style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 8 }}>
-                                <span style={{ fontSize: 10, color: SEC, minWidth: 110 }}>{t}</span>
-                                <div style={{ flex: 1, height: 14, borderRadius: 4, background: "rgba(255,255,255,0.05)", overflow: "hidden" }}>
+                            <div key={t} style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8, minWidth: 260 }}>
+                                <span style={{ fontSize: 10, color: SEC, width: 90, flexShrink: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t}</span>
+                                <div style={{ flex: 1, minWidth: 60, height: 14, borderRadius: 4, background: "rgba(255,255,255,0.05)", overflow: "hidden" }}>
                                     <div style={{ height: "100%", width: `${[90, 70, 45, 20][i]}%`, background: `linear-gradient(90deg,${IND},${INDL})`, opacity: i === 0 ? 1 : 0.7 - i * 0.1, borderRadius: 4 }} />
                                 </div>
-                                <span style={{ fontSize: 9, color: INDL, minWidth: 30, textAlign: "right" }}>{[90, 70, 45, 20][i]}%</span>
+                                <span style={{ fontSize: 9, color: INDL, width: 30, textAlign: "right", flexShrink: 0 }}>{[90, 70, 45, 20][i]}%</span>
                             </div>
                         ))}
                     </div>
                 )}
                 {panel === 2 && (
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                    <div className="metrics-mockup-grid-v5" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 8 }}>
                         {[{ label: "Tasks Done", val: "124", sub: "↑ 18% this week" }, { label: "On Track", val: "87%", sub: "8 of 12 projects" }, { label: "Avg Velocity", val: "31 pts", sub: "per sprint" }, { label: "Team Health", val: "Good", sub: "No blockers" }].map(m => (
                             <div key={m.label} style={{ background: "rgba(255,255,255,0.03)", borderRadius: 12, padding: "14px 16px", border: `1px solid ${BOR}` }}>
                                 <div style={{ fontSize: 10, color: SEC, marginBottom: 6 }}>{m.label}</div>
@@ -393,6 +393,7 @@ export default function Landing() {
     const [ucTab, setUcTab] = useState<keyof typeof useCaseData>("Teams");
     const [tsIdx, setTsIdx] = useState(0);
     const [navBg, setNavBg] = useState(false);
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     useEffect(() => {
         const fn = () => setNavBg(window.scrollY > 24);
@@ -400,10 +401,23 @@ export default function Landing() {
         return () => window.removeEventListener("scroll", fn);
     }, []);
 
+    // Close mobile menu on resize to desktop
+    useEffect(() => {
+        const fn = () => { if (window.innerWidth >= 768) setMobileMenuOpen(false); };
+        window.addEventListener("resize", fn);
+        return () => window.removeEventListener("resize", fn);
+    }, []);
+
+    // Prevent body scroll when mobile menu is open
+    useEffect(() => {
+        document.body.style.overflow = mobileMenuOpen ? "hidden" : "";
+        return () => { document.body.style.overflow = ""; };
+    }, [mobileMenuOpen]);
+
     const sec: React.CSSProperties = { fontSize: "clamp(30px,4vw,48px)", fontWeight: 900, letterSpacing: "-0.035em", lineHeight: 1.06, color: TXT };
 
     return (
-        <div style={{ fontFamily: "'Inter',system-ui,-apple-system,sans-serif", background: BG, color: TXT, position: "relative" }}>
+        <div style={{ fontFamily: "'Inter',system-ui,-apple-system,sans-serif", background: BG, color: TXT, position: "relative", overflowX: "hidden" }}>
             {/* ── BACKGROUND ANIMATION ────────────────────── */}
             <canvas
                 ref={canvasRef}
@@ -426,13 +440,14 @@ export default function Landing() {
                 left: 0,
                 width: "100%",
                 zIndex: 1000,
-                background: navBg ? "rgba(11,15,25,0.96)" : "rgba(11,15,25,0.7)",
+                background: navBg || mobileMenuOpen ? "rgba(11,15,25,0.98)" : "rgba(11,15,25,0.7)",
                 backdropFilter: "blur(20px)",
                 WebkitBackdropFilter: "blur(20px)",
-                borderBottom: `1px solid ${navBg ? BOR : "transparent"}`,
+                borderBottom: `1px solid ${navBg || mobileMenuOpen ? BOR : "transparent"}`,
                 transition: "all 0.3s ease"
             }}>
                 <div className="container-xl" style={{ height: 64, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 20 }}>
+                    {/* Logo */}
                     <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
                         <div style={{ height: 34, width: 34, borderRadius: 10, background: "linear-gradient(135deg,#6366F1,#8B5CF6)", display: "inline-flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px rgba(99,102,241,0.5)", border: "1px solid rgba(255,255,255,0.1)" }}>
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -441,32 +456,133 @@ export default function Landing() {
                         </div>
                         <span style={{ fontWeight: 900, fontSize: 18, color: TXT, letterSpacing: "-0.03em" }}>TaskFlow Pro</span>
                     </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 28 }} className="hidden md:flex">
+
+                    {/* Desktop nav links */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 28, justifyContent: "center" }} className="nav-desktop-links">
                         {["Product", "Features", "Pricing", "Docs"].map(l => <a key={l} href={`#${l.toLowerCase()}`} className="nav-link-v4">{l}</a>)}
                     </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+
+                    {/* Desktop CTA buttons */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }} className="nav-desktop-cta">
                         <Link href="/login"><a className="nav-link-v4" style={{ fontWeight: 600 }}>Login</a></Link>
                         <Link href="/signup"><a className="cta-btn-v4" style={{ height: 38, padding: "0 18px", fontSize: 13, borderRadius: 10 }}>Start Free</a></Link>
                     </div>
+
+                    {/* Hamburger button — mobile only */}
+                    <button
+                        className="nav-hamburger"
+                        onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                        aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+                        style={{
+                            display: "none",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            height: 40,
+                            width: 40,
+                            borderRadius: 10,
+                            border: `1px solid ${BOR}`,
+                            background: mobileMenuOpen ? "rgba(99,102,241,0.15)" : "rgba(255,255,255,0.05)",
+                            color: TXT,
+                            cursor: "pointer",
+                            flexShrink: 0,
+                            transition: "all 0.2s ease",
+                        }}
+                    >
+                        {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+                    </button>
                 </div>
+
+                {/* Mobile menu drawer */}
+                {mobileMenuOpen && (
+                    <div style={{
+                        borderTop: `1px solid ${BOR}`,
+                        padding: "20px 0 32px",
+                        background: "rgba(11,15,25,0.98)",
+                        backdropFilter: "blur(20px)",
+                        WebkitBackdropFilter: "blur(20px)",
+                        animation: "mobileMenuIn 0.25s ease",
+                    }}>
+                        <div className="container-xl" style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                            {/* Nav links */}
+                            {["Product", "Features", "Pricing", "Docs"].map(l => (
+                                <a
+                                    key={l}
+                                    href={`#${l.toLowerCase()}`}
+                                    onClick={() => setMobileMenuOpen(false)}
+                                    style={{
+                                        display: "block",
+                                        padding: "14px 0",
+                                        fontSize: 16,
+                                        fontWeight: 600,
+                                        color: "rgba(255,255,255,0.8)",
+                                        borderBottom: `1px solid ${BOR}`,
+                                        textDecoration: "none",
+                                        transition: "color 0.2s",
+                                    }}
+                                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = INDL; }}
+                                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.8)"; }}
+                                >
+                                    {l}
+                                </a>
+                            ))}
+                            {/* CTA buttons */}
+                            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 20 }}>
+                                <Link href="/login">
+                                    <a
+                                        onClick={() => setMobileMenuOpen(false)}
+                                        style={{
+                                            display: "block",
+                                            textAlign: "center",
+                                            padding: "12px",
+                                            borderRadius: 10,
+                                            border: `1px solid ${BOR}`,
+                                            color: TXT,
+                                            fontWeight: 600,
+                                            fontSize: 15,
+                                            textDecoration: "none",
+                                            transition: "all 0.2s",
+                                        }}
+                                    >
+                                        Login
+                                    </a>
+                                </Link>
+                                <Link href="/signup">
+                                    <a
+                                        onClick={() => setMobileMenuOpen(false)}
+                                        className="cta-btn-v4"
+                                        style={{
+                                            display: "flex",
+                                            justifyContent: "center",
+                                            height: 48,
+                                            fontSize: 15,
+                                            borderRadius: 10,
+                                        }}
+                                    >
+                                        Start Free Workspace <ArrowRight style={{ height: 16, width: 16 }} />
+                                    </a>
+                                </Link>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </nav>
 
             {/* ── HERO ─────────────────────────────────────── */}
             <section className="hero-section-v5" style={{ position: "relative", minHeight: "90vh", display: "flex", alignItems: "center", overflow: "hidden", paddingTop: 110 }}>
 
                 {/* bg orbs – absolute, won't affect layout */}
-                <div style={{ position: "absolute", top: "8%", left: "5%", width: 520, height: 520, borderRadius: "50%", background: "radial-gradient(circle,rgba(99,102,241,0.16) 0%,transparent 70%)", pointerEvents: "none", animation: "lp3-orb-a 20s ease-in-out infinite" }} />
-                <div style={{ position: "absolute", bottom: "5%", right: "5%", width: 420, height: 420, borderRadius: "50%", background: "radial-gradient(circle,rgba(139,92,246,0.12) 0%,transparent 70%)", pointerEvents: "none", animation: "lp3-orb-b 24s ease-in-out infinite" }} />
+                <div style={{ position: "absolute", top: "8%", left: "5%", width: "min(520px, 90vw)", height: "min(520px, 90vw)", borderRadius: "50%", background: "radial-gradient(circle,rgba(99,102,241,0.16) 0%,transparent 70%)", pointerEvents: "none", animation: "lp3-orb-a 20s ease-in-out infinite" }} />
+                <div style={{ position: "absolute", bottom: "5%", right: "5%", width: "min(420px, 80vw)", height: "min(420px, 80vw)", borderRadius: "50%", background: "radial-gradient(circle,rgba(139,92,246,0.12) 0%,transparent 70%)", pointerEvents: "none", animation: "lp3-orb-b 24s ease-in-out infinite" }} />
 
-                <div className="container-xl" style={{ position: "relative", paddingTop: 0, paddingBottom: 80 }}>
+                <div className="container-xl" style={{ position: "relative", paddingTop: 80, paddingBottom: 80 }}>
                     {/* ── 2-column hero grid ── */}
                     <div className="hero-grid-v5">
                         {/* LEFT — copy */}
                         <div className="hero-copy-v5">
                             <div className="hero-in-v3 lp3-hi-1" style={{ marginBottom: 20 }}>
-                                <span className="pill-v4"><Sparkles style={{ height: 10, width: 10 }} /> Now free for teams up to 5</span>
+                                <span className="hero-pill-v5"><Sparkles style={{ height: 12, width: 12 }} /> Now free for teams up to 5</span>
                             </div>
-                            <h1 className="hero-in-v3 lp3-hi-2" style={{ fontSize: "clamp(32px,5vw,64px)", fontWeight: 900, letterSpacing: "-0.04em", lineHeight: 1.1, marginBottom: 24, wordBreak: "break-word", textShadow: "0 10px 30px rgba(0,0,0,0.4)" }}>
+                            <h1 className="hero-in-v3 lp3-hi-2" style={{ fontSize: "clamp(34px,10vw,64px)", fontWeight: 900, letterSpacing: "-0.04em", lineHeight: 1.1, marginBottom: 24, wordBreak: "break-word", textShadow: "0 10px 30px rgba(0,0,0,0.4)" }}>
                                 Bring clarity to<br /><span className="title-gradient-v3">every project.</span>
                             </h1>
                             <p className="hero-in-v3 lp3-hi-3" style={{ fontSize: "clamp(15px,1.5vw,17px)", color: "rgba(255,255,255,0.6)", lineHeight: 1.8, marginBottom: 40, maxWidth: 500 }}>
@@ -513,7 +629,7 @@ export default function Landing() {
                                 <svg height={brand.h} viewBox={brand.viewBox} fill={brand.color} style={{ filter: "drop-shadow(0 0 6px rgba(255,255,255,0.02))" }}>
                                     <path d={brand.path} />
                                 </svg>
-                                <span style={{ fontSize: 18, fontWeight: 900, color: "white", letterSpacing: "-0.03em" }}>{brand.name}</span>
+                                <span style={{ fontSize: "clamp(14px, 2vw, 18px)", fontWeight: 900, color: "white", letterSpacing: "-0.03em" }}>{brand.name}</span>
                             </div>
                         ))}
 
@@ -604,7 +720,7 @@ export default function Landing() {
                         <h2 style={{ ...sec }}>Every view your team needs</h2>
                     </div>
                     {/* Clickable tab bar */}
-                    <div className="reveal-on-scroll tab-group-v4">
+                    <div className="reveal-on-scroll tab-group-v4" style={{ maxWidth: "100%", width: "fit-content" }}>
                         {showcasePanels.map(({ key, label, icon: Icon }, i) => (
                             <button
                                 key={key}
@@ -636,12 +752,12 @@ export default function Landing() {
                         <h2 style={{ ...sec }}>Built for every kind of team</h2>
                     </div>
                     <div className="reveal-on-scroll" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 32 }}>
-                        <div className="tab-group-v4">
+                        <div className="tab-group-v4" style={{ maxWidth: "100%", width: "fit-content" }}>
                             {Object.keys(useCaseData).map(k => (
                                 <button key={k} className={`tab-v4${ucTab === k ? " active" : ""}`} onClick={() => setUcTab(k as keyof typeof useCaseData)}>{k}</button>
                             ))}
                         </div>
-                        <div className="use-case-grid-v5" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 48, alignItems: "center", width: "100%", maxWidth: 820 }}>
+                        <div className="use-case-grid-v5" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 340px), 1fr))", gap: "clamp(24px, 5vw, 48px)", alignItems: "center", width: "100%", maxWidth: 820 }}>
                             <div>
                                 <h3 style={{ fontSize: "clamp(22px,2.8vw,34px)", fontWeight: 800, letterSpacing: "-0.03em", color: TXT, marginBottom: 20 }}>{useCaseData[ucTab].headline}</h3>
                                 {useCaseData[ucTab].bullets.map(b => (
@@ -689,7 +805,7 @@ export default function Landing() {
                         ))}
                     </div>
                     {/* Animated Metrics */}
-                    <div className="metrics-grid-v5 reveal-on-scroll" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 1, marginTop: 52, borderRadius: 20, overflow: "hidden", border: `1px solid ${BOR}` }}>
+                    <div className="metrics-grid-v5 reveal-on-scroll" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%, 140px), 1fr))", gap: 1, marginTop: 52, borderRadius: 20, overflow: "hidden", border: `1px solid ${BOR}` }}>
                         <MetricCell num={10000} suffix="k+" label="Tasks daily" display="10k+" />
                         <MetricCell num={999} suffix="%" label="Uptime SLA" display="99.9%" />
                         <MetricCell num={2000} suffix="+" label="Teams" display="2,000+" />
@@ -703,11 +819,29 @@ export default function Landing() {
                 <div className="container-xl">
                     <div className="reveal-on-scroll" style={{ textAlign: "center", marginBottom: 40 }}>
                         <span className="pill-v4" style={{ marginBottom: 14, display: "inline-flex" }}>Pricing</span>
-                        <h2 style={{ ...sec, marginBottom: 20 }}>Simple, honest pricing</h2>
-                        <div className="toggle-group-v3">
-                            <button className={`toggle-btn-v3${!annual ? " active" : ""}`} onClick={() => setAnnual(false)} style={{ background: !annual ? IND : "transparent", color: !annual ? "#fff" : SEC }}>Monthly</button>
-                            <button className={`toggle-btn-v3${annual ? " active" : ""}`} onClick={() => setAnnual(true)} style={{ background: annual ? IND : "transparent", color: annual ? "#fff" : SEC }}>
-                                Annual <span style={{ fontSize: 10, background: GN, color: BG, padding: "1px 7px", borderRadius: 999, marginLeft: 5, fontWeight: 800 }}>Save 25%</span>
+                        <h2 style={{ ...sec, marginBottom: 24 }}>Simple, honest pricing</h2>
+
+                        <div className="segmented-toggle-v5">
+                            <button
+                                className={`segmented-btn-v5${!annual ? " active" : ""}`}
+                                onClick={() => setAnnual(false)}
+                            >
+                                Monthly
+                            </button>
+                            <button
+                                className={`segmented-btn-v5${annual ? " active" : ""}`}
+                                onClick={() => setAnnual(true)}
+                            >
+                                Annual
+                                <span style={{
+                                    fontSize: 10,
+                                    background: GN,
+                                    color: BG,
+                                    padding: "2px 6px",
+                                    borderRadius: 999,
+                                    fontWeight: 700,
+                                    letterSpacing: "-0.02em"
+                                }}>Save 25%</span>
                             </button>
                         </div>
                     </div>
@@ -760,7 +894,7 @@ export default function Landing() {
                 <div className="container-xl" style={{ textAlign: "center", position: "relative" }}>
                     <div className="reveal-on-scroll">
                         <span className="lp4-pill" style={{ marginBottom: 20, display: "inline-flex" }}><Sparkles style={{ height: 10, width: 10 }} /> No credit card required</span>
-                        <h2 style={{ fontSize: "clamp(34px,5.5vw,66px)", fontWeight: 900, letterSpacing: "-0.045em", lineHeight: 1.04, color: TXT, marginBottom: 18 }}>
+                        <h2 style={{ fontSize: "clamp(28px,5.5vw,66px)", fontWeight: 900, letterSpacing: "-0.045em", lineHeight: 1.04, color: TXT, marginBottom: 18 }}>
                             Get organised.<br /><span className="lp3-grad">Start shipping faster.</span>
                         </h2>
                         <p style={{ fontSize: 17, color: SEC, maxWidth: 480, margin: "0 auto 36px", lineHeight: 1.75 }}>
@@ -776,7 +910,7 @@ export default function Landing() {
             <footer style={{ borderTop: `1px solid ${BOR}`, padding: "52px 0 28px", background: "transparent" }}>
 
                 <div className="container-xl">
-                    <div className="footer-grid-v5" style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr 1fr 1fr 1fr", gap: 28, marginBottom: 44 }}>
+                    <div className="footer-grid-v5" style={{ gap: 28, marginBottom: 44 }}>
                         <div>
                             <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 14 }}>
                                 <span style={{ height: 26, width: 26, borderRadius: 8, background: "linear-gradient(135deg,#6366F1,#8B5CF6)", display: "inline-flex", alignItems: "center", justifyContent: "center" }}><Zap style={{ height: 12, width: 12, color: "#fff" }} /></span>

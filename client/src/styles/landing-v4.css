@@ -28,12 +28,18 @@
 }
 
 .tab-group-v4 {
-    @apply flex gap-1 bg-white/5 border border-white/10 rounded-2xl p-1.5;
+    @apply flex gap-1 bg-white/5 border border-white/10 rounded-2xl p-1.5 overflow-x-auto;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
+}
+
+.tab-group-v4::-webkit-scrollbar {
+    display: none; /* Chrome/Safari/Webkit */
 }
 
 .tab-v4 {
     font-size: 13px;
-    @apply px-5 py-2.5 rounded-xl font-semibold cursor-pointer bg-transparent text-white/50 whitespace-nowrap;
+    @apply px-5 py-2.5 rounded-xl font-semibold cursor-pointer bg-transparent text-white/50 whitespace-nowrap flex-shrink-0;
     transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
